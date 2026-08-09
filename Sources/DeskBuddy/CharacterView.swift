@@ -8,15 +8,20 @@ struct CharacterView: View {
     @ObservedObject var appState: AppState
 
     @State private var blinking = false
-    @State private var bobbing = false
 
     private var remaining: Int { store.todos.filter { !$0.isDone }.count }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            slime
-                .offset(y: bobbing ? -3 : 3)
-                .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: bobbing)
+            // 걸을 때는 빠르게 통통 튀고, 쉴 때는 느리게 둥실거린다
+            TimelineView(.animation(minimumInterval: appState.walking ? 1.0 / 60.0 : 1.0 / 20.0)) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                let phase = sin(t * (appState.walking ? 7.0 : 1.9))
+                slime
+                    .rotationEffect(.degrees(appState.walking ? phase * 7 : 0))
+                    .offset(y: -phase * (appState.walking ? 5 : 3))
+                    .scaleEffect(x: appState.facingRight ? 1 : -1)   // 진행 방향으로 몸을 돌린다
+            }
 
             if remaining > 0 {
                 Text("\(remaining)")
@@ -29,7 +34,6 @@ struct CharacterView: View {
             }
         }
         .frame(width: 76, height: 84)
-        .onAppear { bobbing = true }
         .task { await blinkLoop() }
     }
 
@@ -151,4 +155,8 @@ private struct SmileShape: Shape {
 @MainActor
 final class AppState: ObservableObject {
     @Published var listVisible = false
+    /// 자유 이동 중 걷고 있는지
+    @Published var walking = false
+    /// 바라보는 방향
+    @Published var facingRight = true
 }

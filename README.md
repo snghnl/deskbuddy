@@ -15,6 +15,9 @@ open build/DeskBuddy.app
 
 - **캐릭터**: 눈 깜빡임·둥실거림 애니메이션이 있는 슬라임. 남은 할 일 개수 뱃지 표시, 리스트가 열리면 표정이 바뀜
 - **클릭 → 리스트 토글**: 캐릭터를 클릭하면 옆에 todo 리스트 패널이 열리고, 드래그하면 캐릭터가 이동 (리스트도 따라옴)
+- **우클릭 메뉴**: 목록 열기/닫기, 자유롭게 돌아다니기 토글, 제자리로 보내기, 캐릭터 숨기기, 종료 (control-클릭도 동일)
+- **자유 이동**: 켜면 화면 안에서 스스로 목표 지점을 골라 걸어다니고 잠깐씩 쉰다. 진행 방향으로 몸을 돌리고 통통 튀는 걸음 모션.
+  목록이 열려 있거나, 캐릭터를 잡고 있거나, 우클릭 메뉴가 떠 있는 동안에는 멈춘다
 - **항상 위**: `NSPanel` + `.floating` 레벨, 모든 Spaces·풀스크린 위에 표시
 - **비활성화 패널**: 클릭해도 현재 작업 중인 앱의 포커스를 뺏지 않음 (`.nonactivatingPanel`)
 - 할 일 추가(Enter), 체크(완료 시 목록 아래로), 호버 시 X로 삭제, 메뉴에서 완료 항목 일괄 정리
@@ -32,5 +35,6 @@ open build/DeskBuddy.app
 
 - `Sources/DeskBuddy/App.swift` — 진입점, 캐릭터/리스트 패널(NSPanel 서브클래스), 클릭·드래그 구분, 메뉴바, 위치 저장
 - `Sources/DeskBuddy/CharacterView.swift` — 슬라임 캐릭터 (Shape 직접 드로잉 + 애니메이션)
+- `Sources/DeskBuddy/WanderController.swift` — 자유 이동 (목표 지점 선정 → 이동 → 휴식 루프)
 - `Sources/DeskBuddy/TodoListView.swift` — 리스트 + 상세 페이지 UI
 - `Sources/DeskBuddy/TodoStore.swift` — 모델 + JSON 영속화

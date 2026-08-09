@@ -17,13 +17,26 @@ final class CharacterPanel: NSPanel {
 final class ClickCatcherView: NSView {
     var onClick: (() -> Void)?
     var onMoved: (() -> Void)?
+    var onRightClick: ((NSEvent) -> Void)?
+    var onPressDown: (() -> Void)?
+    var onPressUp: (() -> Void)?
 
     private var downLocation: NSPoint = .zero
     private var dragging = false
 
     override func mouseDown(with event: NSEvent) {
+        // control-클릭도 우클릭으로 취급 (macOS 관례)
+        if event.modifierFlags.contains(.control) {
+            onRightClick?(event)
+            return
+        }
         downLocation = event.locationInWindow
         dragging = false
+        onPressDown?()
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        onRightClick?(event)
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -43,6 +56,7 @@ final class ClickCatcherView: NSView {
             onClick?()
         }
         dragging = false
+        onPressUp?()
     }
 }
 
@@ -72,14 +86,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var characterPanel: CharacterPanel!
     private var listPanel: FloatingPanel!
     private var statusItem: NSStatusItem!
+    private var wander: WanderController!
     private let store = TodoStore()
     private let appState = AppState()
+
+    /// 메뉴가 열려있는 등 일시적으로 자유 이동을 멈춰야 하는 상황
+    private var wanderSuspended = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupCharacterPanel()
         setupListPanel()
         setupStatusItem()
+        setupWander()
     }
 
     // MARK: - 캐릭터 패널
@@ -107,6 +126,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.saveFrame()
             self?.repositionList()
         }
+        catcher.onRightClick = { [weak self] event in self?.showContextMenu(event) }
+        // 잡고 있는 동안에는 스스로 움직이지 않는다
+        catcher.onPressDown = { [weak self] in self?.suspendWander(true) }
+        catcher.onPressUp = { [weak self] in self?.suspendWander(false) }
         for view in [hosting, catcher] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
@@ -180,6 +203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             listPanel.makeKey()
             appState.listVisible = true
         }
+        updateWander()   // 목록이 열려있는 동안에는 돌아다니지 않는다
     }
 
     /// 리스트를 캐릭터 근처(아래 우선, 공간 없으면 위)에 붙인다
@@ -218,6 +242,109 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(NSStringFromSize(f.size), forKey: listSizeKey)
     }
 
+    // MARK: - 자유 이동
+
+    private let wanderKey = "DeskBuddy.wander"
+
+    private var wanderEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: wanderKey) }
+        set { UserDefaults.standard.set(newValue, forKey: wanderKey) }
+    }
+
+    private func setupWander() {
+        wander = WanderController(
+            panel: characterPanel,
+            onWalk: { [weak self] walking, facingRight in
+                self?.appState.walking = walking
+                self?.appState.facingRight = facingRight
+            },
+            onSettled: { [weak self] in self?.saveFrame() }
+        )
+        updateWander()
+    }
+
+    /// 설정·목록 상태·사용자 조작을 모두 반영해 실제로 움직여야 하는지 결정한다
+    private func updateWander() {
+        let shouldRun = wanderEnabled
+            && !wanderSuspended
+            && !listPanel.isVisible
+            && characterPanel.isVisible
+        if shouldRun {
+            wander.start()
+        } else {
+            wander.stop()
+        }
+    }
+
+    private func suspendWander(_ suspended: Bool) {
+        wanderSuspended = suspended
+        updateWander()
+    }
+
+    @objc private func toggleWander() {
+        wanderEnabled.toggle()
+        // 돌아다니려면 목록은 닫는다 (열려 있으면 목록이 캐릭터를 따라다녀 쓰기 어렵다)
+        if wanderEnabled, listPanel.isVisible { toggleList() } else { updateWander() }
+    }
+
+    @objc private func sendHome() {
+        // 제자리에 두라는 뜻이므로 자유 이동은 끈다 (안 그러면 곧바로 다시 걸어나간다)
+        wanderEnabled = false
+        updateWander()
+
+        guard let screen = characterPanel.screen ?? NSScreen.main else { return }
+        let visible = screen.visibleFrame
+        let size = characterPanel.frame.size
+        characterPanel.setFrameOrigin(NSPoint(
+            x: visible.maxX - size.width - 24,
+            y: visible.maxY - size.height - 24
+        ))
+        saveFrame()
+        repositionList()
+    }
+
+    // MARK: - 우클릭 메뉴
+
+    private func showContextMenu(_ event: NSEvent) {
+        guard let view = characterPanel.contentView else { return }
+        let menu = NSMenu()
+        menu.delegate = self
+
+        let listItem = NSMenuItem(
+            title: listPanel.isVisible ? "할 일 목록 닫기" : "할 일 목록 열기",
+            action: #selector(toggleListFromMenu), keyEquivalent: ""
+        )
+        listItem.target = self
+        menu.addItem(listItem)
+
+        menu.addItem(.separator())
+
+        let wanderItem = NSMenuItem(
+            title: "자유롭게 돌아다니기", action: #selector(toggleWander), keyEquivalent: ""
+        )
+        wanderItem.target = self
+        wanderItem.state = wanderEnabled ? .on : .off
+        menu.addItem(wanderItem)
+
+        let homeItem = NSMenuItem(title: "제자리로 보내기", action: #selector(sendHome), keyEquivalent: "")
+        homeItem.target = self
+        menu.addItem(homeItem)
+
+        menu.addItem(.separator())
+
+        let hideItem = NSMenuItem(title: "캐릭터 숨기기", action: #selector(toggleCharacter), keyEquivalent: "")
+        hideItem.target = self
+        menu.addItem(hideItem)
+
+        menu.addItem(withTitle: "DeskBuddy 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+
+        NSMenu.popUpContextMenu(menu, with: event, for: view)
+    }
+
+    @objc private func toggleListFromMenu() {
+        toggleList()
+    }
+
     // MARK: - 메뉴바
 
     private func setupStatusItem() {
@@ -242,6 +369,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             characterPanel.orderFrontRegardless()
         }
+        updateWander()
     }
 
     // MARK: - 위치 기억
@@ -264,6 +392,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 y: vis.maxY - size.height - 24
             ))
         }
+    }
+}
+
+/// 메뉴가 열려있는 동안에는 캐릭터가 움직이지 않게 한다 (메뉴가 붙은 위치가 어긋나는 것을 방지)
+extension AppDelegate: NSMenuDelegate {
+    func menuWillOpen(_ menu: NSMenu) {
+        suspendWander(true)
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        suspendWander(false)
     }
 }
 
