@@ -13,13 +13,17 @@ struct CharacterView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // 걸을 때는 빠르게 통통 튀고, 쉴 때는 느리게 둥실거린다
-            TimelineView(.animation(minimumInterval: appState.walking ? 1.0 / 60.0 : 1.0 / 20.0)) { context in
+            // 날 때는 빙글빙글 돌고, 걸을 때는 빠르게 통통 튀고, 쉴 때는 느리게 둥실거린다
+            let animated = appState.walking || appState.flying
+            TimelineView(.animation(minimumInterval: animated ? 1.0 / 60.0 : 1.0 / 20.0)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
                 let phase = sin(t * (appState.walking ? 7.0 : 1.9))
+                let spin = (t * 620).truncatingRemainder(dividingBy: 360)
                 slime
-                    .rotationEffect(.degrees(appState.walking ? phase * 7 : 0))
-                    .offset(y: -phase * (appState.walking ? 5 : 3))
+                    .rotationEffect(.degrees(
+                        appState.flying ? spin : (appState.walking ? phase * 7 : 0)
+                    ))
+                    .offset(y: appState.flying ? 0 : -phase * (appState.walking ? 5 : 3))
                     .scaleEffect(x: appState.facingRight ? 1 : -1)   // 진행 방향으로 몸을 돌린다
             }
 
@@ -80,8 +84,13 @@ struct CharacterView: View {
             }
             .offset(y: 4)
 
-            // 입 — 리스트가 열려있으면 벌린 웃음, 평소엔 미소
-            if appState.listVisible {
+            // 입 — 날 때는 놀란 입, 리스트가 열려있으면 벌린 웃음, 평소엔 미소
+            if appState.flying {
+                Ellipse()
+                    .fill(Color(red: 0.55, green: 0.28, blue: 0.25))
+                    .frame(width: 8, height: 10)
+                    .offset(y: 8)
+            } else if appState.listVisible {
                 Ellipse()
                     .fill(Color(red: 0.55, green: 0.28, blue: 0.25))
                     .frame(width: 10, height: 7)
@@ -159,4 +168,6 @@ final class AppState: ObservableObject {
     @Published var walking = false
     /// 바라보는 방향
     @Published var facingRight = true
+    /// 던져져서 날아가는 중인지
+    @Published var flying = false
 }

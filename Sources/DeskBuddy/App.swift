@@ -20,9 +20,16 @@ final class ClickCatcherView: NSView {
     var onRightClick: ((NSEvent) -> Void)?
     var onPressDown: (() -> Void)?
     var onPressUp: (() -> Void)?
+    /// 빠르게 놓았을 때 — 놓는 순간의 속도(pt/s, 화면 좌표)
+    var onThrow: ((CGVector) -> Void)?
+
+    /// 이 속도(pt/s)를 넘겨 놓으면 이동이 아니라 던지기로 취급한다
+    private let throwSpeedThreshold: CGFloat = 420
 
     private var downLocation: NSPoint = .zero
     private var dragging = false
+    /// 최근 마우스 궤적 — 놓는 순간의 속도 계산용
+    private var samples: [(time: TimeInterval, point: NSPoint)] = []
 
     override func mouseDown(with event: NSEvent) {
         // control-클릭도 우클릭으로 취급 (macOS 관례)
@@ -32,6 +39,7 @@ final class ClickCatcherView: NSView {
         }
         downLocation = event.locationInWindow
         dragging = false
+        samples = [(event.timestamp, NSEvent.mouseLocation)]
         onPressDown?()
     }
 
@@ -47,16 +55,39 @@ final class ClickCatcherView: NSView {
         if !dragging && hypot(dx, dy) < 3 { return }
         dragging = true
         window.setFrameOrigin(NSPoint(x: window.frame.origin.x + dx, y: window.frame.origin.y + dy))
+
+        samples.append((event.timestamp, NSEvent.mouseLocation))
+        samples.removeAll { event.timestamp - $0.time > 0.12 }
     }
 
     override func mouseUp(with event: NSEvent) {
         if dragging {
-            onMoved?()
+            if let velocity = releaseVelocity(at: event.timestamp),
+               hypot(velocity.dx, velocity.dy) > throwSpeedThreshold {
+                onThrow?(velocity)
+            } else {
+                onMoved?()
+            }
         } else {
             onClick?()
         }
         dragging = false
+        samples = []
         onPressUp?()
+    }
+
+    /// 드래그 마지막 0.12초 궤적으로 평균 속도를 구한다. 끌다 멈춘 채 놓으면 nil.
+    /// mouseUp 은 실제 손을 뗀 시점보다 늦게 올 수 있으므로(트랙패드 드래그 종료 지연),
+    /// mouseUp 시각으로 샘플을 거르지 않고 샘플 윈도우 자체로 계산한다.
+    private func releaseVelocity(at time: TimeInterval) -> CGVector? {
+        guard let first = samples.first, let last = samples.last,
+              time - last.time < 0.35,          // 놓기 한참 전에 이미 멈춰 있었다면 던지기가 아니다
+              last.time - first.time > 0.008 else { return nil }
+        let dt = CGFloat(last.time - first.time)
+        return CGVector(
+            dx: (last.point.x - first.point.x) / dt,
+            dy: (last.point.y - first.point.y) / dt
+        )
     }
 }
 
@@ -87,6 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var listPanel: FloatingPanel!
     private var statusItem: NSStatusItem!
     private var wander: WanderController!
+    private var thrower: ThrowController!
     private let store = TodoStore()
     private let appState = AppState()
 
@@ -99,6 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupListPanel()
         setupStatusItem()
         setupWander()
+        setupThrow()
     }
 
     // MARK: - 캐릭터 패널
@@ -127,9 +160,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.repositionList()
         }
         catcher.onRightClick = { [weak self] event in self?.showContextMenu(event) }
-        // 잡고 있는 동안에는 스스로 움직이지 않는다
-        catcher.onPressDown = { [weak self] in self?.suspendWander(true) }
+        // 잡고 있는 동안에는 스스로 움직이지 않고, 날아가던 중이면 잡아챈다
+        catcher.onPressDown = { [weak self] in
+            self?.thrower.cancel()
+            self?.suspendWander(true)
+        }
         catcher.onPressUp = { [weak self] in self?.suspendWander(false) }
+        catcher.onThrow = { [weak self] velocity in self?.startThrow(velocity) }
         for view in [hosting, catcher] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
@@ -269,6 +306,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             && !wanderSuspended
             && !listPanel.isVisible
             && characterPanel.isVisible
+            && !(thrower?.isFlying ?? false)
         if shouldRun {
             wander.start()
         } else {
@@ -301,6 +339,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ))
         saveFrame()
         repositionList()
+    }
+
+    // MARK: - 던지기
+
+    private func setupThrow() {
+        thrower = ThrowController(
+            panel: characterPanel,
+            onFlight: { [weak self] flying in
+                self?.appState.flying = flying
+                self?.updateWander()   // 나는 동안에는 배회를 멈추고, 착지하면 재개
+            },
+            onSettled: { [weak self] in self?.saveFrame() }
+        )
+    }
+
+    private func startThrow(_ velocity: CGVector) {
+        // 목록을 매단 채 던지면 목록이 같이 날아다니므로 접는다
+        if listPanel.isVisible { toggleList() }
+        appState.facingRight = velocity.dx >= 0
+        thrower.throwPanel(with: velocity)
     }
 
     // MARK: - 우클릭 메뉴
