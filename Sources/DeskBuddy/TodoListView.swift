@@ -1,15 +1,22 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum TodoTab: Hashable {
+    case active, done
+}
+
 struct TodoListView: View {
     @ObservedObject var store: TodoStore
 
     @State private var newTitle = ""
     @State private var selectedID: UUID?
     @State private var draggedID: UUID?
+    @State private var tab: TodoTab = .active
     @FocusState private var inputFocused: Bool
 
-    private var remaining: Int { store.todos.filter { !$0.isDone }.count }
+    private var activeTodos: [Todo] { store.activeTodos }
+    private var completedGroups: [CompletedGroup] { store.completedGroups }
+    private var doneCount: Int { store.todos.count - activeTodos.count }
 
     var body: some View {
         Group {
@@ -38,29 +45,25 @@ struct TodoListView: View {
     private var listPage: some View {
         VStack(spacing: 0) {
             header
-            input
+            if tab == .active { input }
             Divider().opacity(0.4)
-            list
+            if tab == .active { list } else { completedList }
         }
     }
 
     private var header: some View {
-        HStack {
-            Text("TODO")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.secondary)
-                .kerning(1.5)
-            Spacer()
-            if remaining > 0 {
-                Text("\(remaining)")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(.tint))
-            }
+        HStack(spacing: 4) {
+            tabButton("할 일", count: activeTodos.count, tab: .active)
+            tabButton("완료", count: doneCount, tab: .done)
+            Spacer(minLength: 0)
             Menu {
-                Button("완료 항목 정리") { store.clearCompleted() }
+                // 기록을 지우는 동작이라 한 단계 더 확인을 받는다
+                Menu("완료 기록 비우기") {
+                    Button("\(doneCount)개 모두 삭제", role: .destructive) {
+                        store.clearCompleted()
+                    }
+                }
+                .disabled(doneCount == 0)
                 Divider()
                 Button("종료") { NSApp.terminate(nil) }
             } label: {
@@ -72,9 +75,33 @@ struct TodoListView: View {
             .menuIndicator(.hidden)
             .fixedSize()
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 6)
+        .padding(.horizontal, 10)
+        .padding(.top, 9)
+        .padding(.bottom, 7)
+    }
+
+    private func tabButton(_ title: String, count: Int, tab target: TodoTab) -> some View {
+        let selected = tab == target
+        return Button {
+            withAnimation(.easeOut(duration: 0.15)) { tab = target }
+        } label: {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 11, weight: selected ? .semibold : .regular))
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .opacity(0.7)
+                }
+            }
+            .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                Capsule().fill(selected ? Color.primary.opacity(0.1) : .clear)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var input: some View {
@@ -99,13 +126,13 @@ struct TodoListView: View {
     private var list: some View {
         ScrollView {
             LazyVStack(spacing: 2) {
-                if store.todos.isEmpty {
+                if activeTodos.isEmpty {
                     Text("오늘은 뭘 할까요?")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .padding(.vertical, 16)
                 }
-                ForEach(store.todos) { todo in
+                ForEach(activeTodos) { todo in
                     TodoRow(todo: todo, store: store) { selectedID = todo.id }
                         .opacity(draggedID == todo.id ? 0.35 : 1)
                         .onDrag {
@@ -127,6 +154,44 @@ struct TodoListView: View {
             draggedID = nil
             return true
         }
+        .animation(.spring(duration: 0.25), value: store.todos)
+    }
+
+    private var completedList: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 2, pinnedViews: [.sectionHeaders]) {
+                if completedGroups.isEmpty {
+                    Text("아직 완료한 일이 없어요")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                ForEach(completedGroups) { group in
+                    Section {
+                        ForEach(group.items) { todo in
+                            TodoRow(todo: todo, store: store) { selectedID = todo.id }
+                        }
+                    } header: {
+                        HStack(spacing: 6) {
+                            Text(group.title)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Text("\(group.items.count)")
+                                .font(.system(size: 9, design: .rounded))
+                                .foregroundStyle(.tertiary)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial)
+                    }
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 6)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.spring(duration: 0.25), value: store.todos)
     }
 }
@@ -164,6 +229,13 @@ private struct TodoRow: View {
             .contentShape(Rectangle())
             .onTapGesture(perform: onSelect)
 
+            // 완료 항목은 끝낸 시각을 함께 보여준다
+            if todo.isDone, !hovering {
+                Text(todo.completionDate.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 9, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+
             if hovering {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .semibold))
@@ -185,7 +257,15 @@ private struct TodoRow: View {
                 .fill(hovering ? Color.primary.opacity(0.06) : .clear)
         )
         .onHover { hovering = $0 }
-        .help("\(todo.createdAt.formatted(date: .abbreviated, time: .shortened)) 추가 · \(todo.createdAt.relativeText)")
+        .help(tooltip)
+    }
+
+    private var tooltip: String {
+        var text = "\(todo.createdAt.formatted(date: .abbreviated, time: .shortened)) 추가 · \(todo.createdAt.relativeText)"
+        if todo.isDone {
+            text += "\n\(todo.completionDate.formatted(date: .abbreviated, time: .shortened)) 완료 · \(todo.completionDate.relativeText)"
+        }
+        return text
     }
 }
 
@@ -274,20 +354,12 @@ private struct TodoDetailView: View {
                         .onSubmit { store.updateTitle(todo.id, title) }
                 }
 
-                // 추가 시각
-                VStack(alignment: .leading, spacing: 2) {
-                    Label {
-                        Text(todo.createdAt.formatted(date: .complete, time: .shortened))
-                    } icon: {
-                        Image(systemName: "clock")
+                // 추가 · 완료 시각
+                VStack(alignment: .leading, spacing: 6) {
+                    timestamp("clock", "추가", todo.createdAt)
+                    if todo.isDone {
+                        timestamp("checkmark.circle", "완료", todo.completionDate)
                     }
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-
-                    Text(todo.createdAt.relativeText)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
-                        .padding(.leading, 18)
                 }
 
                 // 메모
@@ -316,6 +388,23 @@ private struct TodoDetailView: View {
         .onDisappear {
             store.updateTitle(todo.id, title)
             store.updateMemo(todo.id, memo)
+        }
+    }
+
+    private func timestamp(_ icon: String, _ label: String, _ date: Date) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Label {
+                Text("\(label) · \(date.formatted(date: .complete, time: .shortened))")
+            } icon: {
+                Image(systemName: icon)
+            }
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+
+            Text(date.relativeText)
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .padding(.leading, 18)
         }
     }
 

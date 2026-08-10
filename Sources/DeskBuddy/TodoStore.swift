@@ -6,6 +6,20 @@ struct Todo: Identifiable, Codable, Equatable {
     var isDone = false
     var createdAt = Date()
     var memo: String?
+    /// 완료한 시각 — 완료 탭에서 날짜별로 묶는 기준
+    var completedAt: Date?
+}
+
+extension Todo {
+    /// 완료 시각 — 예전 데이터엔 completedAt 이 없으므로 생성 시각으로 대체한다
+    var completionDate: Date { completedAt ?? createdAt }
+}
+
+/// 완료 탭에서 하루 단위로 묶인 그룹
+struct CompletedGroup: Identifiable {
+    let id: Date        // 그날의 자정
+    let title: String   // "오늘" / "어제" / "8월 7일 (목)"
+    let items: [Todo]
 }
 
 @MainActor
@@ -33,6 +47,7 @@ final class TodoStore: ObservableObject {
         load()
     }
 
+
     func add(_ title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -42,14 +57,8 @@ final class TodoStore: ObservableObject {
     func toggle(_ todo: Todo) {
         guard let i = todos.firstIndex(where: { $0.id == todo.id }) else { return }
         todos[i].isDone.toggle()
-        // 완료 항목은 목록 아래로 보낸다
-        let item = todos.remove(at: i)
-        if item.isDone {
-            todos.append(item)
-        } else {
-            let firstDone = todos.firstIndex(where: { $0.isDone }) ?? todos.endIndex
-            todos.insert(item, at: firstDone)
-        }
+        // 완료/미완료는 탭으로 나뉘므로 배열 순서는 그대로 둔다 (할 일 탭의 수동 정렬 유지)
+        todos[i].completedAt = todos[i].isDone ? Date() : nil
     }
 
     func remove(_ todo: Todo) {
@@ -78,6 +87,34 @@ final class TodoStore: ObservableObject {
 
     func clearCompleted() {
         todos.removeAll { $0.isDone }
+    }
+
+    // MARK: - 탭별 목록
+
+    var activeTodos: [Todo] { todos.filter { !$0.isDone } }
+
+    /// 완료 항목을 최신순으로 하루 단위로 묶는다
+    var completedGroups: [CompletedGroup] {
+        let calendar = Calendar.current
+        let done = todos
+            .filter { $0.isDone }
+            .sorted { $0.completionDate > $1.completionDate }
+        let grouped = Dictionary(grouping: done) { calendar.startOfDay(for: $0.completionDate) }
+        return grouped.keys.sorted(by: >).map { day in
+            CompletedGroup(id: day, title: Self.dayTitle(day, calendar: calendar), items: grouped[day] ?? [])
+        }
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "M월 d일 (E)"
+        return f
+    }()
+
+    private static func dayTitle(_ day: Date, calendar: Calendar) -> String {
+        if calendar.isDateInToday(day) { return "오늘" }
+        if calendar.isDateInYesterday(day) { return "어제" }
+        return dayFormatter.string(from: day)
     }
 
     private func load() {
