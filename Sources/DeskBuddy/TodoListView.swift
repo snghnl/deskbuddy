@@ -7,6 +7,7 @@ enum TodoTab: Hashable {
 
 struct TodoListView: View {
     @ObservedObject var store: TodoStore
+    @ObservedObject var appState: AppState
 
     @State private var newTitle = ""
     @State private var selectedID: UUID?
@@ -39,6 +40,13 @@ struct TodoListView: View {
                 .rotationEffect(.degrees(-45))
                 .foregroundStyle(.tertiary)
                 .padding(7)
+        }
+        // 목록이 열리면(클릭·단축키 모두) 바로 입력할 수 있게 포커스
+        .onChange(of: appState.listVisible) { _, visible in
+            if visible {
+                tab = .active
+                inputFocused = true
+            }
         }
     }
 

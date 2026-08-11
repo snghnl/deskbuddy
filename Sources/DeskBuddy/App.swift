@@ -119,6 +119,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var wander: WanderController!
     private var thrower: ThrowController!
+    private var hotKeys: HotKeyCenter!
+    private var settingsWindow: NSWindow?
     private let store = TodoStore()
     private let appState = AppState()
 
@@ -127,11 +129,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        UserDefaults.standard.register(defaults: [SettingsKeys.throwEnabled: true])
         setupCharacterPanel()
         setupListPanel()
         setupStatusItem()
         setupWander()
         setupThrow()
+        setupHotKeys()
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(settingsChanged),
+            name: .settingsChanged, object: nil
+        )
+    }
+
+    @objc private func settingsChanged() {
+        updateWander()
+        reloadHotKey()
     }
 
     // MARK: - 캐릭터 패널
@@ -205,7 +219,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 윈도우 크기는 여기(AppKit)가 주도하고, SwiftUI 뷰는 그 크기를 채우기만 한다
         let container = NSView()
-        let hosting = NSHostingView(rootView: TodoListView(store: store))
+        let hosting = NSHostingView(rootView: TodoListView(store: store, appState: appState))
         hosting.sizingOptions = []
         let grip = ResizeGripView()
         grip.onResize = { [weak self] size in self?.applyListSize(size) }
@@ -281,11 +295,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - 자유 이동
 
-    private let wanderKey = "DeskBuddy.wander"
-
     private var wanderEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: wanderKey) }
-        set { UserDefaults.standard.set(newValue, forKey: wanderKey) }
+        get { UserDefaults.standard.bool(forKey: SettingsKeys.wander) }
+        set { UserDefaults.standard.set(newValue, forKey: SettingsKeys.wander) }
     }
 
     private func setupWander() {
@@ -355,10 +367,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startThrow(_ velocity: CGVector) {
+        // 설정에서 껐으면 일반 이동으로 처리
+        guard UserDefaults.standard.bool(forKey: SettingsKeys.throwEnabled) else {
+            saveFrame()
+            repositionList()
+            return
+        }
         // 목록을 매단 채 던지면 목록이 같이 날아다니므로 접는다
         if listPanel.isVisible { toggleList() }
         appState.facingRight = velocity.dx >= 0
         thrower.throwPanel(with: velocity)
+    }
+
+    // MARK: - 글로벌 단축키
+
+    private func setupHotKeys() {
+        hotKeys = HotKeyCenter()
+        hotKeys.onTrigger = { [weak self] in self?.hotKeyTriggered() }
+        reloadHotKey()
+    }
+
+    private func reloadHotKey() {
+        let defaults = UserDefaults.standard
+        let keyCode = defaults.object(forKey: SettingsKeys.hotkeyKeyCode) as? Int ?? -1
+        hotKeys.apply(keyCode: keyCode, modifierFlags: defaults.integer(forKey: SettingsKeys.hotkeyModifiers))
+    }
+
+    private func hotKeyTriggered() {
+        // 캐릭터가 숨겨져 있으면 먼저 꺼낸다
+        if !characterPanel.isVisible {
+            characterPanel.orderFrontRegardless()
+        }
+        thrower.cancel()
+        toggleList()
+    }
+
+    // MARK: - 설정 창
+
+    @objc private func openSettings() {
+        if settingsWindow == nil {
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
+            window.title = "DeskBuddy 설정"
+            window.styleMask = [.titled, .closable]
+            window.isReleasedWhenClosed = false
+            window.center()
+            settingsWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - 우클릭 메뉴
@@ -390,6 +446,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
+        let settingsItem = NSMenuItem(title: "설정…", action: #selector(openSettings), keyEquivalent: "")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
         let hideItem = NSMenuItem(title: "캐릭터 숨기기", action: #selector(toggleCharacter), keyEquivalent: "")
         hideItem.target = self
         menu.addItem(hideItem)
@@ -415,6 +475,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let toggleItem = NSMenuItem(title: "캐릭터 보이기 / 숨기기", action: #selector(toggleCharacter), keyEquivalent: "")
         toggleItem.target = self
         menu.addItem(toggleItem)
+        let settingsItem = NSMenuItem(title: "설정…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: "종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
