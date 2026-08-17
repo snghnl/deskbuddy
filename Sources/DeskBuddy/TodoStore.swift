@@ -6,19 +6,19 @@ struct Todo: Identifiable, Codable, Equatable {
     var isDone = false
     var createdAt = Date()
     var memo: String?
-    /// 완료한 시각 — 완료 탭에서 날짜별로 묶는 기준
+    /// When the item was completed — used to group by date in the Done tab
     var completedAt: Date?
 }
 
 extension Todo {
-    /// 완료 시각 — 예전 데이터엔 completedAt 이 없으므로 생성 시각으로 대체한다
+    /// Completion time — legacy data has no completedAt, so fall back to the creation time
     var completionDate: Date { completedAt ?? createdAt }
 }
 
-/// 완료 탭에서 하루 단위로 묶인 그룹
+/// A group of completed items bucketed by day in the Done tab
 struct CompletedGroup: Identifiable {
-    let id: Date        // 그날의 자정
-    let title: String   // "오늘" / "어제" / "8월 7일 (목)"
+    let id: Date        // Midnight of that day
+    let title: String   // "Today" / "Yesterday" / "Aug 7 (Thu)"
     let items: [Todo]
 }
 
@@ -37,7 +37,7 @@ final class TodoStore: ObservableObject {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("todos.json")
 
-        // FloatingTodo 시절 데이터 마이그레이션
+        // Migrate data from the FloatingTodo era
         let legacy = support.appendingPathComponent("FloatingTodo/todos.json")
         if !FileManager.default.fileExists(atPath: fileURL.path),
            FileManager.default.fileExists(atPath: legacy.path) {
@@ -57,7 +57,7 @@ final class TodoStore: ObservableObject {
     func toggle(_ todo: Todo) {
         guard let i = todos.firstIndex(where: { $0.id == todo.id }) else { return }
         todos[i].isDone.toggle()
-        // 완료/미완료는 탭으로 나뉘므로 배열 순서는 그대로 둔다 (할 일 탭의 수동 정렬 유지)
+        // Done/undone items live in separate tabs, so keep the array order as-is (preserves manual ordering in the To Do tab)
         todos[i].completedAt = todos[i].isDone ? Date() : nil
     }
 
@@ -65,7 +65,7 @@ final class TodoStore: ObservableObject {
         todos.removeAll { $0.id == todo.id }
     }
 
-    /// 드래그 중인 항목을 대상 항목 자리로 이동
+    /// Move the dragged item to the target item's position
     func move(_ draggedID: UUID, to targetID: UUID) {
         guard draggedID != targetID,
               let from = todos.firstIndex(where: { $0.id == draggedID }),
@@ -89,11 +89,11 @@ final class TodoStore: ObservableObject {
         todos.removeAll { $0.isDone }
     }
 
-    // MARK: - 탭별 목록
+    // MARK: - Per-tab lists
 
     var activeTodos: [Todo] { todos.filter { !$0.isDone } }
 
-    /// 완료 항목을 최신순으로 하루 단위로 묶는다
+    /// Groups completed items by day, newest first
     var completedGroups: [CompletedGroup] {
         let calendar = Calendar.current
         let done = todos
@@ -105,16 +105,14 @@ final class TodoStore: ObservableObject {
         }
     }
 
-    private static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "M월 d일 (E)"
-        return f
-    }()
-
     private static func dayTitle(_ day: Date, calendar: Calendar) -> String {
-        if calendar.isDateInToday(day) { return "오늘" }
-        if calendar.isDateInYesterday(day) { return "어제" }
-        return dayFormatter.string(from: day)
+        if calendar.isDateInToday(day) { return L.t("오늘", "Today") }
+        if calendar.isDateInYesterday(day) { return L.t("어제", "Yesterday") }
+        // Built per call so the format and locale follow the current app language
+        let f = DateFormatter()
+        f.locale = L.locale
+        f.dateFormat = L.t("M월 d일 (E)", "MMM d (E)")
+        return f.string(from: day)
     }
 
     private func load() {

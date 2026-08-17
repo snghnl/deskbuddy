@@ -1,17 +1,17 @@
 import AppKit
 import QuartzCore
 
-/// 캐릭터가 화면 안을 스스로 돌아다니게 한다.
-/// 목표 지점을 무작위로 골라 걸어간 뒤 잠깐 쉬고, 다시 새 목표를 고르는 것을 반복한다.
+/// Makes the character wander around the screen on its own.
+/// Repeatedly picks a random target, walks there, rests briefly, then picks a new target.
 @MainActor
 final class WanderController {
-    /// 걷는 속도 (pt/s)
+    /// Walking speed (pt/s)
     private let speed: CGFloat = 72
 
     private weak var panel: NSPanel?
-    /// (걷는 중인지, 오른쪽을 향하는지) — 상태가 바뀔 때만 호출된다
+    /// (isWalking, isFacingRight) — called only when the state changes
     private let onWalk: (Bool, Bool) -> Void
-    /// 목표 지점에 도착해 자리를 잡았을 때 (위치 저장용)
+    /// Called when the character reaches the target and settles (for saving the position)
     private let onSettled: () -> Void
 
     private var task: Task<Void, Never>?
@@ -35,14 +35,14 @@ final class WanderController {
     func start() {
         guard task == nil else { return }
         target = nil
-        resting = .random(in: 0.3...1.2)   // 시작하자마자 튀어나가지 않도록 잠깐 뜸을 들인다
+        resting = .random(in: 0.3...1.2)   // Pause briefly so it doesn't dart off the moment it starts
         task = Task { [weak self] in
             var last = CACurrentMediaTime()
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(16))
                 guard let self else { return }
                 let now = CACurrentMediaTime()
-                self.step(dt: min(now - last, 0.1))   // 앱이 멈췄다 깨어나도 순간이동하지 않게 상한
+                self.step(dt: min(now - last, 0.1))   // Cap dt so the character doesn't teleport when the app stalls and wakes up
                 last = now
             }
         }
@@ -55,7 +55,7 @@ final class WanderController {
         setWalking(false)
     }
 
-    // MARK: - 한 프레임
+    // MARK: - Single Frame
 
     private func step(dt: CFTimeInterval) {
         guard let panel, panel.isVisible else { return }
@@ -103,9 +103,9 @@ final class WanderController {
         onWalk(value, facingRight)
     }
 
-    // MARK: - 목표 지점
+    // MARK: - Target Point
 
-    /// 패널이 화면 밖으로 나가지 않는 origin 의 유효 범위
+    /// Valid range of origins that keep the panel from leaving the screen
     private func wanderBounds(for panel: NSPanel) -> CGRect {
         let visible = (panel.screen ?? NSScreen.main)?.visibleFrame ?? .zero
         let size = panel.frame.size
@@ -117,7 +117,7 @@ final class WanderController {
         )
     }
 
-    /// 현재 위치에서 너무 가깝지 않은 지점을 고른다
+    /// Picks a point that is not too close to the current position
     private func randomTarget(in bounds: CGRect, from current: NSPoint) -> NSPoint {
         var candidate = current
         for _ in 0..<8 {

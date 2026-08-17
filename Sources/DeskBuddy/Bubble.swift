@@ -1,21 +1,21 @@
 import AppKit
 import SwiftUI
 
-// MARK: - 말풍선 모양/뷰
+// MARK: - Bubble Shape/View
 
-/// 꼬리가 붙는 변 — 캐릭터가 있는 방향
+/// The edge the tail attaches to — the side the character is on
 enum TailEdge {
-    case top        // 말풍선이 캐릭터 아래에 있을 때
-    case bottom     // 말풍선이 캐릭터 위에 있을 때
-    case leading    // 말풍선이 캐릭터 오른쪽에 있을 때
-    case trailing   // 말풍선이 캐릭터 왼쪽에 있을 때
+    case top        // Bubble is below the character
+    case bottom     // Bubble is above the character
+    case leading    // Bubble is to the right of the character
+    case trailing   // Bubble is to the left of the character
 }
 
-/// 지정한 변 가운데에 꼬리가 달린 말풍선 — 몸통과 꼬리를 하나의 연속된 외곽선으로 그려서
-/// 채움/테두리에 경계선이 생기지 않는다
+/// Speech bubble with a tail at the middle of the given edge — body and tail are drawn
+/// as one continuous outline so no seam appears in the fill/stroke
 private struct BubbleShape: Shape {
     let tail: TailEdge
-    /// 꼬리 끝의 위치 (top/bottom 이면 x 좌표, leading/trailing 이면 y 좌표). nil 이면 가운데.
+    /// Position of the tail tip (x coordinate for top/bottom, y coordinate for leading/trailing). nil means centered.
     var apex: CGFloat?
 
     func path(in rect: CGRect) -> Path {
@@ -30,13 +30,13 @@ private struct BubbleShape: Shape {
         case .trailing: body.size.width -= tailHeight
         case .leading: body.origin.x += tailHeight; body.size.width -= tailHeight
         }
-        // 꼬리가 몸통 모서리를 침범하지 않게 클램프
+        // Clamp so the tail does not intrude into the body's rounded corners
         let midX = min(max(apex ?? rect.midX, body.minX + r + half), body.maxX - r - half)
         let midY = min(max(apex ?? rect.midY, body.minY + r + half), body.maxY - r - half)
 
         var p = Path()
         p.move(to: CGPoint(x: body.minX + r, y: body.minY))
-        // 윗변 (왼쪽 → 오른쪽)
+        // Top edge (left → right)
         if tail == .top {
             p.addLine(to: CGPoint(x: midX - half, y: body.minY))
             p.addLine(to: CGPoint(x: midX, y: rect.minY))
@@ -45,7 +45,7 @@ private struct BubbleShape: Shape {
         p.addLine(to: CGPoint(x: body.maxX - r, y: body.minY))
         p.addArc(tangent1End: CGPoint(x: body.maxX, y: body.minY),
                  tangent2End: CGPoint(x: body.maxX, y: body.minY + r), radius: r)
-        // 오른쪽 변 (위 → 아래)
+        // Right edge (top → bottom)
         if tail == .trailing {
             p.addLine(to: CGPoint(x: body.maxX, y: midY - half))
             p.addLine(to: CGPoint(x: rect.maxX, y: midY))
@@ -54,7 +54,7 @@ private struct BubbleShape: Shape {
         p.addLine(to: CGPoint(x: body.maxX, y: body.maxY - r))
         p.addArc(tangent1End: CGPoint(x: body.maxX, y: body.maxY),
                  tangent2End: CGPoint(x: body.maxX - r, y: body.maxY), radius: r)
-        // 아랫변 (오른쪽 → 왼쪽)
+        // Bottom edge (right → left)
         if tail == .bottom {
             p.addLine(to: CGPoint(x: midX + half, y: body.maxY))
             p.addLine(to: CGPoint(x: midX, y: rect.maxY))
@@ -63,7 +63,7 @@ private struct BubbleShape: Shape {
         p.addLine(to: CGPoint(x: body.minX + r, y: body.maxY))
         p.addArc(tangent1End: CGPoint(x: body.minX, y: body.maxY),
                  tangent2End: CGPoint(x: body.minX, y: body.maxY - r), radius: r)
-        // 왼쪽 변 (아래 → 위)
+        // Left edge (bottom → top)
         if tail == .leading {
             p.addLine(to: CGPoint(x: body.minX, y: midY + half))
             p.addLine(to: CGPoint(x: rect.minX, y: midY))
@@ -80,14 +80,14 @@ private struct BubbleShape: Shape {
 struct BubbleView: View {
     let message: String
     var tail: TailEdge = .bottom
-    /// 꼬리 끝 위치 — 패널 좌표가 아니라 뷰(그림자 패딩 10 포함) 좌표 기준
+    /// Tail tip position — in view coordinates (including the 10pt shadow padding), not panel coordinates
     var apex: CGFloat?
 
     var body: some View {
         Text(message)
             .font(.system(size: 12, weight: .medium))
             .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)   // 줄임표 없이 전체 내용 표시
+            .fixedSize(horizontal: false, vertical: true)   // Show the full content without truncation
             .padding(.leading, 14 + (tail == .leading ? 8 : 0))
             .padding(.trailing, 14 + (tail == .trailing ? 8 : 0))
             .padding(.top, 9 + (tail == .top ? 8 : 0))
@@ -96,16 +96,16 @@ struct BubbleView: View {
             .background(BubbleShape(tail: tail, apex: apexInShape).fill(.ultraThinMaterial))
             .overlay(BubbleShape(tail: tail, apex: apexInShape).stroke(.white.opacity(0.2), lineWidth: 1))
             .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
-            .padding(10)   // 그림자가 잘리지 않게 패널 안쪽 여백
+            .padding(10)   // Inner padding so the shadow is not clipped by the panel
     }
 
-    /// apex 는 패널 전체 좌표 기준으로 들어오므로, 바깥 패딩(10)을 빼서 shape 좌표로 변환
+    /// apex comes in panel-wide coordinates, so subtract the outer padding (10) to convert to shape coordinates
     private var apexInShape: CGFloat? {
         apex.map { $0 - 10 }
     }
 }
 
-/// 클릭만 받는 캐처 (ClickCatcherView 와 달리 드래그로 창이 움직이지 않는다)
+/// Catcher that only accepts clicks (unlike ClickCatcherView, dragging does not move the window)
 private final class TapCatcherView: NSView {
     var onClick: (() -> Void)?
 
@@ -116,21 +116,21 @@ private final class TapCatcherView: NSView {
     }
 }
 
-// MARK: - 말풍선 패널
+// MARK: - Bubble Panel
 
-/// 캐릭터 머리 위에 말풍선을 띄운다. 캐릭터 패널의 child window 라서 캐릭터를 끌면 같이 움직인다.
+/// Shows a speech bubble above the character's head. It is a child window of the character panel, so it moves along when the character is dragged.
 @MainActor
 final class BubbleController {
-    /// 말풍선을 클릭했을 때 (닫기 처리는 컨트롤러가 하고, 추가 동작만 위임)
+    /// Called when the bubble is clicked (the controller handles dismissal; only extra behavior is delegated)
     var onTap: (() -> Void)?
-    /// 표시 상태가 바뀔 때 (캐릭터 표정 연동용)
+    /// Called when visibility changes (used to sync the character's expression)
     var onVisibleChange: ((Bool) -> Void)?
 
     private let panel: NSPanel
     private let hosting: NSHostingView<BubbleView>
     private weak var characterPanel: NSPanel?
     private var autoHideTask: Task<Void, Never>?
-    /// 지금 표시 중이거나 보류(suspend)된 메시지 — 닫기 전까지 유지
+    /// The message currently showing or suspended — kept until dismissed
     private var current: (message: String, autoHide: TimeInterval?)?
 
     init(characterPanel: NSPanel) {
@@ -146,12 +146,12 @@ final class BubbleController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = false   // 말풍선이 자체 그림자를 그린다
+        panel.hasShadow = false   // The bubble draws its own shadow
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
 
         hosting = NSHostingView(rootView: BubbleView(message: ""))
-        // 크기는 show() 에서 sizeThatFits 로 직접 측정한다 — intrinsic 은 긴 텍스트에서 부정확
+        // Size is measured directly with sizeThatFits in show() — intrinsic sizing is inaccurate for long text
         hosting.sizingOptions = []
 
         let container = NSView()
@@ -179,38 +179,38 @@ final class BubbleController {
         var size = NSHostingController(rootView: BubbleView(message: message, tail: tail))
             .sizeThatFits(in: CGSize(width: 280, height: 600))
         if size.width <= 1 || size.height <= 1 {
-            size = CGSize(width: 220, height: 64)   // 마지막 안전망
+            size = CGSize(width: 220, height: 64)   // Last-resort fallback
         }
         return size
     }
 
-    /// 말풍선 표시. autoHide 를 주면 그 시간 후 스스로 닫힌다 (없으면 클릭할 때까지 유지).
-    /// 위치는 캐릭터 주변의 화면 공간에 따라 위 → 아래 → 좌/우 순으로 고른다.
+    /// Shows the bubble. With autoHide it closes itself after that interval (otherwise it stays until clicked).
+    /// Placement is chosen from the screen space around the character, in the order above → below → left/right.
     func show(_ message: String, autoHide: TimeInterval? = nil) {
         guard let characterPanel else { return }
         current = (message, autoHide)
 
         let charFrame = characterPanel.frame
         let visible = (characterPanel.screen ?? NSScreen.main)?.visibleFrame ?? .zero
-        let overlap: CGFloat = 6   // 꼬리 끝이 캐릭터에 살짝 겹치게
+        let overlap: CGFloat = 6   // Let the tail tip slightly overlap the character
 
-        // 캐릭터 사방의 여유 공간
+        // Free space on each side of the character
         let spaceAbove = visible.maxY - charFrame.maxY
         let spaceBelow = charFrame.minY - visible.minY
         let spaceLeft = charFrame.minX - visible.minX
         let spaceRight = visible.maxX - charFrame.maxX
 
-        // 배치 결정 (위 → 아래 → 넓은 쪽 옆). 측정 크기는 꼬리 방향에 따라 8pt 차이라 근사로 충분.
+        // Decide placement (above → below → whichever side is wider). Measured size only differs by 8pt across tail directions, so an approximation is enough.
         let probe = measure(message, tail: .bottom)
         let tail: TailEdge
         if spaceAbove + overlap >= probe.height {
-            tail = .bottom       // 캐릭터 위
+            tail = .bottom       // Above the character
         } else if spaceBelow + overlap >= probe.height {
-            tail = .top          // 캐릭터 아래
+            tail = .top          // Below the character
         } else if spaceRight >= spaceLeft {
-            tail = .leading      // 캐릭터 오른쪽
+            tail = .leading      // To the right of the character
         } else {
-            tail = .trailing     // 캐릭터 왼쪽
+            tail = .trailing     // To the left of the character
         }
 
         let size = tail == .bottom ? probe : measure(message, tail: tail)
@@ -238,13 +238,13 @@ final class BubbleController {
                              y: clampY(charFrame.midY - size.height / 2))
         }
 
-        // 꼬리 끝이 캐릭터 중심을 가리키게 (클램핑으로 말풍선이 밀렸을 때도)
+        // Point the tail tip at the character's center (even when clamping shifted the bubble)
         let apex: CGFloat
         switch tail {
         case .top, .bottom:
             apex = charFrame.midX - origin.x
         case .leading, .trailing:
-            // AppKit(y 위로) → SwiftUI(y 아래로) 좌표 변환
+            // Convert AppKit (y up) → SwiftUI (y down) coordinates
             apex = (origin.y + size.height) - charFrame.midY
         }
         hosting.rootView = BubbleView(message: message, tail: tail, apex: apex)
@@ -266,19 +266,19 @@ final class BubbleController {
         }
     }
 
-    /// 완전히 닫기 (클릭·자동 닫힘) — 보류 메시지도 버린다
+    /// Fully dismiss (click or auto-hide) — discards any suspended message too
     func hide() {
         current = nil
         dismissPanel()
     }
 
-    /// 잠시 접기 (던져지는 동안 등) — 메시지는 유지했다가 resume 에서 되살린다
+    /// Fold away temporarily (e.g. while being thrown) — the message is kept and restored in resume
     func suspend() {
         guard panel.isVisible else { return }
         dismissPanel()
     }
 
-    /// 보류된 메시지가 있으면 현재 캐릭터 위치 기준으로 다시 띄운다
+    /// If there is a suspended message, shows it again relative to the character's current position
     func resume() {
         if let current {
             show(current.message, autoHide: current.autoHide)
@@ -295,9 +295,9 @@ final class BubbleController {
     }
 }
 
-// MARK: - 일정 알림 감시
+// MARK: - Event Alert Watcher
 
-/// 30초마다 오늘 일정을 검사해 시작 전 설정된 리드타임에 한 번씩 알린다
+/// Checks today's events every 30 seconds and notifies once per event at the configured lead time before it starts
 @MainActor
 final class EventNotifier {
     var onNotify: ((String) -> Void)?
@@ -333,7 +333,7 @@ final class EventNotifier {
                   !notifiedIDs.contains(event.id) else { continue }
             notifiedIDs.insert(event.id)
             let minutes = max(1, Int(seconds / 60))
-            onNotify?("🕐 \(minutes)분 후 · \(event.title)")
+            onNotify?(L.t("🕐 \(minutes)분 후 · \(event.title)", "🕐 In \(minutes) min · \(event.title)"))
         }
     }
 }

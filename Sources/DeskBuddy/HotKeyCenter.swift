@@ -1,8 +1,8 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Carbon RegisterEventHotKey 기반 글로벌 단축키.
-/// NSEvent 글로벌 모니터와 달리 접근성 권한 없이 동작하고, 이벤트를 시스템에서 가로챈다.
+/// Global hotkey based on Carbon RegisterEventHotKey.
+/// Unlike an NSEvent global monitor, it works without Accessibility permission and intercepts the event at the system level.
 @MainActor
 final class HotKeyCenter {
     var onTrigger: (() -> Void)?
@@ -10,7 +10,7 @@ final class HotKeyCenter {
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
 
-    /// 저장된 설정(keyCode < 0 이면 해제)을 반영한다
+    /// Applies the saved settings (keyCode < 0 means unregister)
     func apply(keyCode: Int, modifierFlags: Int) {
         unregister()
         guard keyCode >= 0 else { return }
@@ -38,7 +38,7 @@ final class HotKeyCenter {
             { _, _, userData -> OSStatus in
                 guard let userData else { return noErr }
                 let center = Unmanaged<HotKeyCenter>.fromOpaque(userData).takeUnretainedValue()
-                // Carbon 이벤트는 메인 스레드에서 온다
+                // Carbon events arrive on the main thread
                 MainActor.assumeIsolated { center.onTrigger?() }
                 return noErr
             },

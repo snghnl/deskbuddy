@@ -3,11 +3,13 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 extension Notification.Name {
-    /// 설정이 바뀌면 AppDelegate 가 배회·단축키 등록을 다시 반영한다
+    /// Posted whenever a setting changes so AppDelegate can re-apply
+    /// wandering, hotkey registration, menus, and language.
     static let settingsChanged = Notification.Name("DeskBuddy.settingsChanged")
 }
 
 enum SettingsKeys {
+    static let language = "DeskBuddy.language"
     static let showCalendar = "DeskBuddy.showCalendar"
     static let eventAlerts = "DeskBuddy.eventAlerts"
     static let eventAlertLead = "DeskBuddy.eventAlertLead"
@@ -22,6 +24,7 @@ enum SettingsKeys {
 struct SettingsView: View {
     @ObservedObject var calendar: CalendarService
 
+    @AppStorage(SettingsKeys.language) private var languageRaw = AppLanguage.system.rawValue
     @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.slime.rawValue
     @AppStorage(SettingsKeys.showCalendar) private var showCalendar = true
     @AppStorage(SettingsKeys.eventAlerts) private var eventAlerts = true
@@ -42,6 +45,17 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
+                Picker(L.t("언어", "Language"), selection: $languageRaw) {
+                    Text(L.t("시스템 설정 따름", "Follow System")).tag(AppLanguage.system.rawValue)
+                    Text("한국어").tag(AppLanguage.korean.rawValue)
+                    Text("English").tag(AppLanguage.english.rawValue)
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text(L.t("일반", "General"))
+            }
+
+            Section {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(CharacterKind.allCases) { kind in
@@ -50,8 +64,8 @@ struct SettingsView: View {
                         ForEach(customs, id: \.self) { name in
                             characterOption(.custom(name), label: CustomCharacters.displayName(name), deletable: true)
                                 .contextMenu {
-                                    Button("이름 변경…") { beginRename(name) }
-                                    Button("삭제", role: .destructive) { removeCustom(name) }
+                                    Button(L.t("이름 변경…", "Rename…")) { beginRename(name) }
+                                    Button(L.t("삭제", "Delete"), role: .destructive) { removeCustom(name) }
                                 }
                         }
                         addCharacterButton
@@ -59,12 +73,13 @@ struct SettingsView: View {
                     .padding(.vertical, 2)
                 }
 
-                Toggle("휙 던질 수 있게", isOn: $throwEnabled)
-                Toggle("자유롭게 돌아다니기", isOn: $wanderEnabled)
+                Toggle(L.t("휙 던질 수 있게", "Throwable (flick to toss)"), isOn: $throwEnabled)
+                Toggle(L.t("자유롭게 돌아다니기", "Wander around the screen"), isOn: $wanderEnabled)
             } header: {
-                Text("캐릭터")
+                Text(L.t("캐릭터", "Character"))
             } footer: {
-                Text("+ 로 이미지를 캐릭터로 추가할 수 있어요. 투명 배경 PNG가 잘 어울립니다. (커스텀 캐릭터는 표정 없이 움직임만 적용)")
+                Text(L.t("+ 로 이미지를 캐릭터로 추가할 수 있어요. 투명 배경 PNG가 잘 어울립니다. (커스텀 캐릭터는 표정 없이 움직임만 적용)",
+                         "Use + to add an image as a character. Transparent PNGs work best. (Custom characters get motion but no facial expressions.)"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -72,36 +87,37 @@ struct SettingsView: View {
             Section {
                 calendarIntegrationRow
                 if calendar.access == .authorized {
-                    Toggle("달력 탭에 일정 표시", isOn: $showCalendar)
-                    Toggle("일정 알림 (말풍선)", isOn: $eventAlerts)
+                    Toggle(L.t("달력 탭에 일정 표시", "Show events in Calendar tab"), isOn: $showCalendar)
+                    Toggle(L.t("일정 알림 (말풍선)", "Event alerts (speech bubble)"), isOn: $eventAlerts)
                     if eventAlerts {
-                        Picker("알림 시점", selection: $eventAlertLead) {
-                            Text("5분 전").tag(5)
-                            Text("10분 전").tag(10)
-                            Text("15분 전").tag(15)
-                            Text("30분 전").tag(30)
+                        Picker(L.t("알림 시점", "Alert timing"), selection: $eventAlertLead) {
+                            Text(L.t("5분 전", "5 min before")).tag(5)
+                            Text(L.t("10분 전", "10 min before")).tag(10)
+                            Text(L.t("15분 전", "15 min before")).tag(15)
+                            Text(L.t("30분 전", "30 min before")).tag(30)
                         }
                         .pickerStyle(.menu)
                     }
                 }
             } header: {
-                Text("연동")
+                Text(L.t("연동", "Integrations"))
             } footer: {
-                Text("macOS 캘린더에 연결된 계정의 일정을 읽습니다.")
+                Text(L.t("macOS 캘린더에 연결된 계정의 일정을 읽습니다.",
+                         "Reads events from accounts connected to macOS Calendar."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section {
                 HStack {
-                    Text("할 일 목록 열기 / 닫기")
+                    Text(L.t("할 일 목록 열기 / 닫기", "Open / close the to-do list"))
                     Spacer()
                     Button {
                         recording ? stopRecording() : startRecording()
                     } label: {
                         Text(recording
-                             ? "키를 누르세요 (esc 취소)"
-                             : (hotkeyDisplay.isEmpty ? "단축키 등록" : hotkeyDisplay))
+                             ? L.t("키를 누르세요 (esc 취소)", "Press keys (esc to cancel)")
+                             : (hotkeyDisplay.isEmpty ? L.t("단축키 등록", "Record Shortcut") : hotkeyDisplay))
                             .frame(minWidth: 130)
                     }
                     if !hotkeyDisplay.isEmpty && !recording {
@@ -110,32 +126,34 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
-                        .help("단축키 해제")
+                        .help(L.t("단축키 해제", "Remove shortcut"))
                     }
                 }
             } header: {
-                Text("글로벌 단축키")
+                Text(L.t("글로벌 단축키", "Global Shortcut"))
             } footer: {
-                Text("어느 앱에서든 목록을 열고 바로 입력할 수 있어요. ⌘/⌥/⌃ 중 하나를 포함해야 합니다.")
+                Text(L.t("어느 앱에서든 목록을 열고 바로 입력할 수 있어요. ⌘/⌥/⌃ 중 하나를 포함해야 합니다.",
+                         "Open the list and start typing from any app. Must include ⌘, ⌥, or ⌃."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 380, height: 440)
+        .frame(width: 380, height: 500)
+        .onChange(of: languageRaw) { notifyChange() }
         .onChange(of: throwEnabled) { notifyChange() }
         .onChange(of: wanderEnabled) { notifyChange() }
         .onAppear { customs = CustomCharacters.list() }
         .onDisappear(perform: stopRecording)
-        .alert("캐릭터 이름", isPresented: $showRename) {
-            TextField("이름", text: $renameText)
-            Button("저장") {
+        .alert(L.t("캐릭터 이름", "Character Name"), isPresented: $showRename) {
+            TextField(L.t("이름", "Name"), text: $renameText)
+            Button(L.t("저장", "Save")) {
                 if let target = renameTarget {
                     CustomCharacters.setDisplayName(renameText, for: target)
                 }
                 renameTarget = nil
             }
-            Button("취소", role: .cancel) { renameTarget = nil }
+            Button(L.t("취소", "Cancel"), role: .cancel) { renameTarget = nil }
         }
     }
 
@@ -145,38 +163,38 @@ struct SettingsView: View {
         showRename = true
     }
 
-    // MARK: - 캘린더 연동
+    // MARK: - Calendar integration
 
     @ViewBuilder
     private var calendarIntegrationRow: some View {
         switch calendar.access {
         case .notDetermined:
             HStack {
-                Text("캘린더")
+                Text(L.t("캘린더", "Calendar"))
                 Spacer()
-                Button("연동하기") { calendar.requestAccess() }
+                Button(L.t("연동하기", "Connect")) { calendar.requestAccess() }
             }
         case .denied:
             HStack {
-                Text("캘린더")
+                Text(L.t("캘린더", "Calendar"))
                 Spacer()
-                Text("권한 꺼짐")
+                Text(L.t("권한 꺼짐", "Access denied"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button("시스템 설정 열기") { calendar.openPrivacySettings() }
+                Button(L.t("시스템 설정 열기", "Open System Settings")) { calendar.openPrivacySettings() }
             }
         case .authorized:
             HStack {
-                Text("캘린더")
+                Text(L.t("캘린더", "Calendar"))
                 Spacer()
-                Label("연동됨", systemImage: "checkmark.circle.fill")
+                Label(L.t("연동됨", "Connected"), systemImage: "checkmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.green)
             }
         }
     }
 
-    // MARK: - 캐릭터 선택
+    // MARK: - Character selection
 
     private func characterOption(_ choice: CharacterChoice, label: String, deletable: Bool = false) -> some View {
         let selected = characterRaw == choice.raw
@@ -216,7 +234,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                     .offset(x: 4, y: -4)
-                    .help("삭제")
+                    .help(L.t("삭제", "Delete"))
                 }
             }
         }
@@ -230,7 +248,7 @@ struct SettingsView: View {
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.secondary)
                     .frame(width: 56, height: 60)
-                Text("추가")
+                Text(L.t("추가", "Add"))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
@@ -242,18 +260,19 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
-        .help("이미지 파일을 캐릭터로 추가")
+        .help(L.t("이미지 파일을 캐릭터로 추가", "Add an image file as a character"))
     }
 
     private func addCustom() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .gif, .heic, .tiff, .webP]
         panel.allowsMultipleSelection = false
-        panel.message = "캐릭터로 쓸 이미지를 선택하세요 (투명 배경 PNG 추천)"
+        panel.message = L.t("캐릭터로 쓸 이미지를 선택하세요 (투명 배경 PNG 추천)",
+                            "Choose an image for your character (transparent PNG recommended)")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if let name = try? CustomCharacters.add(url) {
             customs = CustomCharacters.list()
-            characterRaw = CharacterChoice.custom(name).raw   // 추가하면 바로 선택
+            characterRaw = CharacterChoice.custom(name).raw   // select it right away
         }
     }
 
@@ -261,17 +280,17 @@ struct SettingsView: View {
         CustomCharacters.remove(name)
         customs = CustomCharacters.list()
         if characterRaw == CharacterChoice.custom(name).raw {
-            characterRaw = CharacterKind.slime.rawValue   // 쓰던 캐릭터가 지워지면 슬라임으로
+            characterRaw = CharacterKind.slime.rawValue   // fall back to the slime if the active one was deleted
         }
     }
 
-    // MARK: - 단축키 녹화
+    // MARK: - Shortcut recording
 
     private func startRecording() {
         recording = true
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             handleRecorded(event)
-            return nil   // 녹화 중에는 키 입력을 삼킨다
+            return nil   // swallow key events while recording
         }
     }
 
@@ -284,12 +303,12 @@ struct SettingsView: View {
     }
 
     private func handleRecorded(_ event: NSEvent) {
-        if event.keyCode == 53 {   // esc — 취소
+        if event.keyCode == 53 {   // esc — cancel
             stopRecording()
             return
         }
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
-        // 수식키 없는 일반 키를 글로벌로 뺏으면 다른 앱 입력이 망가진다
+        // Capturing a bare key globally would break typing in other apps
         guard flags.contains(.command) || flags.contains(.option) || flags.contains(.control) else {
             NSSound.beep()
             return

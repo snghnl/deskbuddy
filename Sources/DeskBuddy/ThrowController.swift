@@ -1,14 +1,14 @@
 import AppKit
 import QuartzCore
 
-/// 캐릭터를 던졌을 때의 물리 시뮬레이션.
-/// 놓는 순간의 속도를 받아 중력으로 떨어뜨리고, 화면 가장자리에 튕기다가 바닥에서 멈춘다.
+/// Physics simulation for when the character is thrown.
+/// Takes the velocity at the moment of release, drops it under gravity, bounces it off the screen edges, and stops it on the floor.
 @MainActor
 final class ThrowController {
     private let gravity: CGFloat = -1700        // pt/s²
-    private let restitution: CGFloat = 0.62     // 벽·천장·바닥 반발 계수
-    private let floorFriction: CGFloat = 0.82   // 바닥에 닿을 때마다 수평 속도 감쇠
-    private let maxFlight: CFTimeInterval = 6   // 안전장치 — 이 시간이 지나면 그 자리에서 멈춘다
+    private let restitution: CGFloat = 0.62     // Bounce coefficient for walls, ceiling, and floor
+    private let floorFriction: CGFloat = 0.82   // Horizontal velocity damping on each floor contact
+    private let maxFlight: CFTimeInterval = 6   // Safety net — stops in place once this much time passes
 
     private weak var panel: NSPanel?
     private let onFlight: (Bool) -> Void
@@ -29,7 +29,7 @@ final class ThrowController {
     func throwPanel(with velocity: CGVector) {
         self.velocity = velocity
         elapsed = 0
-        guard task == nil else { return }   // 이미 날고 있으면 속도만 갱신
+        guard task == nil else { return }   // Already flying — just update the velocity
         onFlight(true)
         task = Task { [weak self] in
             var last = CACurrentMediaTime()
@@ -43,7 +43,7 @@ final class ThrowController {
         }
     }
 
-    /// 날아가는 도중 잡아채거나(드래그 시작) 상황이 바뀌면 그 자리에서 멈춘다
+    /// Stops in place when grabbed mid-flight (drag start) or when circumstances change
     func cancel() {
         guard task != nil else { return }
         task?.cancel()
@@ -73,16 +73,16 @@ final class ThrowController {
         p.x += velocity.dx * CGFloat(dt)
         p.y += velocity.dy * CGFloat(dt)
 
-        // 좌우 벽
+        // Side walls
         if p.x < minX { p.x = minX; velocity.dx = -velocity.dx * restitution }
         if p.x > maxX { p.x = maxX; velocity.dx = -velocity.dx * restitution }
-        // 천장
+        // Ceiling
         if p.y > maxY { p.y = maxY; velocity.dy = -velocity.dy * restitution }
-        // 바닥
+        // Floor
         if p.y < minY {
             p.y = minY
             if abs(velocity.dy) < 90 {
-                // 더 튀지 않고 미끄러지다 멈춘다
+                // Stop bouncing; slide to a halt instead
                 velocity.dy = 0
                 velocity.dx *= pow(0.02, CGFloat(dt))
                 if abs(velocity.dx) < 12 {

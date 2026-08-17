@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - 캐릭터 종류
+// MARK: - Character Kinds
 
 enum CharacterKind: String, CaseIterable, Identifiable {
     case slime, ghost, cat
@@ -9,23 +9,23 @@ enum CharacterKind: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .slime: "슬라임"
-        case .ghost: "유령"
-        case .cat: "고양이"
+        case .slime: L.t("슬라임", "Slime")
+        case .ghost: L.t("유령", "Ghost")
+        case .cat: L.t("고양이", "Cat")
         }
     }
 }
 
 enum MouthState {
-    case smile      // 평소
-    case open       // 목록이 열려 신남
-    case surprised  // 던져져서 날아가는 중
+    case smile      // Default expression
+    case open       // Excited because the list is open
+    case surprised  // Thrown and flying through the air
 }
 
-// MARK: - 플로팅 캐릭터
+// MARK: - Floating Character
 
-/// 화면에 떠 있는 캐릭터. 클릭/드래그 이벤트는 패널(윈도우)이 직접 처리하므로
-/// 이 뷰는 순수하게 그리기만 한다.
+/// The character floating on screen. Click/drag events are handled directly by the
+/// panel (window), so this view does nothing but draw.
 struct CharacterView: View {
     @ObservedObject var store: TodoStore
     @ObservedObject var appState: AppState
@@ -44,7 +44,7 @@ struct CharacterView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // 날 때는 빙글빙글 돌고, 걸을 때는 빠르게 통통 튀고, 쉴 때는 느리게 둥실거린다
+            // Spins while flying, bounces quickly while walking, bobs slowly while idle
             let animated = appState.walking || appState.flying
             TimelineView(.animation(minimumInterval: animated ? 1.0 / 60.0 : 1.0 / 20.0)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
@@ -55,7 +55,7 @@ struct CharacterView: View {
                         appState.flying ? spin : (appState.walking ? phase * 7 : 0)
                     ))
                     .offset(y: appState.flying ? 0 : -phase * (appState.walking ? 5 : 3))
-                    .scaleEffect(x: appState.facingRight ? 1 : -1)   // 진행 방향으로 몸을 돌린다
+                    .scaleEffect(x: appState.facingRight ? 1 : -1)   // Face the direction of travel
             }
 
             if remaining > 0 {
@@ -82,9 +82,9 @@ struct CharacterView: View {
     }
 }
 
-// MARK: - 캐릭터 몸통 (설정 미리보기에서도 재사용)
+// MARK: - Character Body (also reused in the settings preview)
 
-/// 76x84 캔버스 기준으로 그린다. 다른 크기가 필요하면 scaleEffect 로 줄인다.
+/// Drawn on a 76x84 canvas. Shrink with scaleEffect when another size is needed.
 struct CharacterBody: View {
     let choice: CharacterChoice
     var blinking = false
@@ -102,7 +102,7 @@ struct CharacterBody: View {
 
     var body: some View {
         ZStack {
-            // 바닥 그림자
+            // Ground shadow
             Ellipse()
                 .fill(.black.opacity(0.18))
                 .frame(width: 44, height: 8)
@@ -128,7 +128,7 @@ struct CharacterBody: View {
         }
     }
 
-    /// 사용자 이미지 — 표정 없이 몸통만. 파일이 사라졌으면 슬라임으로 대체한다.
+    /// User-provided image — body only, no face. Falls back to the slime if the file is gone.
     @ViewBuilder
     private func customBody(_ name: String) -> some View {
         if let image = CharacterImageCache.image(name) {
@@ -143,7 +143,7 @@ struct CharacterBody: View {
         }
     }
 
-    // MARK: 몸통
+    // MARK: Body
 
     private var slimeBody: some View {
         SlimeShape()
@@ -176,7 +176,7 @@ struct CharacterBody: View {
 
     private var catBody: some View {
         ZStack {
-            // 귀 (머리 뒤에 깔린다)
+            // Ears (layered behind the head)
             HStack(spacing: 26) {
                 ear
                 ear.scaleEffect(x: -1)
@@ -217,7 +217,7 @@ struct CharacterBody: View {
             .offset(x: -13, y: -16)
     }
 
-    // MARK: 얼굴
+    // MARK: Face
 
     private func eyeColor(_ kind: CharacterKind) -> Color {
         switch kind {
@@ -295,9 +295,9 @@ struct CharacterBody: View {
     }
 }
 
-// MARK: - 도형
+// MARK: - Shapes
 
-/// 아래가 살짝 퍼진 물방울형 슬라임 몸통
+/// Droplet-shaped slime body that spreads slightly at the bottom
 private struct SlimeShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
@@ -320,7 +320,7 @@ private struct SlimeShape: Shape {
     }
 }
 
-/// 밑단이 물결치는 유령 몸통
+/// Ghost body with a wavy hem
 private struct GhostShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
@@ -334,7 +334,7 @@ private struct GhostShape: Shape {
                    control1: CGPoint(x: w * 0.84, y: 0),
                    control2: CGPoint(x: w, y: h * 0.12))
         p.addLine(to: CGPoint(x: w, y: hem))
-        // 아래로 늘어지는 물결 3개
+        // Three waves drooping downward
         p.addQuadCurve(to: CGPoint(x: w * 0.67, y: hem),
                        control: CGPoint(x: w * 0.83, y: h * 1.06))
         p.addQuadCurve(to: CGPoint(x: w * 0.33, y: hem),
@@ -367,7 +367,7 @@ private struct SmileShape: Shape {
     }
 }
 
-/// 고양이 ω 입
+/// Cat ω mouth
 private struct CatMouthShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
@@ -381,20 +381,20 @@ private struct CatMouthShape: Shape {
     }
 }
 
-// MARK: - 공유 상태
+// MARK: - Shared State
 
-/// 패널 간 공유되는 UI 상태
+/// UI state shared across panels
 @MainActor
 final class AppState: ObservableObject {
     @Published var listVisible = false
-    /// 목록 패널의 현재 탭 (⌘1/2/3 단축키로도 전환된다)
+    /// Current tab of the list panel (also switched with the ⌘1/2/3 shortcuts)
     @Published var tab: TodoTab = .active
-    /// 자유 이동 중 걷고 있는지
+    /// Whether the character is walking while roaming freely
     @Published var walking = false
-    /// 바라보는 방향
+    /// Facing direction
     @Published var facingRight = true
-    /// 던져져서 날아가는 중인지
+    /// Whether the character is flying after being thrown
     @Published var flying = false
-    /// 말풍선이 떠 있는 동안
+    /// While a speech bubble is showing
     @Published var talking = false
 }

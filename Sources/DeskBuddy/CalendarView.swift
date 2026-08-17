@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// 완료 기록을 월 달력으로 보여주는 탭.
-/// 완료가 많은 날일수록 칸이 진해지고, 날짜를 누르면 그날 완료한 항목이 아래에 나온다.
+/// Tab showing completion history as a monthly calendar.
+/// Days with more completions are shaded darker; tapping a date lists that day's completed items below.
 struct CalendarTabView: View {
     @ObservedObject var store: TodoStore
     @ObservedObject var calendar: CalendarService
@@ -43,7 +43,7 @@ struct CalendarTabView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - 월 이동
+    // MARK: - Month navigation
 
     private var monthHeader: some View {
         HStack {
@@ -75,7 +75,7 @@ struct CalendarTabView: View {
         }
     }
 
-    // MARK: - 달력 그리드
+    // MARK: - Calendar grid
 
     private var orderedWeekdaySymbols: [String] {
         let symbols = cal.veryShortWeekdaySymbols
@@ -93,7 +93,7 @@ struct CalendarTabView: View {
         }
     }
 
-    /// 앞쪽 빈칸(nil) + 이 달의 날짜들
+    /// Leading blank cells (nil) + the days of this month
     private var monthDays: [Date?] {
         guard let interval = cal.dateInterval(of: .month, for: month),
               let range = cal.range(of: .day, in: .month, for: month) else { return [] }
@@ -107,7 +107,7 @@ struct CalendarTabView: View {
 
     private var grid: some View {
         let days = monthDays
-        // revision 을 읽어 캘린더 DB 변경 시 점 표시가 갱신되게 한다
+        // Read revision so the event dots refresh when the calendar DB changes
         let eventDays = (showEvents && calendar.revision >= 0) ? calendar.eventDays(inMonthOf: month) : []
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
             ForEach(days.indices, id: \.self) { i in
@@ -143,7 +143,7 @@ struct CalendarTabView: View {
                     .font(.system(size: 10, weight: isToday ? .bold : .regular))
                     .foregroundStyle(count > 0 ? .primary : .secondary)
                 if hasEvent {
-                    // 일정이 있는 날 표시
+                    // Dot marking a day with events
                     Circle()
                         .fill(.secondary)
                         .frame(width: 3, height: 3)
@@ -154,16 +154,16 @@ struct CalendarTabView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help([count > 0 ? "\(count)개 완료" : nil, hasEvent ? "일정 있음" : nil]
+        .help([count > 0 ? L.t("\(count)개 완료", "\(count) completed") : nil, hasEvent ? L.t("일정 있음", "Has events") : nil]
             .compactMap { $0 }.joined(separator: " · "))
     }
 
-    // MARK: - 선택한 날짜의 일정 + 완료 목록
+    // MARK: - Selected day's events + completed items
 
     private var dayDetail: some View {
         let items = (completedByDay[selectedDay] ?? [])
             .sorted { $0.completionDate > $1.completionDate }
-        // revision 을 읽어 캘린더 DB 변경 시 이 뷰가 다시 그려지게 한다
+        // Read revision so this view re-renders when the calendar DB changes
         let events = (showEvents && calendar.revision >= 0) ? calendar.events(on: selectedDay) : []
 
         return VStack(alignment: .leading, spacing: 2) {
@@ -172,7 +172,7 @@ struct CalendarTabView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                 if !items.isEmpty {
-                    Text("\(items.count)개 완료")
+                    Text(L.t("\(items.count)개 완료", "\(items.count) completed"))
                         .font(.system(size: 9, design: .rounded))
                         .foregroundStyle(.tertiary)
                 }
@@ -187,7 +187,9 @@ struct CalendarTabView: View {
             }
 
             if items.isEmpty {
-                Text(events.isEmpty ? "이 날엔 기록이 없어요" : "이 날엔 완료한 일이 없어요")
+                Text(events.isEmpty
+                     ? L.t("이 날엔 기록이 없어요", "Nothing recorded on this day")
+                     : L.t("이 날엔 완료한 일이 없어요", "Nothing completed on this day"))
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity)
@@ -200,7 +202,7 @@ struct CalendarTabView: View {
         }
     }
 
-    // MARK: - 일정 섹션
+    // MARK: - Event section
 
     private func eventSection(_ events: [CalendarEvent]) -> some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
@@ -226,7 +228,7 @@ struct CalendarTabView: View {
             Circle()
                 .fill(event.color)
                 .frame(width: 5, height: 5)
-            Text(event.isAllDay ? "종일" : event.start.formatted(date: .omitted, time: .shortened))
+            Text(event.isAllDay ? L.t("종일", "All day") : event.start.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: 11, weight: isNext ? .semibold : .regular).monospacedDigit())
                 .foregroundStyle(isNext ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
             Text(event.title)
@@ -235,7 +237,7 @@ struct CalendarTabView: View {
                 .lineLimit(1)
             Spacer(minLength: 0)
             if isNext {
-                Text(ongoing ? "진행 중" : relative(to: event.start, from: now))
+                Text(ongoing ? L.t("진행 중", "Now") : relative(to: event.start, from: now))
                     .font(.system(size: 9, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5)
@@ -251,11 +253,12 @@ struct CalendarTabView: View {
               : "\(event.start.formatted(date: .omitted, time: .shortened)) – \(event.end.formatted(date: .omitted, time: .shortened)) \(event.title)")
     }
 
-    /// "5분 후", "2시간 30분 후" — 오늘 안의 일정만 다루므로 단순 계산으로 충분하다
+    /// "in 5 min", "in 2h 30m" — only handles events within today, so simple math is enough
     private func relative(to date: Date, from now: Date) -> String {
         let minutes = Int(date.timeIntervalSince(now) / 60)
-        if minutes < 1 { return "곧 시작" }
-        if minutes < 60 { return "\(minutes)분 후" }
-        return "\(minutes / 60)시간 \(minutes % 60 == 0 ? "" : "\(minutes % 60)분 ")후"
+        if minutes < 1 { return L.t("곧 시작", "starting soon") }
+        if minutes < 60 { return L.t("\(minutes)분 후", "in \(minutes) min") }
+        return L.t("\(minutes / 60)시간 \(minutes % 60 == 0 ? "" : "\(minutes % 60)분 ")후",
+                   minutes % 60 == 0 ? "in \(minutes / 60)h" : "in \(minutes / 60)h \(minutes % 60)m")
     }
 }

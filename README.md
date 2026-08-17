@@ -1,101 +1,116 @@
 # DeskBuddy
 
-macOS용 플로팅 todo 캐릭터. 화면에 항상 떠 있는 캐릭터를 클릭하면 todo 리스트가 펼쳐진다. 모든 Spaces와 풀스크린 앱 위에서도 보인다.
+A floating desktop buddy for macOS. A little character sits on top of your screen;
+click it and your to-do list unfolds. Visible across every Space and even over
+full-screen apps.
 
-## 빌드 & 실행
+## Build & Run
 
 ```sh
-./make-app.sh          # build/DeskBuddy.app 생성
+./make-app.sh          # builds build/DeskBuddy.app
 open build/DeskBuddy.app
 ```
 
-개발 중에는 `swift run`으로 바로 실행할 수 있다.
+During development you can also just `swift run`. No Xcode project — plain Swift Package Manager.
 
-## 기능
+## Features
 
-- **캐릭터 3종 + 커스텀**: 슬라임·유령·고양이 중 선택하거나, 이미지를 추가해 나만의 캐릭터로 사용 (설정에서 이름 지정·변경 가능).
-  내장 캐릭터는 눈 깜빡임·표정 변화 지원, 남은 할 일 개수 뱃지 표시
-- **클릭 → 리스트 토글**: 캐릭터를 클릭하면 옆에 todo 리스트 패널이 열리고, 드래그하면 캐릭터가 이동 (리스트도 따라옴)
-- **던지기**: 캐릭터를 잡고 휙 놓으면 관성으로 날아가 화면 가장자리에 튕기다 착지. 날아가는 중에 클릭하면 잡아챌 수 있음 (설정에서 끄기 가능)
-- **글로벌 단축키**: 설정에서 단축키를 등록하면 어느 앱에서든 목록을 열고 바로 입력 (Carbon 핫키 — 접근성 권한 불필요)
-- **설정 창**: 캐릭터 선택/추가, 던지기·자유 이동 토글, 단축키 등록 (우클릭 메뉴 또는 메뉴바 → 설정…)
-- **우클릭 메뉴**: 목록 열기/닫기, 자유롭게 돌아다니기 토글, 제자리로 보내기, 설정, 캐릭터 숨기기, 종료 (control-클릭도 동일)
-- **자유 이동**: 켜면 화면 안에서 스스로 목표 지점을 골라 걸어다니고 잠깐씩 쉰다. 진행 방향으로 몸을 돌리고 통통 튀는 걸음 모션.
-  목록이 열려 있거나, 캐릭터를 잡고 있거나, 우클릭 메뉴가 떠 있는 동안에는 멈춘다
-- **항상 위**: `NSPanel` + `.floating` 레벨, 모든 Spaces·풀스크린 위에 표시
-- **비활성화 패널**: 클릭해도 현재 작업 중인 앱의 포커스를 뺏지 않음 (`.nonactivatingPanel`)
-- 할 일 추가(Enter), 체크, 호버 시 X로 삭제, 드래그로 순서 변경
-- **할 일 / 완료 / 달력 탭**: 체크한 항목은 완료 탭으로 이동해 날짜별(오늘/어제/…)로 최신순 그룹핑, 완료 시각 표시.
-  메뉴의 '완료 기록 비우기'(2단계 확인)로 일괄 삭제. 목록이 떠 있을 때 ⌘1/⌘2/⌘3 으로 탭 전환
-- **달력 탭**: 월 그리드에 완료 히트맵(많이 한 날일수록 진하게) + 일정 있는 날 점 표시.
-  날짜를 누르면 그날의 일정과 완료 항목을 함께 보여줌
-- **캘린더 연동 (EventKit)**: macOS 캘린더에 연결된 계정(구글 포함)의 일정을 읽음 — OAuth 불필요.
-  오늘 일정에는 "진행 중"/"N분 후" 뱃지. 연동·표시 설정은 설정 창의 '연동' 섹션에서
-- **일정 알림 (말풍선)**: 일정 시작 5/10/15/30분 전(설정 가능)에 캐릭터 머리 위에 말풍선으로 알림.
-  클릭할 때까지 유지되고, 캐릭터를 끌거나 배회 중에도 따라다님. 일정당 한 번만 알림
-- **추가 시점 툴팁**: 항목에 마우스를 올리면 "8월 9일 오후 2:30 추가 · 3시간 전" 형태로 표시
-- **상세 페이지**: 항목 제목을 클릭하면 상세로 진입 — 제목 수정, 추가 시각(절대+상대), 메모 작성
-- 캐릭터 위치는 재시작 후에도 기억
-- 메뉴바 체크리스트 아이콘: 캐릭터 보이기/숨기기, 종료 (Dock 아이콘 없음)
-- 데이터: `~/Library/Application Support/DeskBuddy/todos.json` (300ms 디바운스 자동 저장)
+- **3 built-in characters + custom images**: pick the slime, ghost, or cat — or add any
+  image as your own character (name it and rename it in Settings). Built-in characters
+  blink and change expressions; a badge shows the number of open to-dos
+- **Click → list toggle**: click the character to open the to-do panel next to it;
+  drag the character to move (the list follows)
+- **Throwing**: grab and flick the character — it flies with momentum, bounces off the
+  screen edges, and lands. Catch it mid-air with a click (can be disabled in Settings)
+- **Wandering**: optionally lets the character stroll around the screen, picking random
+  spots, walking there, and resting. Pauses while the list is open, while being held,
+  or while a menu is up
+- **Global shortcut**: register a hotkey in Settings to open the list and start typing
+  from any app (Carbon hotkey — no Accessibility permission needed)
+- **To Do / Done / Calendar tabs**: completed items move to the Done tab, grouped by day
+  (Today/Yesterday/…) with completion times. ⌘1/⌘2/⌘3 switch tabs while the list is up
+- **Calendar tab**: a monthly grid with a completion heatmap (busier days shaded darker)
+  plus dots on days that have calendar events. Tap a date to see that day's events and
+  completed items together
+- **Calendar integration (EventKit)**: reads events from any account connected to macOS
+  Calendar (Google included) — no OAuth. Today's events get "Now" / "in N min" badges.
+  Managed from the Integrations section in Settings
+- **Event alerts (speech bubble)**: 5/10/15/30 minutes (configurable) before an event
+  starts, the character raises a speech bubble. It stays until clicked, follows the
+  character around, and repositions above/below/left/right based on screen space
+- **Language setting**: follow the system language or force Korean/English from Settings
+- **Always on top**: `NSPanel` at `.floating` level, visible on all Spaces and over
+  full-screen apps
+- **Non-activating**: clicking the buddy never steals focus from the app you are using
+- Add (Enter), check off, hover-to-delete, drag to reorder
+- Tooltips show when each item was added; a detail page holds the title, memo, and timestamps
+- Character position and list size persist across restarts
+- Menu bar icon (no Dock icon); data lives in `~/Library/Application Support/DeskBuddy/todos.json`
 
-## 에이전트 연동 (CLI / URL 스킴)
+## Agent Integration (CLI / URL scheme)
 
-외부 스크립트·에이전트(Claude Code, steward 등)가 DeskBuddy 로 알림과 할 일을 보낼 수 있다.
+External scripts and agents (Claude Code, background workers, cron jobs) can talk to
+DeskBuddy:
 
 ```sh
-bin/deskbuddy notify "빌드 끝났어요!"              # 말풍선 (클릭할 때까지 유지)
-bin/deskbuddy notify "잠깐 알림" --autohide 8      # 8초 후 자동 닫힘
-bin/deskbuddy add "PR 리뷰하기" --memo "긴급 아님"  # 할 일 추가
-bin/deskbuddy list                                 # 남은 할 일 목록
-bin/deskbuddy list --json                          # 전체 데이터 JSON (에이전트용)
-bin/deskbuddy done a42620c8                        # 완료 처리 (id 앞자리 또는 제목 일부)
-bin/deskbuddy toggle                               # 목록 열기/닫기
+bin/deskbuddy notify "Build finished!"            # speech bubble (stays until clicked)
+bin/deskbuddy notify "heads up" --autohide 8      # auto-dismiss after 8s
+bin/deskbuddy add "Review the PR" --memo "not urgent"
+bin/deskbuddy list                                # open to-dos
+bin/deskbuddy list --json                         # full data as JSON (for agents)
+bin/deskbuddy done a42620c8                       # complete by id prefix or title part
+bin/deskbuddy toggle                              # open/close the list
 ```
 
-쓰기(notify/add/done/toggle)는 `deskbuddy://` URL 스킴을 사용하므로 앱이 꺼져 있으면 자동 실행되고,
-읽기(list)는 todos.json 을 직접 읽으므로 앱 실행 여부와 무관하다.
-PATH 에 넣으려면: `ln -s ~/personal/deskbuddy/bin/deskbuddy /usr/local/bin/deskbuddy`
+Writes (notify/add/done/toggle) go through the `deskbuddy://` URL scheme, so the app
+launches automatically if it is not running. Reads (list) go straight to todos.json and
+work either way. To put the CLI on PATH:
+`ln -s "$(pwd)/bin/deskbuddy" /usr/local/bin/deskbuddy`
 
 - `deskbuddy://notify?message=...&autohide=8`
 - `deskbuddy://add?title=...&memo=...`
 - `deskbuddy://done?id=<uuid>`
 - `deskbuddy://toggle`
 
-## Claude Code 플러그인
+## Claude Code Plugin
 
-이 저장소는 Claude Code 플러그인 마켓플레이스를 겸한다. 설치하면 에이전트가
-DeskBuddy 를 알아서 활용한다 (스킬 + 입력 대기 자동 알림 훅 + CLI 동봉).
+This repository doubles as a Claude Code plugin marketplace. Installing the plugin
+teaches agents to use DeskBuddy on their own (skill + waiting-for-input alert hook +
+bundled CLI).
 
 ```
 /plugin marketplace add snghnl/deskbuddy
 /plugin install deskbuddy@deskbuddy
 ```
 
-포함 내용:
-- **스킬** (`plugin/skills/deskbuddy/`): 긴 작업 완료 시 말풍선 보고, 할 일 추가/조회/완료
-  플로우 등 에이전트 사용 지침
-- **Notification 훅** (`plugin/hooks/`): Claude 가 권한 승인·입력을 기다릴 때 자동으로
-  말풍선 알림 (`🔔 [프로젝트명] 메시지`). 앱이 없으면 조용히 무시된다
-- **CLI 사본** (`plugin/scripts/deskbuddy`): PATH 설정 없이도 훅·스킬이 동작
+What's included:
+- **Skill** (`plugin/skills/deskbuddy/`): guidelines for agents — report long-running
+  work via bubbles, add/list/complete to-dos, don't spam
+- **Notification hook** (`plugin/hooks/`): when Claude Code waits for permission or
+  input, a bubble appears automatically (`🔔 [project] message`). Silently does nothing
+  if the app isn't installed
+- **Bundled CLI** (`plugin/scripts/deskbuddy`): works without any PATH setup
 
-`bin/deskbuddy` 를 수정하면 `plugin/scripts/deskbuddy` 에도 복사해 동기화한다.
+If you edit `bin/deskbuddy`, copy it to `plugin/scripts/deskbuddy` to keep them in sync.
 
-## 로그인 시 자동 시작
+## Launch at Login
 
-시스템 설정 → 일반 → 로그인 항목에 `build/DeskBuddy.app` 추가.
+System Settings → General → Login Items → add `build/DeskBuddy.app`.
 
-## 구조
+## Project Layout
 
-- `Sources/DeskBuddy/App.swift` — 진입점, 캐릭터/리스트 패널(NSPanel 서브클래스), 클릭·드래그·던지기 구분, 메뉴바, 설정 창, 위치 저장
-- `Sources/DeskBuddy/CharacterView.swift` — 캐릭터 3종 드로잉(Shape) + 애니메이션, 커스텀 이미지 렌더링
-- `Sources/DeskBuddy/CustomCharacters.swift` — 커스텀 캐릭터 이미지 관리 + 이름 매핑 + 이미지 캐시
-- `Sources/DeskBuddy/WanderController.swift` — 자유 이동 (목표 지점 선정 → 이동 → 휴식 루프)
-- `Sources/DeskBuddy/ThrowController.swift` — 던지기 물리 (중력·반발·마찰)
-- `Sources/DeskBuddy/HotKeyCenter.swift` — Carbon 글로벌 단축키
-- `Sources/DeskBuddy/SettingsView.swift` — 설정 화면 (캐릭터 선택·토글·단축키 녹화)
-- `Sources/DeskBuddy/Bubble.swift` — 말풍선 패널 + 일정 알림 감시 (EventNotifier)
-- `Sources/DeskBuddy/CalendarService.swift` — EventKit 연동 (권한·일정 조회·변경 감지)
-- `Sources/DeskBuddy/CalendarView.swift` — 달력 탭 (월 그리드 히트맵 + 일정/완료 목록)
-- `Sources/DeskBuddy/TodoListView.swift` — 리스트(할 일/완료/달력 탭) + 상세 페이지 UI
-- `Sources/DeskBuddy/TodoStore.swift` — 모델 + JSON 영속화
+- `Sources/DeskBuddy/App.swift` — entry point, character/list panels (NSPanel subclasses), click/drag/throw handling, menus, settings window, URL scheme
+- `Sources/DeskBuddy/CharacterView.swift` — the three built-in characters (Shape drawing + animation), custom image rendering
+- `Sources/DeskBuddy/CustomCharacters.swift` — custom character images, display names, image cache
+- `Sources/DeskBuddy/WanderController.swift` — wandering (pick target → walk → rest loop)
+- `Sources/DeskBuddy/ThrowController.swift` — throw physics (gravity, restitution, friction)
+- `Sources/DeskBuddy/HotKeyCenter.swift` — Carbon global hotkey
+- `Sources/DeskBuddy/Bubble.swift` — speech bubble panel + event alert watcher
+- `Sources/DeskBuddy/CalendarService.swift` — EventKit integration (access, queries, change tracking)
+- `Sources/DeskBuddy/CalendarView.swift` — calendar tab (heatmap grid + events/completions)
+- `Sources/DeskBuddy/SettingsView.swift` — settings (language, characters, toggles, hotkey recorder)
+- `Sources/DeskBuddy/TodoListView.swift` — list (To Do/Done/Calendar tabs) + detail page
+- `Sources/DeskBuddy/TodoStore.swift` — model + JSON persistence
+- `Sources/DeskBuddy/Localization.swift` — lightweight `L.t(ko, en)` localization layer
+- `bin/deskbuddy` — CLI for agent integration
+- `plugin/` — Claude Code plugin (skill, hook, bundled CLI)

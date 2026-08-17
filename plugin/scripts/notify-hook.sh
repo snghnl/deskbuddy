@@ -1,7 +1,8 @@
 #!/bin/zsh
-# Notification 훅 — Claude Code 가 승인/입력을 기다릴 때 DeskBuddy 말풍선으로 알린다.
-# stdin 으로 훅 이벤트 JSON 이 들어온다 (message, cwd 등).
-# DeskBuddy 앱이 없어도 훅이 세션을 방해하지 않도록 항상 0 으로 끝낸다.
+# Notification hook — surfaces a DeskBuddy speech bubble when Claude Code is
+# waiting for approval or input. The hook event JSON arrives on stdin
+# (fields: message, cwd, ...).
+# Always exits 0 so a missing DeskBuddy app never disrupts the session.
 
 input=$(cat)
 
@@ -11,14 +12,14 @@ try:
     d = json.load(sys.stdin)
 except Exception:
     d = {}
-msg = (d.get("message") or "Claude Code가 입력을 기다려요").replace("\n", " ")
+msg = (d.get("message") or "Claude Code is waiting for your input").replace("\n", " ")
 cwd = os.path.basename(d.get("cwd") or "")
 print(f"[{cwd}] {msg}" if cwd else msg)
 ' 2>/dev/null)
 
-[[ -z "$text" ]] && text="Claude Code가 입력을 기다려요"
+[[ -z "$text" ]] && text="Claude Code is waiting for your input"
 
-# 플러그인에 동봉된 CLI 우선, 없으면 PATH 의 deskbuddy
+# Prefer the CLI bundled with the plugin, fall back to deskbuddy on PATH
 cli="$(dirname "$0")/deskbuddy"
 if [[ -x "$cli" ]]; then
   "$cli" notify "🔔 $text" || true

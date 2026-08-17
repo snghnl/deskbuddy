@@ -2,7 +2,7 @@ import AppKit
 import EventKit
 import SwiftUI
 
-/// 화면에 그리기 위한 일정 스냅샷 (EKEvent 를 뷰에 직접 노출하지 않는다)
+/// Event snapshot for rendering (never exposes EKEvent directly to views)
 struct CalendarEvent: Identifiable {
     let id: String
     let title: String
@@ -13,17 +13,17 @@ struct CalendarEvent: Identifiable {
 }
 
 enum CalendarAccess {
-    case notDetermined   // 아직 물어본 적 없음 — 연동 버튼 표시
-    case denied          // 거부됨 — 시스템 설정 안내
+    case notDetermined   // Never asked yet — show the connect button
+    case denied          // Denied — point to System Settings
     case authorized
 }
 
-/// EventKit 으로 macOS 캘린더(구글 계정 포함)의 오늘 일정을 읽는다.
-/// 동기화는 macOS 가 담당하므로 여기서는 로컬 DB 변경(EKEventStoreChanged)만 따라가면 된다.
+/// Reads today's events from the macOS calendar (including Google accounts) via EventKit.
+/// macOS handles syncing, so we only need to follow local DB changes (EKEventStoreChanged).
 @MainActor
 final class CalendarService: ObservableObject {
     @Published private(set) var access: CalendarAccess
-    /// 캘린더 DB 가 바뀔 때마다 증가 — 이 값을 구독하는 뷰가 events(on:) 을 다시 부르게 한다
+    /// Incremented whenever the calendar DB changes — views observing this value call events(on:) again
     @Published private(set) var revision = 0
 
     private let store = EKEventStore()
@@ -65,7 +65,7 @@ final class CalendarService: ObservableObject {
         revision += 1
     }
 
-    /// 해당 월에 일정이 있는 날짜들(자정 기준) — 달력 그리드의 점 표시용
+    /// Days in the given month that have events (normalized to midnight) — for the calendar grid's dots
     func eventDays(inMonthOf month: Date) -> Set<Date> {
         guard access == .authorized else { return [] }
         let cal = Calendar.current
@@ -74,7 +74,7 @@ final class CalendarService: ObservableObject {
         return Set(store.events(matching: predicate).map { cal.startOfDay(for: $0.startDate) })
     }
 
-    /// 특정 날짜의 일정 (하루 종일 일정이 먼저, 나머지는 시간순)
+    /// Events on a specific day (all-day events first, the rest in time order)
     func events(on day: Date) -> [CalendarEvent] {
         guard access == .authorized else { return [] }
         let cal = Calendar.current
@@ -86,7 +86,7 @@ final class CalendarService: ObservableObject {
             .map { event in
                 CalendarEvent(
                     id: "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
-                    title: event.title ?? "(제목 없음)",
+                    title: event.title ?? L.t("(제목 없음)", "(No title)"),
                     start: event.startDate,
                     end: event.endDate,
                     isAllDay: event.isAllDay,

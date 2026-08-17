@@ -1,9 +1,9 @@
 import AppKit
 
-/// 현재 선택된 캐릭터 — 내장 캐릭터 또는 사용자가 추가한 이미지
+/// The currently selected character — a built-in character or a user-added image
 enum CharacterChoice: Equatable {
     case builtin(CharacterKind)
-    case custom(String)   // characters 폴더 안의 파일명
+    case custom(String)   // File name inside the characters folder
 
     static func parse(_ raw: String) -> CharacterChoice {
         if raw.hasPrefix("custom:") {
@@ -20,7 +20,7 @@ enum CharacterChoice: Equatable {
     }
 }
 
-/// 사용자가 추가한 캐릭터 이미지 관리
+/// Manages user-added character images
 /// (~/Library/Application Support/DeskBuddy/characters/)
 @MainActor
 enum CustomCharacters {
@@ -41,7 +41,7 @@ enum CustomCharacters {
             .sorted()
     }
 
-    /// 원본을 폴더로 복사하고 저장된 파일명을 돌려준다. 표시 이름은 원본 파일명으로 시작한다.
+    /// Copies the source into the folder and returns the stored file name. The display name starts as the original file name.
     static func add(_ source: URL) throws -> String {
         let ext = source.pathExtension.isEmpty ? "png" : source.pathExtension
         let name = UUID().uuidString + "." + ext
@@ -53,16 +53,16 @@ enum CustomCharacters {
     static func remove(_ name: String) {
         try? FileManager.default.removeItem(at: url(name))
         CharacterImageCache.evict(name)
-        setDisplayName("", for: name)   // 이름 매핑도 정리
+        setDisplayName("", for: name)   // Clean up the name mapping too
     }
 
-    // MARK: 표시 이름 (파일명 → 사용자가 붙인 이름)
+    // MARK: Display names (file name → user-assigned name)
 
     private static let namesKey = "DeskBuddy.customNames"
 
     static func displayName(_ name: String) -> String {
         let dict = UserDefaults.standard.dictionary(forKey: namesKey) as? [String: String]
-        return dict?[name] ?? "커스텀"
+        return dict?[name] ?? L.t("커스텀", "Custom")
     }
 
     static func setDisplayName(_ display: String, for name: String) {
@@ -73,7 +73,7 @@ enum CustomCharacters {
     }
 }
 
-/// 커스텀 캐릭터 이미지는 애니메이션 프레임마다 다시 그려지므로 반드시 캐시를 거친다
+/// Custom character images are redrawn on every animation frame, so they must go through this cache
 @MainActor
 enum CharacterImageCache {
     private static var cache: [String: NSImage] = [:]

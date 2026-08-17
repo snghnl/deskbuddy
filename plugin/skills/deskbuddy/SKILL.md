@@ -1,51 +1,57 @@
 ---
 name: deskbuddy
 description: >
-  DeskBuddy(macOS 화면 위 플로팅 캐릭터)로 사용자에게 말풍선 알림을 보내고 할 일을 관리한다.
-  다음 상황에서 사용한다: (1) 오래 걸린 작업(빌드·테스트·마이그레이션·배포·긴 분석)이 끝나
-  사용자에게 결과를 알릴 때 (2) 사용자가 "알려줘", "리마인드해줘", "deskbuddy" 를 언급할 때
-  (3) 사용자의 할 일을 추가·조회·완료 처리할 때 ("할 일 추가해줘", "내 할 일 뭐 있지",
-  "이거 완료 처리해줘"). macOS 전용.
+  Send speech-bubble notifications to the user and manage their to-dos through
+  DeskBuddy (a floating character on the macOS screen). Use when: (1) a
+  long-running task (build, tests, migration, deploy, lengthy analysis) finishes
+  and the user should be notified (2) the user says "notify me", "remind me", or
+  mentions "deskbuddy" (3) adding, listing, or completing the user's to-dos
+  ("add a to-do", "what's on my list", "mark this done"). macOS only.
 ---
 
-# DeskBuddy 연동
+# DeskBuddy Integration
 
-DeskBuddy 는 화면 위에 항상 떠 있는 캐릭터 앱이다. CLI 로 말풍선 알림을 보내거나
-할 일을 관리할 수 있고, 사용자는 어떤 앱을 쓰고 있든 캐릭터를 통해 즉시 확인한다.
+DeskBuddy is a character that floats on top of the screen at all times. Through
+its CLI you can show speech-bubble notifications and manage to-dos; the user
+sees the bubble immediately no matter which app they are using.
 
-## CLI 위치
+## Locating the CLI
 
-1. `command -v deskbuddy` — PATH 에 있으면 그걸 사용
-2. 없으면 이 스킬이 설치된 플러그인의 `scripts/deskbuddy` 사용
-   (이 SKILL.md 기준 `../../scripts/deskbuddy`)
-3. 둘 다 없으면 DeskBuddy 앱이 설치되지 않은 것 — 사용자에게
-   https://github.com/snghnl/deskbuddy 안내
+1. `command -v deskbuddy` — use it if it is on PATH
+2. Otherwise use `scripts/deskbuddy` inside the plugin this skill was installed
+   from (`../../scripts/deskbuddy` relative to this SKILL.md)
+3. If neither exists, the DeskBuddy app is not installed — point the user to
+   https://github.com/snghnl/deskbuddy
 
-## 명령
+## Commands
 
 ```sh
-deskbuddy notify "메시지"               # 말풍선 (사용자가 클릭할 때까지 유지)
-deskbuddy notify "메시지" --autohide 8   # 8초 후 자동 닫힘 (가벼운 알림용)
-deskbuddy add "제목"                     # 할 일 추가
-deskbuddy add "제목" --memo "설명"       # 메모와 함께 추가
-deskbuddy list                           # 남은 할 일 (id 앞자리 + 제목)
-deskbuddy list --json                    # 전체 데이터 JSON (파싱용)
-deskbuddy done <id앞자리|제목 일부>       # 완료 처리
-deskbuddy toggle                         # 할 일 목록 패널 열기/닫기
+deskbuddy notify "message"               # Speech bubble (stays until the user clicks it)
+deskbuddy notify "message" --autohide 8   # Auto-dismiss after 8s (for light-weight notices)
+deskbuddy add "title"                     # Add a to-do
+deskbuddy add "title" --memo "note"       # Add with a memo
+deskbuddy list                            # Open to-dos (id prefix + title)
+deskbuddy list --json                     # Full data as JSON (for parsing)
+deskbuddy done <id prefix|title part>     # Mark as done
+deskbuddy toggle                          # Open/close the to-do list panel
 ```
 
-앱이 꺼져 있어도 명령을 보내면 자동으로 실행된다 (list 제외 — list 는 데이터 파일을
-직접 읽으므로 앱 실행 여부와 무관).
+Sending a command launches the app automatically if it is not running
+(except `list`, which reads the data file directly and works either way).
 
-## 사용 지침
+## Usage guidelines
 
-- **작업 완료 보고**: 사용자가 자리를 비웠을 수 있는 긴 작업(수 분 이상)이 끝나면
-  `notify` 로 핵심 결과를 알린다. 예: `deskbuddy notify "✅ 마이그레이션 완료 — 37개 파일, 테스트 통과"`
-- **실패·확인 필요**: 작업이 실패했거나 사용자 판단이 필요하면 autohide 없이 보낸다
-  (클릭 전까지 유지되므로 놓치지 않는다). 예: `deskbuddy notify "⚠️ 배포 실패 — 로그 확인 필요"`
-- **가벼운 진행 알림**: 중간 진행 상황은 `--autohide 8` 로 보내 방해를 줄인다.
-- **메시지는 짧고 구체적으로**: 한 줄 요약 + 필요한 다음 행동. 긴 로그를 넣지 않는다.
-- **할 일 처리 플로우**: `list` 로 확인 → 작업 수행 → `done <id>` → `notify` 로 보고.
-  `done` 은 제목 일부로도 매칭되지만 여러 개가 걸리면 실패하므로 id 앞자리를 우선 사용한다.
-- **남용 금지**: 모든 턴마다 notify 하지 않는다. 사용자가 터미널을 보고 있는 짧은
-  대화형 작업에서는 불필요하다.
+- **Report finished work**: when a long task (several minutes or more) that the
+  user may have stepped away from completes, `notify` with the key result.
+  e.g. `deskbuddy notify "✅ Migration done — 37 files, tests passing"`
+- **Failures and decisions**: if something failed or needs the user's judgment,
+  send without autohide (the bubble stays until clicked, so it won't be missed).
+  e.g. `deskbuddy notify "⚠️ Deploy failed — check the logs"`
+- **Light progress updates**: use `--autohide 8` to keep interruptions low.
+- **Keep messages short and specific**: a one-line summary plus the next action.
+  Never paste long logs into a bubble.
+- **To-do flow**: `list` to check → do the work → `done <id>` → `notify` to
+  report. `done` also matches on partial titles but fails when ambiguous, so
+  prefer the id prefix.
+- **Don't spam**: do not notify on every turn. Short interactive work where the
+  user is watching the terminal needs no bubbles.

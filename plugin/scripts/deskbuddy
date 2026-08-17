@@ -1,17 +1,19 @@
 #!/bin/zsh
-# DeskBuddy CLI — 에이전트/스크립트에서 DeskBuddy 와 상호작용한다.
+# DeskBuddy CLI — lets agents and scripts interact with DeskBuddy.
 #
-#   deskbuddy notify "메시지"               말풍선 표시 (클릭할 때까지 유지)
-#   deskbuddy notify "메시지" --autohide 8   8초 후 자동 닫힘
-#   deskbuddy add "할 일 제목"               할 일 추가
-#   deskbuddy add "제목" --memo "설명"       메모와 함께 추가
-#   deskbuddy list                           남은 할 일 목록 (사람용)
-#   deskbuddy list --json                    전체 데이터 JSON (에이전트용)
-#   deskbuddy done <id앞자리|제목 일부>       할 일 완료 처리
-#   deskbuddy toggle                         목록 열기/닫기
+#   deskbuddy notify "message"               Show a speech bubble (stays until clicked)
+#   deskbuddy notify "message" --autohide 8   Auto-dismiss after 8 seconds
+#   deskbuddy add "title"                     Add a to-do
+#   deskbuddy add "title" --memo "note"       Add with a memo
+#   deskbuddy list                            List open to-dos (human-readable)
+#   deskbuddy list --json                     Full data as JSON (for agents)
+#   deskbuddy list --all                      Include completed items
+#   deskbuddy done <id prefix|title part>     Mark a to-do as done
+#   deskbuddy toggle                          Open/close the to-do list panel
 #
-# notify/add/done/toggle 은 URL 스킴을 쓰므로 앱이 꺼져 있으면 자동 실행된다.
-# list 는 데이터 파일을 직접 읽으므로 앱 실행 여부와 무관하다.
+# notify/add/done/toggle use the deskbuddy:// URL scheme, so the app launches
+# automatically if it is not running. list reads the data file directly and
+# works regardless of whether the app is running.
 set -e
 
 DATA="$HOME/Library/Application Support/DeskBuddy/todos.json"
@@ -23,7 +25,7 @@ urlencode() {
 cmd="${1:-}"
 case "$cmd" in
   notify)
-    message="${2:?사용법: deskbuddy notify \"메시지\" [--autohide 초]}"
+    message="${2:?usage: deskbuddy notify \"message\" [--autohide seconds]}"
     url="deskbuddy://notify?message=$(urlencode "$message")"
     if [[ "${3:-}" == "--autohide" && -n "${4:-}" ]]; then
       url+="&autohide=$4"
@@ -31,7 +33,7 @@ case "$cmd" in
     open -g "$url"
     ;;
   add)
-    title="${2:?사용법: deskbuddy add \"제목\" [--memo \"메모\"]}"
+    title="${2:?usage: deskbuddy add \"title\" [--memo \"note\"]}"
     url="deskbuddy://add?title=$(urlencode "$title")"
     if [[ "${3:-}" == "--memo" && -n "${4:-}" ]]; then
       url+="&memo=$(urlencode "$4")"
@@ -49,7 +51,7 @@ if flag == "--json":
 show_all = flag == "--all"
 items = todos if show_all else [t for t in todos if not t["isDone"]]
 if not items:
-    print("남은 할 일이 없습니다." if not show_all else "할 일이 없습니다.")
+    print("No open to-dos." if not show_all else "No to-dos.")
     sys.exit()
 for t in items:
     mark = "[x]" if t["isDone"] else "[ ]"
@@ -58,7 +60,7 @@ for t in items:
 PY
     ;;
   done)
-    target="${2:?사용법: deskbuddy done <id앞자리|제목 일부>}"
+    target="${2:?usage: deskbuddy done <id prefix|title part>}"
     full_id=$(python3 - "$DATA" "$target" <<'PY'
 import json, sys, os
 path, target = sys.argv[1], sys.argv[2].lower()
@@ -67,9 +69,9 @@ active = [t for t in todos if not t["isDone"]]
 hits = [t for t in active
         if t["id"].lower().startswith(target) or target in t["title"].lower()]
 if not hits:
-    print(f"일치하는 할 일이 없습니다: {sys.argv[2]}", file=sys.stderr); sys.exit(1)
+    print(f"No matching to-do: {sys.argv[2]}", file=sys.stderr); sys.exit(1)
 if len(hits) > 1:
-    print("여러 개가 일치합니다 — id 로 지정하세요:", file=sys.stderr)
+    print("Multiple matches — specify by id:", file=sys.stderr)
     for t in hits:
         print(f"  {t['id'][:8].lower()}  {t['title']}", file=sys.stderr)
     sys.exit(1)
@@ -77,13 +79,13 @@ print(hits[0]["id"])
 PY
     )
     open -g "deskbuddy://done?id=$full_id"
-    echo "완료 처리: $target"
+    echo "Marked done: $target"
     ;;
   toggle)
     open -g "deskbuddy://toggle"
     ;;
   *)
-    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

@@ -35,7 +35,7 @@ struct TodoListView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(.white.opacity(0.15), lineWidth: 1)
         )
-        // 크기 조절 그립 표시 (실제 드래그 처리는 ResizeGripView 가 담당)
+        // Shows the resize grip (the actual drag handling is done by ResizeGripView)
         .overlay(alignment: .bottomTrailing) {
             Image(systemName: "line.3.horizontal.decrease")
                 .font(.system(size: 8, weight: .bold))
@@ -43,14 +43,14 @@ struct TodoListView: View {
                 .foregroundStyle(.tertiary)
                 .padding(7)
         }
-        // 목록이 열리면(클릭·단축키 모두) 바로 입력할 수 있게 포커스
+        // Focus the input as soon as the list opens (whether by click or shortcut) so typing works immediately
         .onChange(of: appState.listVisible) { _, visible in
             if visible {
                 appState.tab = .active
                 inputFocused = true
             }
         }
-        // ⌘1 로 할 일 탭에 돌아왔을 때도 바로 입력 가능하게
+        // Also allow immediate typing when returning to the To Do tab via ⌘1
         .onChange(of: appState.tab) { _, newTab in
             if newTab == .active, appState.listVisible {
                 inputFocused = true
@@ -73,20 +73,20 @@ struct TodoListView: View {
 
     private var header: some View {
         HStack(spacing: 4) {
-            tabButton("할 일", count: activeTodos.count, tab: .active).help("⌘1")
-            tabButton("완료", count: doneCount, tab: .done).help("⌘2")
-            tabButton("달력", count: 0, tab: .calendar).help("⌘3")
+            tabButton(L.t("할 일", "To Do"), count: activeTodos.count, tab: .active).help("⌘1")
+            tabButton(L.t("완료", "Done"), count: doneCount, tab: .done).help("⌘2")
+            tabButton(L.t("달력", "Calendar"), count: 0, tab: .calendar).help("⌘3")
             Spacer(minLength: 0)
             Menu {
-                // 기록을 지우는 동작이라 한 단계 더 확인을 받는다
-                Menu("완료 기록 비우기") {
-                    Button("\(doneCount)개 모두 삭제", role: .destructive) {
+                // Destructive action that erases history, so require one extra confirmation step
+                Menu(L.t("완료 기록 비우기", "Clear Completed History")) {
+                    Button(L.t("\(doneCount)개 모두 삭제", "Delete All \(doneCount)"), role: .destructive) {
                         store.clearCompleted()
                     }
                 }
                 .disabled(doneCount == 0)
                 Divider()
-                Button("종료") { NSApp.terminate(nil) }
+                Button(L.t("종료", "Quit")) { NSApp.terminate(nil) }
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 12))
@@ -130,7 +130,7 @@ struct TodoListView: View {
             Image(systemName: "plus")
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.tertiary)
-            TextField("할 일 추가", text: $newTitle)
+            TextField(L.t("할 일 추가", "Add a to-do"), text: $newTitle)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .focused($inputFocused)
@@ -148,7 +148,7 @@ struct TodoListView: View {
         ScrollView {
             LazyVStack(spacing: 2) {
                 if activeTodos.isEmpty {
-                    Text("오늘은 뭘 할까요?")
+                    Text(L.t("오늘은 뭘 할까요?", "What shall we do today?"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .padding(.vertical, 16)
@@ -170,7 +170,7 @@ struct TodoListView: View {
             .padding(.vertical, 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // 행 바깥(여백)에 놓아도 드래그 상태가 풀리도록
+        // Clear the drag state even when dropping outside the rows (in the padding area)
         .onDrop(of: [.plainText], isTargeted: nil) { _ in
             draggedID = nil
             return true
@@ -182,7 +182,7 @@ struct TodoListView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 2, pinnedViews: [.sectionHeaders]) {
                 if completedGroups.isEmpty {
-                    Text("아직 완료한 일이 없어요")
+                    Text(L.t("아직 완료한 일이 없어요", "Nothing completed yet"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
@@ -250,7 +250,7 @@ struct TodoRow: View {
             .contentShape(Rectangle())
             .onTapGesture(perform: onSelect)
 
-            // 완료 항목은 끝낸 시각을 함께 보여준다
+            // Completed items also show the time they were finished
             if todo.isDone, !hovering {
                 Text(todo.completionDate.formatted(date: .omitted, time: .shortened))
                     .font(.system(size: 9, design: .rounded))
@@ -282,15 +282,21 @@ struct TodoRow: View {
     }
 
     private var tooltip: String {
-        var text = "\(todo.createdAt.formatted(date: .abbreviated, time: .shortened)) 추가 · \(todo.createdAt.relativeText)"
+        var text = L.t(
+            "\(todo.createdAt.formatted(date: .abbreviated, time: .shortened)) 추가 · \(todo.createdAt.relativeText)",
+            "Added \(todo.createdAt.formatted(date: .abbreviated, time: .shortened)) · \(todo.createdAt.relativeText)"
+        )
         if todo.isDone {
-            text += "\n\(todo.completionDate.formatted(date: .abbreviated, time: .shortened)) 완료 · \(todo.completionDate.relativeText)"
+            text += L.t(
+                "\n\(todo.completionDate.formatted(date: .abbreviated, time: .shortened)) 완료 · \(todo.completionDate.relativeText)",
+                "\nCompleted \(todo.completionDate.formatted(date: .abbreviated, time: .shortened)) · \(todo.completionDate.relativeText)"
+            )
         }
         return text
     }
 }
 
-/// 드래그한 항목이 다른 항목 위로 들어오는 순간 자리를 바꾼다 (라이브 리오더)
+/// Swaps positions the moment the dragged item enters another item's area (live reorder)
 private struct TodoReorderDelegate: DropDelegate {
     let targetID: UUID
     @Binding var draggedID: UUID?
@@ -313,7 +319,7 @@ private struct TodoReorderDelegate: DropDelegate {
     }
 }
 
-// MARK: - 상세 페이지
+// MARK: - Detail page
 
 private struct TodoDetailView: View {
     let todo: Todo
@@ -326,13 +332,13 @@ private struct TodoDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 헤더
+            // Header
             HStack {
                 Button(action: commitAndBack) {
                     HStack(spacing: 3) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 10, weight: .semibold))
-                        Text("목록")
+                        Text(L.t("목록", "List"))
                             .font(.system(size: 11))
                     }
                     .foregroundStyle(.secondary)
@@ -348,7 +354,7 @@ private struct TodoDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("삭제")
+                .help(L.t("삭제", "Delete"))
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -357,7 +363,7 @@ private struct TodoDetailView: View {
             Divider().opacity(0.4)
 
             VStack(alignment: .leading, spacing: 10) {
-                // 완료 토글 + 제목
+                // Done toggle + title
                 HStack(alignment: .top, spacing: 8) {
                     Button {
                         store.toggle(todo)
@@ -368,24 +374,24 @@ private struct TodoDetailView: View {
                     }
                     .buttonStyle(.plain)
 
-                    TextField("제목", text: $title, axis: .vertical)
+                    TextField(L.t("제목", "Title"), text: $title, axis: .vertical)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13, weight: .medium))
                         .focused($titleFocused)
                         .onSubmit { store.updateTitle(todo.id, title) }
                 }
 
-                // 추가 · 완료 시각
+                // Created / completed timestamps
                 VStack(alignment: .leading, spacing: 6) {
-                    timestamp("clock", "추가", todo.createdAt)
+                    timestamp("clock", L.t("추가", "Added"), todo.createdAt)
                     if todo.isDone {
-                        timestamp("checkmark.circle", "완료", todo.completionDate)
+                        timestamp("checkmark.circle", L.t("완료", "Completed"), todo.completionDate)
                     }
                 }
 
-                // 메모
+                // Memo
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("메모")
+                    Text(L.t("메모", "Memo"))
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.secondary)
                     TextEditor(text: $memo)
@@ -437,7 +443,7 @@ private struct TodoDetailView: View {
 }
 
 extension Date {
-    /// "3시간 전" 같은 상대 시간 문자열
+    /// Relative time string like "3 hours ago"
     var relativeText: String {
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .full

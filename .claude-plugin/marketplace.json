@@ -8,7 +8,7 @@
     {
       "name": "deskbuddy",
       "source": "./plugin",
-      "description": "macOS 플로팅 캐릭터 DeskBuddy 연동 — 말풍선 알림, 할 일 추가/조회/완료, 입력 대기 자동 알림 훅"
+      "description": "DeskBuddy (macOS floating desktop buddy) integration — speech-bubble notifications, to-do add/list/done, and an automatic waiting-for-input alert hook"
     }
   ]
 }

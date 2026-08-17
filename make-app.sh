@@ -1,5 +1,5 @@
 #!/bin/zsh
-# DeskBuddy.app 번들 생성 스크립트
+# Builds the DeskBuddy.app bundle
 set -e
 cd "$(dirname "$0")"
 
@@ -44,12 +44,12 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
         </dict>
     </array>
     <key>NSCalendarsUsageDescription</key>
-    <string>오늘 일정을 보여주기 위해 캘린더를 읽습니다.</string>
+    <string>DeskBuddy reads your calendar to show today's events.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>오늘 일정을 보여주기 위해 캘린더를 읽습니다.</string>
+    <string>DeskBuddy reads your calendar to show today's events.</string>
 </dict>
 </plist>
 PLIST
 
 codesign --force --sign - "$APP"
-echo "✅ $APP 생성 완료"
+echo "✅ $APP created"
