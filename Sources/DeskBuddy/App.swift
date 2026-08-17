@@ -407,8 +407,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         thrower = ThrowController(
             panel: characterPanel,
             onFlight: { [weak self] flying in
-                self?.appState.flying = flying
-                self?.updateWander()   // 나는 동안에는 배회를 멈추고, 착지하면 재개
+                guard let self else { return }
+                appState.flying = flying
+                updateWander()   // 나는 동안에는 배회를 멈추고, 착지하면 재개
+                // 날아가는 동안 말풍선은 접어뒀다가 착지하면 새 위치에 다시 편다
+                if flying { bubble.suspend() } else { bubble.resume() }
             },
             onSettled: { [weak self] in self?.saveFrame() }
         )
