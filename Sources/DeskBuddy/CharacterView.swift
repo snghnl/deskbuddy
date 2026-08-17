@@ -385,6 +385,8 @@ private struct CatMouthShape: Shape {
 @MainActor
 final class AppState: ObservableObject {
     @Published var listVisible = false
+    /// 목록 패널의 현재 탭 (⌘1/2/3 단축키로도 전환된다)
+    @Published var tab: TodoTab = .active
     /// 자유 이동 중 걷고 있는지
     @Published var walking = false
     /// 바라보는 방향

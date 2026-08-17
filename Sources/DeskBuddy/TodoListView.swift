@@ -2,18 +2,20 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 enum TodoTab: Hashable {
-    case active, done
+    case active, done, calendar
 }
 
 struct TodoListView: View {
     @ObservedObject var store: TodoStore
     @ObservedObject var appState: AppState
+    @ObservedObject var calendar: CalendarService
 
     @State private var newTitle = ""
     @State private var selectedID: UUID?
     @State private var draggedID: UUID?
-    @State private var tab: TodoTab = .active
     @FocusState private var inputFocused: Bool
+
+    private var tab: TodoTab { appState.tab }
 
     private var activeTodos: [Todo] { store.activeTodos }
     private var completedGroups: [CompletedGroup] { store.completedGroups }
@@ -44,7 +46,13 @@ struct TodoListView: View {
         // 목록이 열리면(클릭·단축키 모두) 바로 입력할 수 있게 포커스
         .onChange(of: appState.listVisible) { _, visible in
             if visible {
-                tab = .active
+                appState.tab = .active
+                inputFocused = true
+            }
+        }
+        // ⌘1 로 할 일 탭에 돌아왔을 때도 바로 입력 가능하게
+        .onChange(of: appState.tab) { _, newTab in
+            if newTab == .active, appState.listVisible {
                 inputFocused = true
             }
         }
@@ -55,14 +63,19 @@ struct TodoListView: View {
             header
             if tab == .active { input }
             Divider().opacity(0.4)
-            if tab == .active { list } else { completedList }
+            switch tab {
+            case .active: list
+            case .done: completedList
+            case .calendar: CalendarTabView(store: store, calendar: calendar) { selectedID = $0 }
+            }
         }
     }
 
     private var header: some View {
         HStack(spacing: 4) {
-            tabButton("할 일", count: activeTodos.count, tab: .active)
-            tabButton("완료", count: doneCount, tab: .done)
+            tabButton("할 일", count: activeTodos.count, tab: .active).help("⌘1")
+            tabButton("완료", count: doneCount, tab: .done).help("⌘2")
+            tabButton("달력", count: 0, tab: .calendar).help("⌘3")
             Spacer(minLength: 0)
             Menu {
                 // 기록을 지우는 동작이라 한 단계 더 확인을 받는다
@@ -91,7 +104,7 @@ struct TodoListView: View {
     private func tabButton(_ title: String, count: Int, tab target: TodoTab) -> some View {
         let selected = tab == target
         return Button {
-            withAnimation(.easeOut(duration: 0.15)) { tab = target }
+            withAnimation(.easeOut(duration: 0.15)) { appState.tab = target }
         } label: {
             HStack(spacing: 4) {
                 Text(title)
@@ -204,7 +217,7 @@ struct TodoListView: View {
     }
 }
 
-private struct TodoRow: View {
+struct TodoRow: View {
     let todo: Todo
     let store: TodoStore
     let onSelect: () -> Void

@@ -25,8 +25,12 @@ open build/DeskBuddy.app
 - **항상 위**: `NSPanel` + `.floating` 레벨, 모든 Spaces·풀스크린 위에 표시
 - **비활성화 패널**: 클릭해도 현재 작업 중인 앱의 포커스를 뺏지 않음 (`.nonactivatingPanel`)
 - 할 일 추가(Enter), 체크, 호버 시 X로 삭제, 드래그로 순서 변경
-- **할 일 / 완료 탭**: 체크한 항목은 완료 탭으로 이동해 날짜별(오늘/어제/…)로 최신순 그룹핑, 완료 시각 표시.
-  메뉴의 '완료 기록 비우기'(2단계 확인)로 일괄 삭제
+- **할 일 / 완료 / 달력 탭**: 체크한 항목은 완료 탭으로 이동해 날짜별(오늘/어제/…)로 최신순 그룹핑, 완료 시각 표시.
+  메뉴의 '완료 기록 비우기'(2단계 확인)로 일괄 삭제. 목록이 떠 있을 때 ⌘1/⌘2/⌘3 으로 탭 전환
+- **달력 탭**: 월 그리드에 완료 히트맵(많이 한 날일수록 진하게) + 일정 있는 날 점 표시.
+  날짜를 누르면 그날의 일정과 완료 항목을 함께 보여줌
+- **캘린더 연동 (EventKit)**: macOS 캘린더에 연결된 계정(구글 포함)의 일정을 읽음 — OAuth 불필요.
+  오늘 일정에는 "진행 중"/"N분 후" 뱃지. 연동·표시 설정은 설정 창의 '연동' 섹션에서
 - **추가 시점 툴팁**: 항목에 마우스를 올리면 "8월 9일 오후 2:30 추가 · 3시간 전" 형태로 표시
 - **상세 페이지**: 항목 제목을 클릭하면 상세로 진입 — 제목 수정, 추가 시각(절대+상대), 메모 작성
 - 캐릭터 위치는 재시작 후에도 기억
@@ -46,5 +50,7 @@ open build/DeskBuddy.app
 - `Sources/DeskBuddy/ThrowController.swift` — 던지기 물리 (중력·반발·마찰)
 - `Sources/DeskBuddy/HotKeyCenter.swift` — Carbon 글로벌 단축키
 - `Sources/DeskBuddy/SettingsView.swift` — 설정 화면 (캐릭터 선택·토글·단축키 녹화)
-- `Sources/DeskBuddy/TodoListView.swift` — 리스트(할 일/완료 탭) + 상세 페이지 UI
+- `Sources/DeskBuddy/CalendarService.swift` — EventKit 연동 (권한·일정 조회·변경 감지)
+- `Sources/DeskBuddy/CalendarView.swift` — 달력 탭 (월 그리드 히트맵 + 일정/완료 목록)
+- `Sources/DeskBuddy/TodoListView.swift` — 리스트(할 일/완료/달력 탭) + 상세 페이지 UI
 - `Sources/DeskBuddy/TodoStore.swift` — 모델 + JSON 영속화

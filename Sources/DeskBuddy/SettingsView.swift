@@ -8,6 +8,7 @@ extension Notification.Name {
 }
 
 enum SettingsKeys {
+    static let showCalendar = "DeskBuddy.showCalendar"
     static let character = "DeskBuddy.character"
     static let throwEnabled = "DeskBuddy.throwEnabled"
     static let wander = "DeskBuddy.wander"
@@ -17,7 +18,10 @@ enum SettingsKeys {
 }
 
 struct SettingsView: View {
+    @ObservedObject var calendar: CalendarService
+
     @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.slime.rawValue
+    @AppStorage(SettingsKeys.showCalendar) private var showCalendar = true
     @AppStorage(SettingsKeys.throwEnabled) private var throwEnabled = true
     @AppStorage(SettingsKeys.wander) private var wanderEnabled = false
     @AppStorage(SettingsKeys.hotkeyKeyCode) private var hotkeyKeyCode = -1
@@ -62,6 +66,19 @@ struct SettingsView: View {
             }
 
             Section {
+                calendarIntegrationRow
+                if calendar.access == .authorized {
+                    Toggle("달력 탭에 일정 표시", isOn: $showCalendar)
+                }
+            } header: {
+                Text("연동")
+            } footer: {
+                Text("macOS 캘린더에 연결된 계정의 일정을 읽습니다.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 HStack {
                     Text("할 일 목록 열기 / 닫기")
                     Spacer()
@@ -91,7 +108,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 380, height: 380)
+        .frame(width: 380, height: 440)
         .onChange(of: throwEnabled) { notifyChange() }
         .onChange(of: wanderEnabled) { notifyChange() }
         .onAppear { customs = CustomCharacters.list() }
@@ -112,6 +129,37 @@ struct SettingsView: View {
         renameTarget = name
         renameText = CustomCharacters.displayName(name)
         showRename = true
+    }
+
+    // MARK: - 캘린더 연동
+
+    @ViewBuilder
+    private var calendarIntegrationRow: some View {
+        switch calendar.access {
+        case .notDetermined:
+            HStack {
+                Text("캘린더")
+                Spacer()
+                Button("연동하기") { calendar.requestAccess() }
+            }
+        case .denied:
+            HStack {
+                Text("캘린더")
+                Spacer()
+                Text("권한 꺼짐")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("시스템 설정 열기") { calendar.openPrivacySettings() }
+            }
+        case .authorized:
+            HStack {
+                Text("캘린더")
+                Spacer()
+                Label("연동됨", systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+        }
     }
 
     // MARK: - 캐릭터 선택

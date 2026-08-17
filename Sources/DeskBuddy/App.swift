@@ -123,13 +123,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
     private let store = TodoStore()
     private let appState = AppState()
+    private let calendarService = CalendarService()
 
     /// 메뉴가 열려있는 등 일시적으로 자유 이동을 멈춰야 하는 상황
     private var wanderSuspended = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        UserDefaults.standard.register(defaults: [SettingsKeys.throwEnabled: true])
+        UserDefaults.standard.register(defaults: [
+            SettingsKeys.throwEnabled: true,
+            SettingsKeys.showCalendar: true,
+        ])
         setupCharacterPanel()
         setupListPanel()
         setupStatusItem()
@@ -141,6 +145,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(settingsChanged),
             name: .settingsChanged, object: nil
         )
+
+        setupTabShortcuts()
+    }
+
+    /// 목록 패널이 떠 있을 때 ⌘1/⌘2/⌘3 으로 탭 전환
+    private func setupTabShortcuts() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self,
+                  listPanel.isVisible, listPanel.isKeyWindow,
+                  event.modifierFlags.intersection([.command, .option, .control]) == .command
+            else { return event }
+
+            let tab: TodoTab? = switch event.charactersIgnoringModifiers {
+            case "1": .active
+            case "2": .done
+            case "3": .calendar
+            default: nil
+            }
+            guard let tab else { return event }
+            withAnimation(.easeOut(duration: 0.15)) { self.appState.tab = tab }
+            return nil   // 이벤트 소비
+        }
     }
 
     @objc private func settingsChanged() {
@@ -219,7 +245,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 윈도우 크기는 여기(AppKit)가 주도하고, SwiftUI 뷰는 그 크기를 채우기만 한다
         let container = NSView()
-        let hosting = NSHostingView(rootView: TodoListView(store: store, appState: appState))
+        let hosting = NSHostingView(rootView: TodoListView(store: store, appState: appState, calendar: calendarService))
         hosting.sizingOptions = []
         let grip = ResizeGripView()
         grip.onResize = { [weak self] size in self?.applyListSize(size) }
@@ -248,6 +274,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.listVisible = false
         } else {
             repositionList()
+            calendarService.refresh()   // 열 때마다 최신 일정으로
             // child window 로 붙이면 캐릭터를 끌 때 리스트가 자동으로 따라온다
             characterPanel.addChildWindow(listPanel, ordered: .above)
             listPanel.orderFrontRegardless()
@@ -406,7 +433,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(calendar: calendarService)))
             window.title = "DeskBuddy 설정"
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
