@@ -121,6 +121,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var thrower: ThrowController!
     private var hotKeys: HotKeyCenter!
     private var settingsWindow: NSWindow?
+    private var bubble: BubbleController!
+    private var eventNotifier: EventNotifier!
     private let store = TodoStore()
     private let appState = AppState()
     private let calendarService = CalendarService()
@@ -133,6 +135,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.register(defaults: [
             SettingsKeys.throwEnabled: true,
             SettingsKeys.showCalendar: true,
+            SettingsKeys.eventAlerts: true,
+            SettingsKeys.eventAlertLead: 10,
         ])
         setupCharacterPanel()
         setupListPanel()
@@ -147,6 +151,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         setupTabShortcuts()
+        setupBubble()
+    }
+
+    // MARK: - 말풍선 · 일정 알림
+
+    private func setupBubble() {
+        bubble = BubbleController(characterPanel: characterPanel)
+        bubble.onVisibleChange = { [weak self] visible in
+            self?.appState.talking = visible
+        }
+
+        eventNotifier = EventNotifier(calendar: calendarService)
+        eventNotifier.onNotify = { [weak self] message in
+            guard let self, characterPanel.isVisible else { return }
+            bubble.show(message)   // 클릭할 때까지 유지
+        }
+        eventNotifier.start()
     }
 
     /// 목록 패널이 떠 있을 때 ⌘1/⌘2/⌘3 으로 탭 전환
@@ -489,6 +510,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleListFromMenu() {
         toggleList()
     }
+
 
     // MARK: - 메뉴바
 

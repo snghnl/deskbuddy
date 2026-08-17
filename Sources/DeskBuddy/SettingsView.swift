@@ -9,6 +9,8 @@ extension Notification.Name {
 
 enum SettingsKeys {
     static let showCalendar = "DeskBuddy.showCalendar"
+    static let eventAlerts = "DeskBuddy.eventAlerts"
+    static let eventAlertLead = "DeskBuddy.eventAlertLead"
     static let character = "DeskBuddy.character"
     static let throwEnabled = "DeskBuddy.throwEnabled"
     static let wander = "DeskBuddy.wander"
@@ -22,6 +24,8 @@ struct SettingsView: View {
 
     @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.slime.rawValue
     @AppStorage(SettingsKeys.showCalendar) private var showCalendar = true
+    @AppStorage(SettingsKeys.eventAlerts) private var eventAlerts = true
+    @AppStorage(SettingsKeys.eventAlertLead) private var eventAlertLead = 10
     @AppStorage(SettingsKeys.throwEnabled) private var throwEnabled = true
     @AppStorage(SettingsKeys.wander) private var wanderEnabled = false
     @AppStorage(SettingsKeys.hotkeyKeyCode) private var hotkeyKeyCode = -1
@@ -69,6 +73,16 @@ struct SettingsView: View {
                 calendarIntegrationRow
                 if calendar.access == .authorized {
                     Toggle("달력 탭에 일정 표시", isOn: $showCalendar)
+                    Toggle("일정 알림 (말풍선)", isOn: $eventAlerts)
+                    if eventAlerts {
+                        Picker("알림 시점", selection: $eventAlertLead) {
+                            Text("5분 전").tag(5)
+                            Text("10분 전").tag(10)
+                            Text("15분 전").tag(15)
+                            Text("30분 전").tag(30)
+                        }
+                        .pickerStyle(.menu)
+                    }
                 }
             } header: {
                 Text("연동")

@@ -31,6 +31,8 @@ open build/DeskBuddy.app
   날짜를 누르면 그날의 일정과 완료 항목을 함께 보여줌
 - **캘린더 연동 (EventKit)**: macOS 캘린더에 연결된 계정(구글 포함)의 일정을 읽음 — OAuth 불필요.
   오늘 일정에는 "진행 중"/"N분 후" 뱃지. 연동·표시 설정은 설정 창의 '연동' 섹션에서
+- **일정 알림 (말풍선)**: 일정 시작 5/10/15/30분 전(설정 가능)에 캐릭터 머리 위에 말풍선으로 알림.
+  클릭할 때까지 유지되고, 캐릭터를 끌거나 배회 중에도 따라다님. 일정당 한 번만 알림
 - **추가 시점 툴팁**: 항목에 마우스를 올리면 "8월 9일 오후 2:30 추가 · 3시간 전" 형태로 표시
 - **상세 페이지**: 항목 제목을 클릭하면 상세로 진입 — 제목 수정, 추가 시각(절대+상대), 메모 작성
 - 캐릭터 위치는 재시작 후에도 기억
@@ -50,6 +52,7 @@ open build/DeskBuddy.app
 - `Sources/DeskBuddy/ThrowController.swift` — 던지기 물리 (중력·반발·마찰)
 - `Sources/DeskBuddy/HotKeyCenter.swift` — Carbon 글로벌 단축키
 - `Sources/DeskBuddy/SettingsView.swift` — 설정 화면 (캐릭터 선택·토글·단축키 녹화)
+- `Sources/DeskBuddy/Bubble.swift` — 말풍선 패널 + 일정 알림 감시 (EventNotifier)
 - `Sources/DeskBuddy/CalendarService.swift` — EventKit 연동 (권한·일정 조회·변경 감지)
 - `Sources/DeskBuddy/CalendarView.swift` — 달력 탭 (월 그리드 히트맵 + 일정/완료 목록)
 - `Sources/DeskBuddy/TodoListView.swift` — 리스트(할 일/완료/달력 탭) + 상세 페이지 UI

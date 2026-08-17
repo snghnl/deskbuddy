@@ -37,7 +37,9 @@ struct CharacterView: View {
     private var remaining: Int { store.todos.filter { !$0.isDone }.count }
 
     private var mouth: MouthState {
-        if appState.flying { .surprised } else if appState.listVisible { .open } else { .smile }
+        if appState.flying { .surprised }
+        else if appState.listVisible || appState.talking { .open }
+        else { .smile }
     }
 
     var body: some View {
@@ -393,4 +395,6 @@ final class AppState: ObservableObject {
     @Published var facingRight = true
     /// 던져져서 날아가는 중인지
     @Published var flying = false
+    /// 말풍선이 떠 있는 동안
+    @Published var talking = false
 }
