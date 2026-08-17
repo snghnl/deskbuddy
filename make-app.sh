@@ -34,7 +34,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleExecutable</key>
     <string>DeskBuddy</string>
     <key>CFBundleIdentifier</key>
-    <string>com.russell.deskbuddy</string>
+    <string>com.snghnl.deskbuddy</string>
     <key>CFBundleName</key>
     <string>DeskBuddy</string>
     <key>CFBundlePackageType</key>
@@ -51,7 +51,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <array>
         <dict>
             <key>CFBundleURLName</key>
-            <string>com.russell.deskbuddy</string>
+            <string>com.snghnl.deskbuddy</string>
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>deskbuddy</string>

@@ -132,6 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        migrateLegacyDefaults()
         UserDefaults.standard.register(defaults: [
             SettingsKeys.throwEnabled: true,
             SettingsKeys.showCalendar: true,
@@ -152,6 +153,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupTabShortcuts()
         setupBubble()
+    }
+
+    /// One-time migration of settings from the pre-release bundle id
+    /// (com.russell.deskbuddy → com.snghnl.deskbuddy). Safe to remove eventually.
+    private func migrateLegacyDefaults() {
+        let migratedKey = "DeskBuddy.didMigrateBundleID"
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: migratedKey) else { return }
+        defaults.set(true, forKey: migratedKey)
+
+        guard let legacy = UserDefaults(suiteName: "com.russell.deskbuddy") else { return }
+        for (key, value) in legacy.dictionaryRepresentation() where key.hasPrefix("DeskBuddy.") {
+            if defaults.object(forKey: key) == nil {
+                defaults.set(value, forKey: key)
+            }
+        }
     }
 
     // MARK: - URL scheme (agent integration)
