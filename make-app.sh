@@ -7,9 +7,11 @@ swift build -c release
 
 APP=build/DeskBuddy.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp .build/release/DeskBuddy "$APP/Contents/MacOS/"
+# SPM resource bundle (localization tables) — Bundle.module finds it in Contents/Resources
+cp -R .build/release/DeskBuddy_DeskBuddy.bundle "$APP/Contents/Resources/"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

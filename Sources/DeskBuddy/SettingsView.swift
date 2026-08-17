@@ -45,14 +45,14 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(L.t("언어", "Language"), selection: $languageRaw) {
-                    Text(L.t("시스템 설정 따름", "Follow System")).tag(AppLanguage.system.rawValue)
+                Picker(L.s("settings.language"), selection: $languageRaw) {
+                    Text(L.s("settings.follow_system")).tag(AppLanguage.system.rawValue)
                     Text("한국어").tag(AppLanguage.korean.rawValue)
                     Text("English").tag(AppLanguage.english.rawValue)
                 }
                 .pickerStyle(.menu)
             } header: {
-                Text(L.t("일반", "General"))
+                Text(L.s("settings.general"))
             }
 
             Section {
@@ -64,8 +64,8 @@ struct SettingsView: View {
                         ForEach(customs, id: \.self) { name in
                             characterOption(.custom(name), label: CustomCharacters.displayName(name), deletable: true)
                                 .contextMenu {
-                                    Button(L.t("이름 변경…", "Rename…")) { beginRename(name) }
-                                    Button(L.t("삭제", "Delete"), role: .destructive) { removeCustom(name) }
+                                    Button(L.s("settings.rename")) { beginRename(name) }
+                                    Button(L.s("settings.delete"), role: .destructive) { removeCustom(name) }
                                 }
                         }
                         addCharacterButton
@@ -73,13 +73,12 @@ struct SettingsView: View {
                     .padding(.vertical, 2)
                 }
 
-                Toggle(L.t("휙 던질 수 있게", "Throwable (flick to toss)"), isOn: $throwEnabled)
-                Toggle(L.t("자유롭게 돌아다니기", "Wander around the screen"), isOn: $wanderEnabled)
+                Toggle(L.s("settings.throwable"), isOn: $throwEnabled)
+                Toggle(L.s("settings.wander"), isOn: $wanderEnabled)
             } header: {
-                Text(L.t("캐릭터", "Character"))
+                Text(L.s("settings.character"))
             } footer: {
-                Text(L.t("+ 로 이미지를 캐릭터로 추가할 수 있어요. 투명 배경 PNG가 잘 어울립니다. (커스텀 캐릭터는 표정 없이 움직임만 적용)",
-                         "Use + to add an image as a character. Transparent PNGs work best. (Custom characters get motion but no facial expressions.)"))
+                Text(L.s("settings.character_footer"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -87,37 +86,36 @@ struct SettingsView: View {
             Section {
                 calendarIntegrationRow
                 if calendar.access == .authorized {
-                    Toggle(L.t("달력 탭에 일정 표시", "Show events in Calendar tab"), isOn: $showCalendar)
-                    Toggle(L.t("일정 알림 (말풍선)", "Event alerts (speech bubble)"), isOn: $eventAlerts)
+                    Toggle(L.s("settings.show_events"), isOn: $showCalendar)
+                    Toggle(L.s("settings.event_alerts"), isOn: $eventAlerts)
                     if eventAlerts {
-                        Picker(L.t("알림 시점", "Alert timing"), selection: $eventAlertLead) {
-                            Text(L.t("5분 전", "5 min before")).tag(5)
-                            Text(L.t("10분 전", "10 min before")).tag(10)
-                            Text(L.t("15분 전", "15 min before")).tag(15)
-                            Text(L.t("30분 전", "30 min before")).tag(30)
+                        Picker(L.s("settings.alert_timing"), selection: $eventAlertLead) {
+                            Text(L.s("settings.before_5min")).tag(5)
+                            Text(L.s("settings.before_10min")).tag(10)
+                            Text(L.s("settings.before_15min")).tag(15)
+                            Text(L.s("settings.before_30min")).tag(30)
                         }
                         .pickerStyle(.menu)
                     }
                 }
             } header: {
-                Text(L.t("연동", "Integrations"))
+                Text(L.s("settings.integrations"))
             } footer: {
-                Text(L.t("macOS 캘린더에 연결된 계정의 일정을 읽습니다.",
-                         "Reads events from accounts connected to macOS Calendar."))
+                Text(L.s("settings.integrations_footer"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section {
                 HStack {
-                    Text(L.t("할 일 목록 열기 / 닫기", "Open / close the to-do list"))
+                    Text(L.s("settings.hotkey_action"))
                     Spacer()
                     Button {
                         recording ? stopRecording() : startRecording()
                     } label: {
                         Text(recording
-                             ? L.t("키를 누르세요 (esc 취소)", "Press keys (esc to cancel)")
-                             : (hotkeyDisplay.isEmpty ? L.t("단축키 등록", "Record Shortcut") : hotkeyDisplay))
+                             ? L.s("settings.press_keys")
+                             : (hotkeyDisplay.isEmpty ? L.s("settings.record_shortcut") : hotkeyDisplay))
                             .frame(minWidth: 130)
                     }
                     if !hotkeyDisplay.isEmpty && !recording {
@@ -126,14 +124,13 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
-                        .help(L.t("단축키 해제", "Remove shortcut"))
+                        .help(L.s("settings.remove_shortcut"))
                     }
                 }
             } header: {
-                Text(L.t("글로벌 단축키", "Global Shortcut"))
+                Text(L.s("settings.global_shortcut"))
             } footer: {
-                Text(L.t("어느 앱에서든 목록을 열고 바로 입력할 수 있어요. ⌘/⌥/⌃ 중 하나를 포함해야 합니다.",
-                         "Open the list and start typing from any app. Must include ⌘, ⌥, or ⌃."))
+                Text(L.s("settings.hotkey_footer"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -145,15 +142,15 @@ struct SettingsView: View {
         .onChange(of: wanderEnabled) { notifyChange() }
         .onAppear { customs = CustomCharacters.list() }
         .onDisappear(perform: stopRecording)
-        .alert(L.t("캐릭터 이름", "Character Name"), isPresented: $showRename) {
-            TextField(L.t("이름", "Name"), text: $renameText)
-            Button(L.t("저장", "Save")) {
+        .alert(L.s("settings.character_name"), isPresented: $showRename) {
+            TextField(L.s("settings.name"), text: $renameText)
+            Button(L.s("settings.save")) {
                 if let target = renameTarget {
                     CustomCharacters.setDisplayName(renameText, for: target)
                 }
                 renameTarget = nil
             }
-            Button(L.t("취소", "Cancel"), role: .cancel) { renameTarget = nil }
+            Button(L.s("settings.cancel"), role: .cancel) { renameTarget = nil }
         }
     }
 
@@ -170,24 +167,24 @@ struct SettingsView: View {
         switch calendar.access {
         case .notDetermined:
             HStack {
-                Text(L.t("캘린더", "Calendar"))
+                Text(L.s("settings.calendar"))
                 Spacer()
-                Button(L.t("연동하기", "Connect")) { calendar.requestAccess() }
+                Button(L.s("settings.connect")) { calendar.requestAccess() }
             }
         case .denied:
             HStack {
-                Text(L.t("캘린더", "Calendar"))
+                Text(L.s("settings.calendar"))
                 Spacer()
-                Text(L.t("권한 꺼짐", "Access denied"))
+                Text(L.s("settings.access_denied"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button(L.t("시스템 설정 열기", "Open System Settings")) { calendar.openPrivacySettings() }
+                Button(L.s("settings.open_system_settings")) { calendar.openPrivacySettings() }
             }
         case .authorized:
             HStack {
-                Text(L.t("캘린더", "Calendar"))
+                Text(L.s("settings.calendar"))
                 Spacer()
-                Label(L.t("연동됨", "Connected"), systemImage: "checkmark.circle.fill")
+                Label(L.s("settings.connected"), systemImage: "checkmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.green)
             }
@@ -234,7 +231,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                     .offset(x: 4, y: -4)
-                    .help(L.t("삭제", "Delete"))
+                    .help(L.s("settings.delete"))
                 }
             }
         }
@@ -248,7 +245,7 @@ struct SettingsView: View {
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.secondary)
                     .frame(width: 56, height: 60)
-                Text(L.t("추가", "Add"))
+                Text(L.s("settings.add"))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
@@ -260,15 +257,14 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
-        .help(L.t("이미지 파일을 캐릭터로 추가", "Add an image file as a character"))
+        .help(L.s("settings.add_character_help"))
     }
 
     private func addCustom() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .gif, .heic, .tiff, .webP]
         panel.allowsMultipleSelection = false
-        panel.message = L.t("캐릭터로 쓸 이미지를 선택하세요 (투명 배경 PNG 추천)",
-                            "Choose an image for your character (transparent PNG recommended)")
+        panel.message = L.s("settings.choose_image")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if let name = try? CustomCharacters.add(url) {
             customs = CustomCharacters.list()

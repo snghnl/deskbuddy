@@ -106,12 +106,12 @@ final class TodoStore: ObservableObject {
     }
 
     private static func dayTitle(_ day: Date, calendar: Calendar) -> String {
-        if calendar.isDateInToday(day) { return L.t("오늘", "Today") }
-        if calendar.isDateInYesterday(day) { return L.t("어제", "Yesterday") }
+        if calendar.isDateInToday(day) { return L.s("date.today") }
+        if calendar.isDateInYesterday(day) { return L.s("date.yesterday") }
         // Built per call so the format and locale follow the current app language
         let f = DateFormatter()
         f.locale = L.locale
-        f.dateFormat = L.t("M월 d일 (E)", "MMM d (E)")
+        f.dateFormat = L.s("date.day_format")
         return f.string(from: day)
     }
 

@@ -38,7 +38,9 @@ During development you can also just `swift run`. No Xcode project — plain Swi
 - **Event alerts (speech bubble)**: 5/10/15/30 minutes (configurable) before an event
   starts, the character raises a speech bubble. It stays until clicked, follows the
   character around, and repositions above/below/left/right based on screen space
-- **Language setting**: follow the system language or force Korean/English from Settings
+- **Language setting**: follow the system language or force Korean/English from Settings.
+  All strings live in `Sources/DeskBuddy/Resources/Localizations/*.yml` — translation
+  fixes and new languages are welcome as PRs
 - **Always on top**: `NSPanel` at `.floating` level, visible on all Spaces and over
   full-screen apps
 - **Non-activating**: clicking the buddy never steals focus from the app you are using
@@ -111,6 +113,7 @@ System Settings → General → Login Items → add `build/DeskBuddy.app`.
 - `Sources/DeskBuddy/SettingsView.swift` — settings (language, characters, toggles, hotkey recorder)
 - `Sources/DeskBuddy/TodoListView.swift` — list (To Do/Done/Calendar tabs) + detail page
 - `Sources/DeskBuddy/TodoStore.swift` — model + JSON persistence
-- `Sources/DeskBuddy/Localization.swift` — lightweight `L.t(ko, en)` localization layer
+- `Sources/DeskBuddy/Localization.swift` — YAML-backed localization (`L.s("key")` / `L.f("key", args...)`)
+- `Sources/DeskBuddy/Resources/Localizations/` — translation tables (`ko.yml`, `en.yml`)
 - `bin/deskbuddy` — CLI for agent integration
 - `plugin/` — Claude Code plugin (skill, hook, bundled CLI)

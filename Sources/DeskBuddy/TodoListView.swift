@@ -73,20 +73,20 @@ struct TodoListView: View {
 
     private var header: some View {
         HStack(spacing: 4) {
-            tabButton(L.t("할 일", "To Do"), count: activeTodos.count, tab: .active).help("⌘1")
-            tabButton(L.t("완료", "Done"), count: doneCount, tab: .done).help("⌘2")
-            tabButton(L.t("달력", "Calendar"), count: 0, tab: .calendar).help("⌘3")
+            tabButton(L.s("list.to_do"), count: activeTodos.count, tab: .active).help("⌘1")
+            tabButton(L.s("list.done"), count: doneCount, tab: .done).help("⌘2")
+            tabButton(L.s("list.calendar"), count: 0, tab: .calendar).help("⌘3")
             Spacer(minLength: 0)
             Menu {
                 // Destructive action that erases history, so require one extra confirmation step
-                Menu(L.t("완료 기록 비우기", "Clear Completed History")) {
-                    Button(L.t("\(doneCount)개 모두 삭제", "Delete All \(doneCount)"), role: .destructive) {
+                Menu(L.s("list.clear_completed_history")) {
+                    Button(L.f("list.delete_all", doneCount), role: .destructive) {
                         store.clearCompleted()
                     }
                 }
                 .disabled(doneCount == 0)
                 Divider()
-                Button(L.t("종료", "Quit")) { NSApp.terminate(nil) }
+                Button(L.s("app.quit")) { NSApp.terminate(nil) }
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 12))
@@ -130,7 +130,7 @@ struct TodoListView: View {
             Image(systemName: "plus")
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.tertiary)
-            TextField(L.t("할 일 추가", "Add a to-do"), text: $newTitle)
+            TextField(L.s("list.add_placeholder"), text: $newTitle)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .focused($inputFocused)
@@ -148,7 +148,7 @@ struct TodoListView: View {
         ScrollView {
             LazyVStack(spacing: 2) {
                 if activeTodos.isEmpty {
-                    Text(L.t("오늘은 뭘 할까요?", "What shall we do today?"))
+                    Text(L.s("list.empty_state"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .padding(.vertical, 16)
@@ -182,7 +182,7 @@ struct TodoListView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 2, pinnedViews: [.sectionHeaders]) {
                 if completedGroups.isEmpty {
-                    Text(L.t("아직 완료한 일이 없어요", "Nothing completed yet"))
+                    Text(L.s("list.nothing_completed_yet"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
@@ -282,15 +282,13 @@ struct TodoRow: View {
     }
 
     private var tooltip: String {
-        var text = L.t(
-            "\(todo.createdAt.formatted(date: .abbreviated, time: .shortened)) 추가 · \(todo.createdAt.relativeText)",
-            "Added \(todo.createdAt.formatted(date: .abbreviated, time: .shortened)) · \(todo.createdAt.relativeText)"
-        )
+        var text = L.f("list.tooltip_added",
+                       todo.createdAt.formatted(date: .abbreviated, time: .shortened),
+                       todo.createdAt.relativeText)
         if todo.isDone {
-            text += L.t(
-                "\n\(todo.completionDate.formatted(date: .abbreviated, time: .shortened)) 완료 · \(todo.completionDate.relativeText)",
-                "\nCompleted \(todo.completionDate.formatted(date: .abbreviated, time: .shortened)) · \(todo.completionDate.relativeText)"
-            )
+            text += "\n" + L.f("list.tooltip_completed",
+                               todo.completionDate.formatted(date: .abbreviated, time: .shortened),
+                               todo.completionDate.relativeText)
         }
         return text
     }
@@ -338,7 +336,7 @@ private struct TodoDetailView: View {
                     HStack(spacing: 3) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 10, weight: .semibold))
-                        Text(L.t("목록", "List"))
+                        Text(L.s("list.list"))
                             .font(.system(size: 11))
                     }
                     .foregroundStyle(.secondary)
@@ -354,7 +352,7 @@ private struct TodoDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help(L.t("삭제", "Delete"))
+                .help(L.s("settings.delete"))
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -374,7 +372,7 @@ private struct TodoDetailView: View {
                     }
                     .buttonStyle(.plain)
 
-                    TextField(L.t("제목", "Title"), text: $title, axis: .vertical)
+                    TextField(L.s("list.title"), text: $title, axis: .vertical)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13, weight: .medium))
                         .focused($titleFocused)
@@ -383,15 +381,15 @@ private struct TodoDetailView: View {
 
                 // Created / completed timestamps
                 VStack(alignment: .leading, spacing: 6) {
-                    timestamp("clock", L.t("추가", "Added"), todo.createdAt)
+                    timestamp("clock", L.s("list.added"), todo.createdAt)
                     if todo.isDone {
-                        timestamp("checkmark.circle", L.t("완료", "Completed"), todo.completionDate)
+                        timestamp("checkmark.circle", L.s("list.completed"), todo.completionDate)
                     }
                 }
 
                 // Memo
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(L.t("메모", "Memo"))
+                    Text(L.s("list.memo"))
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.secondary)
                     TextEditor(text: $memo)

@@ -154,7 +154,7 @@ struct CalendarTabView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help([count > 0 ? L.t("\(count)개 완료", "\(count) completed") : nil, hasEvent ? L.t("일정 있음", "Has events") : nil]
+        .help([count > 0 ? L.f("calendar.n_completed", count) : nil, hasEvent ? L.s("calendar.has_events") : nil]
             .compactMap { $0 }.joined(separator: " · "))
     }
 
@@ -172,7 +172,7 @@ struct CalendarTabView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                 if !items.isEmpty {
-                    Text(L.t("\(items.count)개 완료", "\(items.count) completed"))
+                    Text(L.f("calendar.n_completed", items.count))
                         .font(.system(size: 9, design: .rounded))
                         .foregroundStyle(.tertiary)
                 }
@@ -188,8 +188,8 @@ struct CalendarTabView: View {
 
             if items.isEmpty {
                 Text(events.isEmpty
-                     ? L.t("이 날엔 기록이 없어요", "Nothing recorded on this day")
-                     : L.t("이 날엔 완료한 일이 없어요", "Nothing completed on this day"))
+                     ? L.s("calendar.nothing_recorded")
+                     : L.s("calendar.nothing_completed"))
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity)
@@ -228,7 +228,7 @@ struct CalendarTabView: View {
             Circle()
                 .fill(event.color)
                 .frame(width: 5, height: 5)
-            Text(event.isAllDay ? L.t("종일", "All day") : event.start.formatted(date: .omitted, time: .shortened))
+            Text(event.isAllDay ? L.s("calendar.all_day") : event.start.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: 11, weight: isNext ? .semibold : .regular).monospacedDigit())
                 .foregroundStyle(isNext ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
             Text(event.title)
@@ -237,7 +237,7 @@ struct CalendarTabView: View {
                 .lineLimit(1)
             Spacer(minLength: 0)
             if isNext {
-                Text(ongoing ? L.t("진행 중", "Now") : relative(to: event.start, from: now))
+                Text(ongoing ? L.s("calendar.now") : relative(to: event.start, from: now))
                     .font(.system(size: 9, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5)
@@ -256,9 +256,10 @@ struct CalendarTabView: View {
     /// "in 5 min", "in 2h 30m" — only handles events within today, so simple math is enough
     private func relative(to date: Date, from now: Date) -> String {
         let minutes = Int(date.timeIntervalSince(now) / 60)
-        if minutes < 1 { return L.t("곧 시작", "starting soon") }
-        if minutes < 60 { return L.t("\(minutes)분 후", "in \(minutes) min") }
-        return L.t("\(minutes / 60)시간 \(minutes % 60 == 0 ? "" : "\(minutes % 60)분 ")후",
-                   minutes % 60 == 0 ? "in \(minutes / 60)h" : "in \(minutes / 60)h \(minutes % 60)m")
+        if minutes < 1 { return L.s("calendar.starting_soon") }
+        if minutes < 60 { return L.f("calendar.in_minutes", minutes) }
+        return minutes % 60 == 0
+            ? L.f("calendar.in_hours", minutes / 60)
+            : L.f("calendar.in_hours_minutes", minutes / 60, minutes % 60)
     }
 }

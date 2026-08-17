@@ -9,9 +9,9 @@ enum CharacterKind: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .slime: L.t("슬라임", "Slime")
-        case .ghost: L.t("유령", "Ghost")
-        case .cat: L.t("고양이", "Cat")
+        case .slime: L.s("character.slime")
+        case .ghost: L.s("character.ghost")
+        case .cat: L.s("character.cat")
         }
     }
 }

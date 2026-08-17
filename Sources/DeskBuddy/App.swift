@@ -186,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 store.updateMemo(added.id, memo)
             }
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            bubble.show(L.t("📥 할 일 추가: \(title)", "📥 Added: \(title)"), autoHide: 5)
+            bubble.show(L.f("bubble.added", title), autoHide: 5)
 
         case "done":
             guard let id = query("id"),
@@ -194,7 +194,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             else { return }
             if !todo.isDone { store.toggle(todo) }
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            bubble.show(L.t("✅ 완료: \(todo.title)", "✅ Done: \(todo.title)"), autoHide: 5)
+            bubble.show(L.f("bubble.done", todo.title), autoHide: 5)
 
         case "toggle":
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
@@ -516,7 +516,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             settingsWindow = window
         }
-        settingsWindow?.title = L.t("DeskBuddy 설정", "DeskBuddy Settings")
+        settingsWindow?.title = L.s("app.settings_title")
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
@@ -530,8 +530,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let listItem = NSMenuItem(
             title: listPanel.isVisible
-                ? L.t("할 일 목록 닫기", "Close To-do List")
-                : L.t("할 일 목록 열기", "Open To-do List"),
+                ? L.s("app.close_to_do_list")
+                : L.s("app.open_to_do_list"),
             action: #selector(toggleListFromMenu), keyEquivalent: ""
         )
         listItem.target = self
@@ -540,27 +540,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
 
         let wanderItem = NSMenuItem(
-            title: L.t("자유롭게 돌아다니기", "Wander Around"), action: #selector(toggleWander), keyEquivalent: ""
+            title: L.s("app.wander_around"), action: #selector(toggleWander), keyEquivalent: ""
         )
         wanderItem.target = self
         wanderItem.state = wanderEnabled ? .on : .off
         menu.addItem(wanderItem)
 
-        let homeItem = NSMenuItem(title: L.t("제자리로 보내기", "Send Home"), action: #selector(sendHome), keyEquivalent: "")
+        let homeItem = NSMenuItem(title: L.s("app.send_home"), action: #selector(sendHome), keyEquivalent: "")
         homeItem.target = self
         menu.addItem(homeItem)
 
         menu.addItem(.separator())
 
-        let settingsItem = NSMenuItem(title: L.t("설정…", "Settings…"), action: #selector(openSettings), keyEquivalent: "")
+        let settingsItem = NSMenuItem(title: L.s("app.settings"), action: #selector(openSettings), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        let hideItem = NSMenuItem(title: L.t("캐릭터 숨기기", "Hide Character"), action: #selector(toggleCharacter), keyEquivalent: "")
+        let hideItem = NSMenuItem(title: L.s("app.hide_character"), action: #selector(toggleCharacter), keyEquivalent: "")
         hideItem.target = self
         menu.addItem(hideItem)
 
-        menu.addItem(withTitle: L.t("DeskBuddy 종료", "Quit DeskBuddy"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: L.s("app.quit_deskbuddy"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
 
         NSMenu.popUpContextMenu(menu, with: event, for: view)
     }
@@ -584,16 +584,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard statusItem != nil else { return }
         let menu = NSMenu()
         let toggleItem = NSMenuItem(
-            title: L.t("캐릭터 보이기 / 숨기기", "Show / Hide Character"),
+            title: L.s("app.show_hide_character"),
             action: #selector(toggleCharacter), keyEquivalent: ""
         )
         toggleItem.target = self
         menu.addItem(toggleItem)
-        let settingsItem = NSMenuItem(title: L.t("설정…", "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: L.s("app.settings"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
         menu.addItem(.separator())
-        menu.addItem(withTitle: L.t("종료", "Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: L.s("app.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
     }
 

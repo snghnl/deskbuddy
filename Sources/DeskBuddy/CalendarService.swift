@@ -86,7 +86,7 @@ final class CalendarService: ObservableObject {
             .map { event in
                 CalendarEvent(
                     id: "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
-                    title: event.title ?? L.t("(제목 없음)", "(No title)"),
+                    title: event.title ?? L.s("calendar.no_title"),
                     start: event.startDate,
                     end: event.endDate,
                     isAllDay: event.isAllDay,

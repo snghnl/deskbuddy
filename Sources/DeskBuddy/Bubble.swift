@@ -333,7 +333,7 @@ final class EventNotifier {
                   !notifiedIDs.contains(event.id) else { continue }
             notifiedIDs.insert(event.id)
             let minutes = max(1, Int(seconds / 60))
-            onNotify?(L.t("🕐 \(minutes)분 후 · \(event.title)", "🕐 In \(minutes) min · \(event.title)"))
+            onNotify?(L.f("bubble.event_upcoming", minutes, event.title))
         }
     }
 }
