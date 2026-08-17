@@ -1,0 +1,9 @@
+{
+  "name": "deskbuddy",
+  "version": "0.1.0",
+  "description": "macOS 플로팅 캐릭터 DeskBuddy 연동 — 에이전트가 말풍선 알림을 보내고 할 일을 읽고/추가하고/완료 처리한다. 입력 대기 시 자동 알림 훅 포함.",
+  "author": {
+    "name": "snghnl",
+    "url": "https://github.com/snghnl/deskbuddy"
+  }
+}

@@ -62,6 +62,25 @@ PATH 에 넣으려면: `ln -s ~/personal/deskbuddy/bin/deskbuddy /usr/local/bin/
 - `deskbuddy://done?id=<uuid>`
 - `deskbuddy://toggle`
 
+## Claude Code 플러그인
+
+이 저장소는 Claude Code 플러그인 마켓플레이스를 겸한다. 설치하면 에이전트가
+DeskBuddy 를 알아서 활용한다 (스킬 + 입력 대기 자동 알림 훅 + CLI 동봉).
+
+```
+/plugin marketplace add snghnl/deskbuddy
+/plugin install deskbuddy@deskbuddy
+```
+
+포함 내용:
+- **스킬** (`plugin/skills/deskbuddy/`): 긴 작업 완료 시 말풍선 보고, 할 일 추가/조회/완료
+  플로우 등 에이전트 사용 지침
+- **Notification 훅** (`plugin/hooks/`): Claude 가 권한 승인·입력을 기다릴 때 자동으로
+  말풍선 알림 (`🔔 [프로젝트명] 메시지`). 앱이 없으면 조용히 무시된다
+- **CLI 사본** (`plugin/scripts/deskbuddy`): PATH 설정 없이도 훅·스킬이 동작
+
+`bin/deskbuddy` 를 수정하면 `plugin/scripts/deskbuddy` 에도 복사해 동기화한다.
+
 ## 로그인 시 자동 시작
 
 시스템 설정 → 일반 → 로그인 항목에 `build/DeskBuddy.app` 추가.

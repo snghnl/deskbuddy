@@ -1,0 +1,14 @@
+{
+  "name": "deskbuddy",
+  "owner": {
+    "name": "snghnl",
+    "url": "https://github.com/snghnl"
+  },
+  "plugins": [
+    {
+      "name": "deskbuddy",
+      "source": "./plugin",
+      "description": "macOS 플로팅 캐릭터 DeskBuddy 연동 — 말풍선 알림, 할 일 추가/조회/완료, 입력 대기 자동 알림 훅"
+    }
+  ]
+}
