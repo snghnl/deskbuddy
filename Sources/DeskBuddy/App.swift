@@ -154,6 +154,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupBubble()
     }
 
+    // MARK: - URL 스킴 (에이전트 연동)
+
+    /// deskbuddy://notify?message=...&autohide=8
+    /// deskbuddy://add?title=...&memo=...
+    /// deskbuddy://done?id=<uuid>
+    /// deskbuddy://toggle
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls { handleURL(url) }
+    }
+
+    private func handleURL(_ url: URL) {
+        guard url.scheme == "deskbuddy" else { return }
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        func query(_ name: String) -> String? {
+            components?.queryItems?.first { $0.name == name }?.value
+        }
+
+        switch url.host {
+        case "notify":
+            guard let message = query("message") ?? query("text"), !message.isEmpty else { return }
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+            let autoHide = query("autohide").flatMap(Double.init)
+            bubble.show(message, autoHide: autoHide)   // 기본은 클릭할 때까지 유지
+
+        case "add":
+            guard let title = query("title"), !title.isEmpty else { return }
+            store.add(title)
+            if let memo = query("memo"), !memo.isEmpty,
+               let added = store.todos.first(where: { $0.title == title.trimmingCharacters(in: .whitespacesAndNewlines) }) {
+                store.updateMemo(added.id, memo)
+            }
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+            bubble.show("📥 할 일 추가: \(title)", autoHide: 5)
+
+        case "done":
+            guard let id = query("id"),
+                  let todo = store.todos.first(where: { $0.id.uuidString.caseInsensitiveCompare(id) == .orderedSame })
+            else { return }
+            if !todo.isDone { store.toggle(todo) }
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+            bubble.show("✅ 완료: \(todo.title)", autoHide: 5)
+
+        case "toggle":
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+            toggleList()
+
+        default:
+            break
+        }
+    }
+
     // MARK: - 말풍선 · 일정 알림
 
     private func setupBubble() {

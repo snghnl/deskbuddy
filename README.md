@@ -39,6 +39,29 @@ open build/DeskBuddy.app
 - 메뉴바 체크리스트 아이콘: 캐릭터 보이기/숨기기, 종료 (Dock 아이콘 없음)
 - 데이터: `~/Library/Application Support/DeskBuddy/todos.json` (300ms 디바운스 자동 저장)
 
+## 에이전트 연동 (CLI / URL 스킴)
+
+외부 스크립트·에이전트(Claude Code, steward 등)가 DeskBuddy 로 알림과 할 일을 보낼 수 있다.
+
+```sh
+bin/deskbuddy notify "빌드 끝났어요!"              # 말풍선 (클릭할 때까지 유지)
+bin/deskbuddy notify "잠깐 알림" --autohide 8      # 8초 후 자동 닫힘
+bin/deskbuddy add "PR 리뷰하기" --memo "긴급 아님"  # 할 일 추가
+bin/deskbuddy list                                 # 남은 할 일 목록
+bin/deskbuddy list --json                          # 전체 데이터 JSON (에이전트용)
+bin/deskbuddy done a42620c8                        # 완료 처리 (id 앞자리 또는 제목 일부)
+bin/deskbuddy toggle                               # 목록 열기/닫기
+```
+
+쓰기(notify/add/done/toggle)는 `deskbuddy://` URL 스킴을 사용하므로 앱이 꺼져 있으면 자동 실행되고,
+읽기(list)는 todos.json 을 직접 읽으므로 앱 실행 여부와 무관하다.
+PATH 에 넣으려면: `ln -s ~/personal/deskbuddy/bin/deskbuddy /usr/local/bin/deskbuddy`
+
+- `deskbuddy://notify?message=...&autohide=8`
+- `deskbuddy://add?title=...&memo=...`
+- `deskbuddy://done?id=<uuid>`
+- `deskbuddy://toggle`
+
 ## 로그인 시 자동 시작
 
 시스템 설정 → 일반 → 로그인 항목에 `build/DeskBuddy.app` 추가.

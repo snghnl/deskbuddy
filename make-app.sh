@@ -32,6 +32,17 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.russell.deskbuddy</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>deskbuddy</string>
+            </array>
+        </dict>
+    </array>
     <key>NSCalendarsUsageDescription</key>
     <string>오늘 일정을 보여주기 위해 캘린더를 읽습니다.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
