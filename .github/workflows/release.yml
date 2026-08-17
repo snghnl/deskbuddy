@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build universal app bundle
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}" ./make-app.sh --universal
+
+      - name: Package
+        run: |
+          ditto -c -k --keepParent build/DeskBuddy.app "DeskBuddy-${GITHUB_REF_NAME}.zip"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "DeskBuddy-${GITHUB_REF_NAME}.zip" \
+            --title "DeskBuddy $GITHUB_REF_NAME" \
+            --generate-notes

@@ -4,10 +4,25 @@ A floating desktop buddy for macOS. A little character sits on top of your scree
 click it and your to-do list unfolds. Visible across every Space and even over
 full-screen apps.
 
+## Install
+
+Download `DeskBuddy-<version>.zip` from [Releases](https://github.com/snghnl/deskbuddy/releases),
+unzip, and move `DeskBuddy.app` to `/Applications`.
+
+The app is not yet notarized, so on first launch macOS will warn about an
+unidentified developer. Either **right-click the app → Open → Open**, or run:
+
+```sh
+xattr -d com.apple.quarantine /Applications/DeskBuddy.app
+```
+
+Requires macOS 14 (Sonoma) or later. Universal binary (Apple Silicon + Intel).
+
 ## Build & Run
 
 ```sh
-./make-app.sh          # builds build/DeskBuddy.app
+./make-app.sh              # builds build/DeskBuddy.app (native arch)
+./make-app.sh --universal  # arm64 + x86_64 (what CI ships)
 open build/DeskBuddy.app
 ```
 
