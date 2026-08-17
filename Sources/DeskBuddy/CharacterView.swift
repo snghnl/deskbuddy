@@ -176,12 +176,12 @@ struct CharacterBody: View {
 
     private var catBody: some View {
         ZStack {
-            // Ears (layered behind the head)
-            HStack(spacing: 26) {
-                ear
-                ear.scaleEffect(x: -1)
+            // Ears (layered behind the head) — bases buried in the head, tips tilted outward
+            HStack(spacing: 16) {
+                ear.rotationEffect(.degrees(-16))
+                ear.rotationEffect(.degrees(16))
             }
-            .offset(y: -24)
+            .offset(y: -23)
 
             Ellipse()
                 .fill(
@@ -201,11 +201,12 @@ struct CharacterBody: View {
         ZStack {
             TriangleShape()
                 .fill(Color(red: 0.88, green: 0.55, blue: 0.24))
-                .frame(width: 17, height: 15)
+                .frame(width: 18, height: 16)
+            // Inner ear — placed toward the tip; the base half of the ear is hidden behind the head
             TriangleShape()
                 .fill(Color(red: 0.98, green: 0.68, blue: 0.62))
-                .frame(width: 8, height: 7)
-                .offset(y: 4)
+                .frame(width: 7, height: 7)
+                .offset(y: -2)
         }
     }
 
