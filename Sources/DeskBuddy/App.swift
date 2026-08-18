@@ -126,6 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = TodoStore()
     private let appState = AppState()
     private let calendarService = CalendarService()
+    private let timerCenter = TimerCenter()
 
     /// Situations where wandering must pause temporarily, e.g. while a menu is open
     private var wanderSuspended = false
@@ -236,6 +237,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             bubble.show(message)   // stays until clicked
         }
         eventNotifier.start()
+
+        // Finished timers announce themselves even if the character is hidden
+        timerCenter.onFire = { [weak self] timer in
+            guard let self else { return }
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+            NSSound(named: "Glass")?.play()
+            // Announce with the linked to-do's title when there is one
+            let title = timer.todoID.flatMap { id in self.store.todos.first { $0.id == id }?.title }
+            bubble.show(L.f("timer.done_bubble", title ?? timer.label))   // stays until clicked
+        }
     }
 
     /// ⌘1/⌘2/⌘3 switch tabs while the list panel is up
@@ -250,6 +261,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "1": .active
             case "2": .done
             case "3": .calendar
+            case "4": .timer
             default: nil
             }
             guard let tab else { return event }
@@ -336,7 +348,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // AppKit owns the window size; the SwiftUI view just fills whatever it is given
         let container = NSView()
-        let hosting = NSHostingView(rootView: TodoListView(store: store, appState: appState, calendar: calendarService))
+        let hosting = NSHostingView(rootView: TodoListView(store: store, appState: appState, calendar: calendarService, timers: timerCenter))
         hosting.sizingOptions = []
         let grip = ResizeGripView()
         grip.onResize = { [weak self] size in self?.applyListSize(size) }
@@ -634,8 +646,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func restoreFrame() {
         if let saved = UserDefaults.standard.string(forKey: frameKey) {
-            characterPanel.setFrameOrigin(NSRectFromString(saved).origin)
-        } else if let screen = NSScreen.main {
+            let frame = NSRect(origin: NSRectFromString(saved).origin, size: characterPanel.frame.size)
+            // Discard a saved position that is no longer on any screen
+            // (display disconnects and resolution changes can strand it off-screen)
+            if NSScreen.screens.contains(where: { $0.visibleFrame.intersects(frame) }) {
+                characterPanel.setFrameOrigin(frame.origin)
+                return
+            }
+        }
+        if let screen = NSScreen.main {
             // Default position: top-right corner
             let vis = screen.visibleFrame
             let size = characterPanel.frame.size

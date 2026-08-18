@@ -2,13 +2,19 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 enum TodoTab: Hashable {
-    case active, done, calendar
+    case active, done, calendar, timer
+}
+
+/// Timer status shown on a to-do row
+enum TimerRowState {
+    case running, paused
 }
 
 struct TodoListView: View {
     @ObservedObject var store: TodoStore
     @ObservedObject var appState: AppState
     @ObservedObject var calendar: CalendarService
+    @ObservedObject var timers: TimerCenter
 
     @State private var newTitle = ""
     @State private var selectedID: UUID?
@@ -16,6 +22,13 @@ struct TodoListView: View {
     @FocusState private var inputFocused: Bool
 
     private var tab: TodoTab { appState.tab }
+
+    /// Whether a timer linked to this to-do is running or paused
+    private func timerState(for todo: Todo) -> TimerRowState? {
+        let linked = timers.timers.filter { $0.todoID == todo.id }
+        guard !linked.isEmpty else { return nil }
+        return linked.contains { $0.isRunning } ? .running : .paused
+    }
 
     private var activeTodos: [Todo] { store.activeTodos }
     private var completedGroups: [CompletedGroup] { store.completedGroups }
@@ -67,6 +80,7 @@ struct TodoListView: View {
             case .active: list
             case .done: completedList
             case .calendar: CalendarTabView(store: store, calendar: calendar) { selectedID = $0 }
+            case .timer: TimerTabView(timers: timers, store: store)
             }
         }
     }
@@ -76,6 +90,7 @@ struct TodoListView: View {
             tabButton(L.s("list.to_do"), count: activeTodos.count, tab: .active).help("⌘1")
             tabButton(L.s("list.done"), count: doneCount, tab: .done).help("⌘2")
             tabButton(L.s("list.calendar"), count: 0, tab: .calendar).help("⌘3")
+            tabButton(L.s("timer.tab"), count: timers.timers.count, tab: .timer).help("⌘4")
             Spacer(minLength: 0)
             Menu {
                 // Destructive action that erases history, so require one extra confirmation step
@@ -154,7 +169,7 @@ struct TodoListView: View {
                         .padding(.vertical, 16)
                 }
                 ForEach(activeTodos) { todo in
-                    TodoRow(todo: todo, store: store) { selectedID = todo.id }
+                    TodoRow(todo: todo, store: store, timerState: timerState(for: todo)) { selectedID = todo.id }
                         .opacity(draggedID == todo.id ? 0.35 : 1)
                         .onDrag {
                             draggedID = todo.id
@@ -220,6 +235,8 @@ struct TodoListView: View {
 struct TodoRow: View {
     let todo: Todo
     let store: TodoStore
+    /// Timer state for this to-do: .running / .paused / nil (shown as a small timer icon)
+    var timerState: TimerRowState? = nil
     let onSelect: () -> Void
     @State private var hovering = false
 
@@ -244,6 +261,12 @@ struct TodoRow: View {
                     Image(systemName: "note.text")
                         .font(.system(size: 8))
                         .foregroundStyle(.tertiary)
+                }
+                if let timerState {
+                    Image(systemName: "timer")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(timerState == .running ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
+                        .help(timerState == .running ? L.s("timer.running") : L.s("timer.pause"))
                 }
                 Spacer(minLength: 0)
             }
