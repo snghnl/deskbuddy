@@ -1,7 +1,7 @@
 #!/bin/sh
 # DeskBuddy installer.
 #
-#   curl -fsSL https://snghnl.github.io/deskbuddy/install.sh | sh
+#   curl -fsSL https://deskbuddy.snghnl.com/install.sh | sh
 #
 # Downloads the latest release and puts DeskBuddy.app in /Applications.
 #

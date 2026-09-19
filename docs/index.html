@@ -11,8 +11,8 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="DeskBuddy">
 <meta property="og:description" content="A small character floats above every window and Space on macOS. Click it and your to-do list unfolds.">
-<meta property="og:image" content="https://snghnl.github.io/deskbuddy/assets/og.jpg">
-<meta property="og:url" content="https://snghnl.github.io/deskbuddy/">
+<meta property="og:image" content="https://deskbuddy.snghnl.com/assets/og.jpg">
+<meta property="og:url" content="https://deskbuddy.snghnl.com/">
 <meta name="twitter:card" content="summary_large_image">
 
 <style>
@@ -226,7 +226,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; }
 
       <div class="install">
         <div class="cmd">
-          <code id="oneliner">curl -fsSL https://snghnl.github.io/deskbuddy/install.sh | sh</code>
+          <code id="oneliner">curl -fsSL https://deskbuddy.snghnl.com/install.sh | sh</code>
           <button type="button" data-copy="#oneliner">Copy</button>
         </div>
         <div class="row">
@@ -264,7 +264,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; }
       and launches it.
     </p>
     <div class="cmd" style="margin-top:14px">
-      <code id="oneliner2">curl -fsSL https://snghnl.github.io/deskbuddy/install.sh | sh</code>
+      <code id="oneliner2">curl -fsSL https://deskbuddy.snghnl.com/install.sh | sh</code>
       <button type="button" data-copy="#oneliner2">Copy</button>
     </div>
     <p style="margin-top:12px; font-size:14px">
@@ -408,6 +408,11 @@ fetch("https://api.github.com/repos/snghnl/deskbuddy/releases/latest")
   .then((d) => { if (d.tag_name) document.getElementById("version").textContent = d.tag_name; })
   .catch(() => {});
 </script>
+
+<!-- Vercel Web Analytics. Cookieless, and served from a first-party path, so it
+     needs no consent banner. The path is handled by Vercel's edge, so on the
+     github.io mirror this 404s and simply records nothing. -->
+<script defer src="/_vercel/insights/script.js"></script>
 
 </body>
 </html>

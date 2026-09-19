@@ -4,12 +4,12 @@ A floating desktop buddy for macOS. A little character sits on top of your scree
 click it and your to-do list unfolds. Visible across every Space and even over
 full-screen apps.
 
-Website: **[snghnl.github.io/deskbuddy](https://snghnl.github.io/deskbuddy)**
+Website: **[deskbuddy.snghnl.com](https://deskbuddy.snghnl.com)**
 
 ## Install
 
 ```sh
-curl -fsSL https://snghnl.github.io/deskbuddy/install.sh | sh
+curl -fsSL https://deskbuddy.snghnl.com/install.sh | sh
 ```
 
 Or download [`DeskBuddy.dmg`](https://github.com/snghnl/deskbuddy/releases/latest/download/DeskBuddy.dmg)
