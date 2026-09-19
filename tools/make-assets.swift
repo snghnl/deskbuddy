@@ -90,7 +90,6 @@ struct OGCard: View {
                 .frame(width: 600, alignment: .leading)
 
                 Buddy(skin: .dark, u: 5.2)
-                    .overlay(EggShape().stroke(Color.white.opacity(0.10), lineWidth: 1))
                     .shadow(color: .black.opacity(0.5), radius: 34, y: 18)
             }
             .padding(.horizontal, 80)
@@ -132,9 +131,16 @@ private func write(_ view: some View, path: String, width: CGFloat, height: CGFl
 @MainActor
 func characters() {
     // Transparent, generously sized; the page scales them down with CSS.
+    //
+    // The canvas is padded rather than matching the body exactly: the outline is
+    // centred on the path, so half its width sits outside the body box and the
+    // image bounds would otherwise slice it off on all four sides.
+    let u: CGFloat = 6
+    let pad = 2.6 * u
     for (name, skin) in [("light", Skin.light), ("dark", Skin.dark)] {
-        renderPNG(Buddy(skin: skin, u: 6), to: "docs/assets/buddy-\(name).png",
-                  width: 56 * 6, height: 60 * 6)
+        renderPNG(Buddy(skin: skin, u: u).padding(pad),
+                  to: "docs/assets/buddy-\(name).png",
+                  width: 56 * u + pad * 2, height: 60 * u + pad * 2)
     }
     print("✅ docs/assets/buddy-{light,dark}.png")
 }
