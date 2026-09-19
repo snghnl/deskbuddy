@@ -11,6 +11,20 @@ permissions:
 jobs:
   release:
     runs-on: macos-latest
+    env:
+      # Developer ID signing and notarization switch themselves on as soon as
+      # these repository secrets exist. Until then the build is ad-hoc signed and
+      # users install it with the curl one-liner, which skips Gatekeeper because
+      # curl does not set the quarantine flag.
+      #
+      #   MACOS_CERTIFICATE           base64 of the Developer ID .p12
+      #   MACOS_CERTIFICATE_PASSWORD  its password
+      #   MACOS_SIGNING_IDENTITY      "Developer ID Application: Name (TEAMID)"
+      #   NOTARY_KEY                  base64 of the App Store Connect .p8 key
+      #   NOTARY_KEY_ID               the key's ID
+      #   NOTARY_ISSUER_ID            the issuer UUID
+      SIGNED: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.NOTARY_KEY != '' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -19,19 +33,65 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"
           swift --version
 
-      - name: Build universal app bundle
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}" ./make-app.sh --universal
+      - name: Install dmgbuild
+        run: python3 -m pip install --break-system-packages dmgbuild || python3 -m pip install dmgbuild
 
-      - name: Package
+      - name: Import signing certificate
+        if: env.SIGNED == 'true'
+        env:
+          CERT: ${{ secrets.MACOS_CERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
-          ditto -c -k --keepParent build/DeskBuddy.app "DeskBuddy-${GITHUB_REF_NAME}.zip"
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          echo "$CERT" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Build universal app bundle
+        env:
+          SIGN_IDENTITY: ${{ env.SIGNED == 'true' && secrets.MACOS_SIGNING_IDENTITY || '-' }}
+        run: VERSION="${GITHUB_REF_NAME#v}" ./make-app.sh --universal
+
+      - name: Build disk image
+        env:
+          SIGN_IDENTITY: ${{ env.SIGNED == 'true' && secrets.MACOS_SIGNING_IDENTITY || '-' }}
+        run: ./make-dmg.sh
+
+      - name: Notarize and staple
+        if: env.SIGNED == 'true'
+        env:
+          NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          echo "$NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          xcrun notarytool submit build/DeskBuddy.dmg \
+            --key "$RUNNER_TEMP/notary.p8" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --wait
+          # Stapling the image means it also validates offline
+          xcrun stapler staple build/DeskBuddy.dmg
+          rm -f "$RUNNER_TEMP/notary.p8"
+
+      - name: Package zip
+        run: ditto -c -k --keepParent build/DeskBuddy.app "DeskBuddy-${GITHUB_REF_NAME}.zip"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # DeskBuddy.dmg carries no version so that the /releases/latest/download/
+          # URL stays valid for the website and install.sh
           gh release create "$GITHUB_REF_NAME" \
+            build/DeskBuddy.dmg \
             "DeskBuddy-${GITHUB_REF_NAME}.zip" \
             --title "DeskBuddy $GITHUB_REF_NAME" \
             --generate-notes

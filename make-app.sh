@@ -5,6 +5,12 @@
 #   ./make-app.sh --universal  arm64 + x86_64 fat binary (release/distribution)
 #
 # VERSION can override the bundle version: VERSION=1.2.0 ./make-app.sh --universal
+#
+# SIGN_IDENTITY picks the signing certificate. The default "-" is an ad-hoc
+# signature, which is all an unnotarized build needs. Set it to a Developer ID
+# ("Developer ID Application: … (TEAMID)") to produce a bundle that can be
+# notarized; that path also turns on the hardened runtime and a secure timestamp,
+# both of which notarization requires.
 set -e
 cd "$(dirname "$0")"
 
@@ -66,5 +72,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-codesign --force --sign - "$APP"
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+if [[ "$SIGN_IDENTITY" == "-" ]]; then
+  codesign --force --sign - "$APP"
+else
+  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
+  codesign --verify --strict --verbose=2 "$APP"
+fi
 echo "✅ $APP created (v$VERSION)"

@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeskBuddy — a desk buddy for your Mac that keeps your to-dos</title>
+<meta name="description" content="A small character floats above every window and Space on macOS. Click it and your to-do list unfolds. Free, open source, and scriptable from the command line.">
+<link rel="icon" href="assets/slime.png">
+<link rel="apple-touch-icon" href="assets/slime.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DeskBuddy">
+<meta property="og:description" content="A small character floats above every window and Space on macOS. Click it and your to-do list unfolds.">
+<meta property="og:image" content="https://snghnl.github.io/deskbuddy/assets/og.jpg">
+<meta property="og:url" content="https://snghnl.github.io/deskbuddy/">
+<meta name="twitter:card" content="summary_large_image">
+
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --bg-soft: #f6f8f7;
+  --bg-sunk: #eef2f0;
+  --fg: #16201c;
+  --fg-dim: #5a6b63;
+  --fg-faint: #8a9993;
+  --line: #dfe6e2;
+  --accent: #0d7d4f;
+  --accent-fg: #ffffff;
+  --accent-soft: #e6f5ee;
+  --code-bg: #10231b;
+  --code-fg: #d8efe4;
+  --radius: 14px;
+  --maxw: 980px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1412;
+    --bg-soft: #141c19;
+    --bg-sunk: #1a2421;
+    --fg: #e8f0ec;
+    --fg-dim: #a3b3ab;
+    --fg-faint: #788880;
+    --line: #26332e;
+    --accent: #58cf96;
+    --accent-fg: #06180f;
+    --accent-soft: #153023;
+    --code-bg: #08120e;
+    --code-fg: #cfe9dd;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+a { color: var(--accent); }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.02em; margin: 0; }
+code, kbd { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
+
+/* ---- nav ---- */
+nav {
+  position: sticky; top: 0; z-index: 10;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+nav .wrap { display: flex; align-items: center; gap: 12px; height: 56px; }
+nav img { width: 26px; height: 26px; }
+nav .name { font-weight: 650; letter-spacing: -0.01em; }
+.spacer { flex: 1; }
+nav a { color: var(--fg-dim); text-decoration: none; font-size: 14px; font-weight: 500; }
+nav a:hover { color: var(--fg); }
+
+/* ---- hero ---- */
+header { padding: 68px 0 56px; }
+.hero { display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: center; }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 28px; } }
+
+.eyebrow {
+  display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
+}
+h1 { font-size: clamp(34px, 5.2vw, 52px); font-weight: 700; }
+.lede { font-size: clamp(17px, 2vw, 19px); color: var(--fg-dim); margin: 18px 0 0; max-width: 34em; }
+
+/* the character, floating the way it does on screen */
+.buddy { position: relative; width: 210px; justify-self: center; }
+.buddy img { width: 100%; display: block; filter: drop-shadow(0 12px 22px rgb(0 0 0 / 0.18)); animation: bob 3.6s ease-in-out infinite; }
+.buddy .bubble {
+  position: absolute; top: -18px; right: -28px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--fg);
+  border-radius: 13px; padding: 7px 12px; font-size: 13px; white-space: nowrap;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.10); animation: bob 3.6s ease-in-out infinite 0.25s;
+}
+.buddy .bubble::after {
+  content: ""; position: absolute; left: 16px; bottom: -6px; width: 10px; height: 10px;
+  background: var(--bg-soft); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@media (prefers-reduced-motion: reduce) { .buddy img, .buddy .bubble { animation: none; } }
+
+/* ---- install ---- */
+.install { margin-top: 38px; display: grid; gap: 14px; max-width: 620px; }
+
+.cmd {
+  display: flex; align-items: stretch; gap: 0;
+  background: var(--code-bg); border-radius: var(--radius); overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--code-fg) 16%, transparent);
+}
+.cmd code {
+  flex: 1; min-width: 0; padding: 15px 16px; color: var(--code-fg); font-size: 13.5px;
+  overflow-x: auto; white-space: nowrap; scrollbar-width: none;
+}
+.cmd code::-webkit-scrollbar { display: none; }
+.cmd button {
+  flex: none; border: 0; border-left: 1px solid rgb(255 255 255 / 0.10);
+  background: transparent; color: var(--code-fg); padding: 0 16px; cursor: pointer;
+  font: inherit; font-size: 13px; opacity: 0.75;
+}
+.cmd button:hover { opacity: 1; background: rgb(255 255 255 / 0.06); }
+
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: var(--accent); color: var(--accent-fg); text-decoration: none;
+  font-weight: 600; font-size: 15px; padding: 12px 20px; border-radius: 11px;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.btn.ghost {
+  background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 500;
+}
+.meta { font-size: 13.5px; color: var(--fg-faint); }
+.meta b { color: var(--fg-dim); font-weight: 600; }
+
+.tag {
+  display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 9px;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+}
+
+/* ---- sections ---- */
+section { padding: 56px 0; border-top: 1px solid var(--line); }
+section:first-of-type { border-top: 0; }
+h2 { font-size: clamp(24px, 3.4vw, 30px); font-weight: 680; }
+.sub { color: var(--fg-dim); margin: 12px 0 0; max-width: 40em; }
+
+.note + .note { margin-top: 16px; }
+.note {
+  margin-top: 26px; background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 22px 24px;
+}
+.note h3 { font-size: 16px; font-weight: 640; }
+.note p { margin: 10px 0 0; color: var(--fg-dim); font-size: 15px; }
+.note ol { margin: 12px 0 0; padding-left: 20px; color: var(--fg-dim); font-size: 15px; }
+.note li { margin: 5px 0; }
+.note :is(p, li) code { background: var(--bg-sunk); padding: 2px 6px; border-radius: 5px; font-size: 13px; color: var(--fg); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 26px 34px; margin-top: 38px; }
+.feat h3 { font-size: 16px; font-weight: 640; }
+.feat p { margin: 7px 0 0; color: var(--fg-dim); font-size: 14.5px; line-height: 1.6; }
+
+pre {
+  background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius);
+  padding: 20px 22px; overflow-x: auto; font-size: 13.5px; line-height: 1.75; margin: 26px 0 0;
+  border: 1px solid color-mix(in srgb, var(--code-fg) 16%, transparent);
+}
+pre .c { color: #7fa896; }
+
+.chars { display: flex; gap: 18px; align-items: flex-end; margin-top: 30px; }
+.chars img { height: 74px; filter: drop-shadow(0 6px 12px rgb(0 0 0 / 0.14)); }
+
+footer { border-top: 1px solid var(--line); margin-top: 72px; padding: 36px 0 56px; color: var(--fg-faint); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+footer a { color: var(--fg-dim); text-decoration: none; }
+footer a:hover { color: var(--fg); text-decoration: underline; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <img src="assets/slime.png" alt="">
+    <span class="name">DeskBuddy</span>
+    <span class="spacer"></span>
+    <a href="#install">Install</a>
+    <a href="#features">Features</a>
+    <a href="#agents">For agents</a>
+    <a href="https://github.com/snghnl/deskbuddy">GitHub</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap hero">
+    <div>
+      <span class="eyebrow">Free &amp; open source · macOS</span>
+      <h1>A desk buddy that keeps your to-dos.</h1>
+      <p class="lede">
+        A small character floats above every window and every Space — even over full-screen
+        apps. Click it and your list unfolds. It wanders around, it can be thrown across the
+        screen, and it raises a speech bubble when something needs you.
+      </p>
+
+      <div class="install">
+        <div class="cmd">
+          <code id="oneliner">curl -fsSL https://snghnl.github.io/deskbuddy/install.sh | sh</code>
+          <button type="button" data-copy="#oneliner">Copy</button>
+        </div>
+        <div class="row">
+          <a class="btn" href="https://github.com/snghnl/deskbuddy/releases/latest/download/DeskBuddy.dmg">
+            Download .dmg
+          </a>
+          <span class="meta">
+            <b id="version">Latest</b> · Universal · macOS 14+ ·
+            <a href="#install">first-launch note</a>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="buddy">
+      <div class="bubble">Build finished ✓</div>
+      <img src="assets/slime.png" alt="DeskBuddy's slime character, smiling">
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section id="install">
+  <h2>Installing</h2>
+  <p class="sub">
+    Both routes install exactly the same build. The difference is how much macOS gets in your way.
+  </p>
+
+  <div class="note">
+    <h3>Terminal <span class="tag">no warning</span></h3>
+    <p>
+      Downloads the latest release, puts <code>DeskBuddy.app</code> in <code>/Applications</code>,
+      and launches it.
+    </p>
+    <div class="cmd" style="margin-top:14px">
+      <code id="oneliner2">curl -fsSL https://snghnl.github.io/deskbuddy/install.sh | sh</code>
+      <button type="button" data-copy="#oneliner2">Copy</button>
+    </div>
+    <p style="margin-top:12px; font-size:14px">
+      Piping a script into a shell deserves a look first —
+      <a href="https://github.com/snghnl/deskbuddy/blob/main/docs/install.sh">read it here</a>.
+    </p>
+  </div>
+
+  <div class="note">
+    <h3>Disk image <span class="tag">3 extra clicks</span></h3>
+    <p>
+      DeskBuddy is not notarized — that requires a paid Apple Developer account, and this is a
+      free hobby project. macOS flags anything a browser downloaded, so the first launch needs
+      your permission. (Control-clicking to open no longer works: Apple removed that in macOS 15.)
+    </p>
+    <ol>
+      <li>Open the <code>.dmg</code> and drag DeskBuddy to Applications.</li>
+      <li>Launch it once. Dismiss the warning.</li>
+      <li>Open <b>System Settings → Privacy &amp; Security</b>, scroll to the bottom, and click
+        <b>Open Anyway</b>.</li>
+    </ol>
+    <p style="margin-top:12px; font-size:14px">
+      The terminal command skips all of this because macOS only quarantines browser downloads,
+      not files fetched with <code>curl</code>.
+    </p>
+  </div>
+</section>
+
+<section id="features">
+  <h2>What it does</h2>
+  <div class="grid">
+    <div class="feat">
+      <h3>Click to open your list</h3>
+      <p>The panel unfolds right next to the character and follows it when you drag it around.
+        A badge on the character counts what's still open.</p>
+    </div>
+    <div class="feat">
+      <h3>Throw it, or let it wander</h3>
+      <p>Grab and flick — it flies with momentum, bounces off the screen edges, and lands.
+        Catch it mid-air with a click. Left alone, it strolls around and takes breaks.</p>
+    </div>
+    <div class="feat">
+      <h3>Speech-bubble alerts</h3>
+      <p>Before a calendar event starts, the character raises a bubble that stays until you
+        click it. Scripts and agents can raise one too.</p>
+    </div>
+    <div class="feat">
+      <h3>Your calendar, already connected</h3>
+      <p>Reads events from any account macOS Calendar knows about, Google included — no OAuth.
+        Today's events get “Now” and “in N min” badges.</p>
+    </div>
+    <div class="feat">
+      <h3>Done tab and a heatmap</h3>
+      <p>Finished items move to Done, grouped by day with completion times. The calendar tab
+        shades busier days darker and dots the days that have events.</p>
+    </div>
+    <div class="feat">
+      <h3>Pomodoro timers</h3>
+      <p>Run several circular timers at once, each linked to the to-do it belongs to.</p>
+    </div>
+    <div class="feat">
+      <h3>Global shortcut</h3>
+      <p>Register a hotkey and start typing a to-do from any app — no Accessibility permission
+        required.</p>
+    </div>
+    <div class="feat">
+      <h3>Never steals focus</h3>
+      <p>Always on top, visible on every Space and over full-screen apps, and clicking it never
+        pulls you out of what you were doing. No Dock icon — it lives in the menu bar.</p>
+    </div>
+  </div>
+
+  <div class="chars">
+    <img src="assets/slime.png" alt="Slime character">
+    <img src="assets/ghost.png" alt="Ghost character">
+    <img src="assets/cat.png" alt="Cat character">
+    <p class="sub" style="margin:0 0 6px">Three built-in characters — or drop in any image and
+      name it yourself. Korean and English, following your system language.</p>
+  </div>
+</section>
+
+<section id="agents">
+  <h2>Your agents can use it</h2>
+  <p class="sub">
+    DeskBuddy ships a CLI and a <code>deskbuddy://</code> URL scheme, so scripts, cron jobs and
+    coding agents can raise a bubble or manage the same list you see.
+  </p>
+
+<pre><span class="c"># tell me when the long thing finishes</span>
+deskbuddy notify "Build finished!"
+deskbuddy notify "heads up" --autohide 8
+
+<span class="c"># work the list</span>
+deskbuddy add "Review the PR" --memo "not urgent"
+deskbuddy list --json
+deskbuddy done a42620c8</pre>
+
+  <p class="sub" style="margin-top:26px">
+    It is also a Claude Code plugin marketplace. Installing the plugin teaches agents when to
+    use DeskBuddy on their own, and pops a bubble whenever Claude Code is waiting on you.
+  </p>
+
+<pre>/plugin marketplace add snghnl/deskbuddy
+/plugin install deskbuddy@deskbuddy</pre>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>DeskBuddy</span>
+    <a href="https://github.com/snghnl/deskbuddy">Source</a>
+    <a href="https://github.com/snghnl/deskbuddy/releases">Releases</a>
+    <a href="https://github.com/snghnl/deskbuddy/issues">Issues</a>
+    <a href="https://github.com/snghnl/deskbuddy/blob/main/LICENSE">MIT License</a>
+    <span class="spacer"></span>
+  </div>
+</footer>
+
+<script>
+// Copy buttons. If the clipboard API is unavailable the command is still selectable.
+for (const btn of document.querySelectorAll("[data-copy]")) {
+  btn.addEventListener("click", async () => {
+    const text = document.querySelector(btn.dataset.copy).textContent.trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      const was = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(() => { btn.textContent = was; }, 1400);
+    } catch {
+      btn.textContent = "Press ⌘C";
+    }
+  });
+}
+
+// Show the latest version. Purely decorative — the download link is static, so a
+// rate-limited or offline API call costs nothing.
+fetch("https://api.github.com/repos/snghnl/deskbuddy/releases/latest")
+  .then((r) => (r.ok ? r.json() : Promise.reject()))
+  .then((d) => { if (d.tag_name) document.getElementById("version").textContent = d.tag_name; })
+  .catch(() => {});
+</script>
+
+</body>
+</html>

@@ -4,19 +4,32 @@ A floating desktop buddy for macOS. A little character sits on top of your scree
 click it and your to-do list unfolds. Visible across every Space and even over
 full-screen apps.
 
+Website: **[snghnl.github.io/deskbuddy](https://snghnl.github.io/deskbuddy)**
+
 ## Install
 
-Download `DeskBuddy-<version>.zip` from [Releases](https://github.com/snghnl/deskbuddy/releases),
-unzip, and move `DeskBuddy.app` to `/Applications`.
-
-The app is not yet notarized, so on first launch macOS will warn about an
-unidentified developer. Either **right-click the app → Open → Open**, or run:
-
 ```sh
-xattr -d com.apple.quarantine /Applications/DeskBuddy.app
+curl -fsSL https://snghnl.github.io/deskbuddy/install.sh | sh
 ```
 
+Or download [`DeskBuddy.dmg`](https://github.com/snghnl/deskbuddy/releases/latest/download/DeskBuddy.dmg)
+and drag the app to Applications.
+
 Requires macOS 14 (Sonoma) or later. Universal binary (Apple Silicon + Intel).
+
+### Why two ways
+
+DeskBuddy is not notarized — that needs a paid Apple Developer account. macOS
+quarantines anything a browser downloaded, so opening the `.dmg` build the first
+time takes a detour: launch it, dismiss the warning, then **System Settings →
+Privacy & Security → Open Anyway**. Control-clicking the app no longer works;
+Apple removed that bypass in macOS 15.
+
+`curl` does not set the quarantine flag, so the one-liner installs the very same
+build with no warning at all. It is a short, readable script — [give it a
+look](docs/install.sh) before piping it into a shell.
+
+Already installed the hard way? `xattr -dr com.apple.quarantine /Applications/DeskBuddy.app`
 
 ## Build & Run
 
@@ -24,7 +37,15 @@ Requires macOS 14 (Sonoma) or later. Universal binary (Apple Silicon + Intel).
 ./make-app.sh              # builds build/DeskBuddy.app (native arch)
 ./make-app.sh --universal  # arm64 + x86_64 (what CI ships)
 open build/DeskBuddy.app
+
+./make-dmg.sh --build      # universal build, then build/DeskBuddy.dmg
 ```
+
+`make-dmg.sh` lays the disk image window out with
+[dmgbuild](https://pypi.org/project/dmgbuild/) (`pip install dmgbuild`), which
+writes the Finder `.DS_Store` directly instead of scripting Finder — the only way
+that also works on a headless CI runner. Without it you still get a plain,
+usable image.
 
 During development you can also just `swift run`. No Xcode project — plain Swift Package Manager.
 
@@ -132,3 +153,10 @@ System Settings → General → Login Items → add `build/DeskBuddy.app`.
 - `Sources/DeskBuddy/Resources/Localizations/` — translation tables (`ko.yml`, `en.yml`)
 - `bin/deskbuddy` — CLI for agent integration
 - `plugin/` — Claude Code plugin (skill, hook, bundled CLI)
+- `tools/make-assets.swift` — renders the website art and the app icon from the same SwiftUI shapes the app draws
+- `tools/dmg-settings.py` — disk image window layout, used by `make-dmg.sh`
+- `docs/` — the website (GitHub Pages) and `install.sh`
+
+## License
+
+[MIT](LICENSE)
