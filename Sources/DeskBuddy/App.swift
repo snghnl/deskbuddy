@@ -539,7 +539,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(calendar: calendarService)))
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(calendar: calendarService, store: store)))
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             window.center()

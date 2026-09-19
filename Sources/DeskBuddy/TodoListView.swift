@@ -32,7 +32,7 @@ struct TodoListView: View {
 
     private var activeTodos: [Todo] { store.activeTodos }
     private var completedGroups: [CompletedGroup] { store.completedGroups }
-    private var doneCount: Int { store.todos.count - activeTodos.count }
+    private var doneCount: Int { store.visibleCompleted.count }
 
     var body: some View {
         Group {
@@ -93,13 +93,18 @@ struct TodoListView: View {
             tabButton(L.s("timer.tab"), count: timers.timers.count, tab: .timer).help("⌘4")
             Spacer(minLength: 0)
             Menu {
-                // Destructive action that erases history, so require one extra confirmation step
-                Menu(L.s("list.clear_completed_history")) {
-                    Button(L.f("list.delete_all", doneCount), role: .destructive) {
-                        store.clearCompleted()
-                    }
+                // Hides rather than deletes, so no destructive styling and no second
+                // confirmation — the permanent version lives in Settings.
+                Button(L.f("list.clear_from_list", doneCount)) {
+                    store.clearCompletedFromList()
                 }
                 .disabled(doneCount == 0)
+
+                if store.hiddenCompletedCount > 0 {
+                    Button(L.f("list.restore_history", store.hiddenCompletedCount)) {
+                        store.restoreClearedHistory()
+                    }
+                }
                 Divider()
                 Button(L.s("app.quit")) { NSApp.terminate(nil) }
             } label: {

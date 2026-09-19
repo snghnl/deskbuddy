@@ -19,10 +19,14 @@ enum SettingsKeys {
     static let hotkeyKeyCode = "DeskBuddy.hotkeyKeyCode"
     static let hotkeyModifiers = "DeskBuddy.hotkeyModifiers"
     static let hotkeyDisplay = "DeskBuddy.hotkeyDisplay"
+    static let historyClearedAt = "DeskBuddy.historyClearedAt"
 }
 
 struct SettingsView: View {
     @ObservedObject var calendar: CalendarService
+    @ObservedObject var store: TodoStore
+
+    @State private var confirmingDelete = false
 
     @AppStorage(SettingsKeys.language) private var languageRaw = AppLanguage.system.rawValue
     @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.buddy.rawValue
@@ -133,6 +137,50 @@ struct SettingsView: View {
                 Text(L.s("settings.hotkey_footer"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            // Every row is label-plus-trailing-control, matching the rest of the form
+            Section {
+                LabeledContent(L.s("settings.history_total")) {
+                    Text(L.f("settings.history_count", store.completedTodos.count))
+                        .foregroundStyle(.secondary)
+                }
+
+                if store.hiddenCompletedCount > 0 {
+                    LabeledContent(L.s("settings.history_hidden_label")) {
+                        HStack(spacing: 8) {
+                            Text(L.f("settings.history_count", store.hiddenCompletedCount))
+                                .foregroundStyle(.secondary)
+                            Button(L.s("settings.history_restore")) { store.restoreClearedHistory() }
+                        }
+                    }
+                }
+
+                LabeledContent(L.s("settings.history_delete_label")) {
+                    // Ellipsis: macOS convention for an action that asks first
+                    Button(L.s("settings.history_delete_button"), role: .destructive) {
+                        confirmingDelete = true
+                    }
+                    .disabled(store.completedTodos.isEmpty)
+                }
+            } header: {
+                Text(L.s("settings.history"))
+            } footer: {
+                Text(L.s("settings.history_footer"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .confirmationDialog(
+                L.f("settings.history_confirm_title", store.completedTodos.count),
+                isPresented: $confirmingDelete,
+                titleVisibility: .visible
+            ) {
+                Button(L.s("settings.history_confirm_delete"), role: .destructive) {
+                    store.deleteCompleted()
+                }
+                Button(L.s("settings.cancel"), role: .cancel) {}
+            } message: {
+                Text(L.s("settings.history_confirm_message"))
             }
         }
         .formStyle(.grouped)

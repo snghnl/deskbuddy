@@ -28,6 +28,24 @@ final class TodoStore: ObservableObject {
         didSet { scheduleSave() }
     }
 
+    /// Completions at or before this moment are hidden from the Done tab. The items
+    /// themselves stay in `todos`, so the Calendar heatmap keeps counting them and the
+    /// clear is undoable; `deleteCompleted()` is the destructive counterpart.
+    ///
+    /// Stored as a watermark rather than a per-item flag on purpose: a new non-optional
+    /// field on `Todo` would make the synthesized decoder throw on every existing
+    /// todos.json, and `load()` swallows that error — every item would silently vanish.
+    @Published var historyClearedAt: Date? {
+        didSet {
+            let defaults = UserDefaults.standard
+            if let at = historyClearedAt {
+                defaults.set(at.timeIntervalSinceReferenceDate, forKey: SettingsKeys.historyClearedAt)
+            } else {
+                defaults.removeObject(forKey: SettingsKeys.historyClearedAt)
+            }
+        }
+    }
+
     private let fileURL: URL
     private var saveTask: Task<Void, Never>?
 
@@ -36,6 +54,10 @@ final class TodoStore: ObservableObject {
         let dir = support.appendingPathComponent("DeskBuddy", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("todos.json")
+
+        // Assigning in init does not fire didSet, so this does not write back
+        historyClearedAt = (UserDefaults.standard.object(forKey: SettingsKeys.historyClearedAt) as? Double)
+            .map(Date.init(timeIntervalSinceReferenceDate:))
 
         // Migrate data from the FloatingTodo era
         let legacy = support.appendingPathComponent("FloatingTodo/todos.json")
@@ -85,19 +107,41 @@ final class TodoStore: ObservableObject {
         todos[i].memo = memo.isEmpty ? nil : memo
     }
 
-    func clearCompleted() {
+    /// Hides everything completed so far from the Done tab. Reversible.
+    func clearCompletedFromList() {
+        historyClearedAt = Date()
+    }
+
+    /// Brings hidden completions back into the Done tab.
+    func restoreClearedHistory() {
+        historyClearedAt = nil
+    }
+
+    /// Removes completed items for good. There is no undo and no backup — the next
+    /// save overwrites todos.json with what is left.
+    func deleteCompleted() {
         todos.removeAll { $0.isDone }
+        historyClearedAt = nil   // nothing left to hide
     }
 
     // MARK: - Per-tab lists
 
     var activeTodos: [Todo] { todos.filter { !$0.isDone } }
 
-    /// Groups completed items by day, newest first
+    var completedTodos: [Todo] { todos.filter { $0.isDone } }
+
+    /// Completed items still shown in the Done tab
+    var visibleCompleted: [Todo] {
+        guard let cutoff = historyClearedAt else { return completedTodos }
+        return completedTodos.filter { $0.completionDate > cutoff }
+    }
+
+    var hiddenCompletedCount: Int { completedTodos.count - visibleCompleted.count }
+
+    /// Groups the visible completed items by day, newest first
     var completedGroups: [CompletedGroup] {
         let calendar = Calendar.current
-        let done = todos
-            .filter { $0.isDone }
+        let done = visibleCompleted
             .sorted { $0.completionDate > $1.completionDate }
         let grouped = Dictionary(grouping: done) { calendar.startOfDay(for: $0.completionDate) }
         return grouped.keys.sorted(by: >).map { day in
