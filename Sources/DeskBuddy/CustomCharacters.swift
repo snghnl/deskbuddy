@@ -9,7 +9,7 @@ enum CharacterChoice: Equatable {
         if raw.hasPrefix("custom:") {
             return .custom(String(raw.dropFirst("custom:".count)))
         }
-        return .builtin(CharacterKind(rawValue: raw) ?? .slime)
+        return .builtin(CharacterKind(rawValue: raw) ?? .buddy)
     }
 
     var raw: String {

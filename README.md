@@ -51,9 +51,11 @@ During development you can also just `swift run`. No Xcode project — plain Swi
 
 ## Features
 
-- **3 built-in characters + custom images**: pick the slime, ghost, or cat — or add any
-  image as your own character (name it and rename it in Settings). Built-in characters
-  blink and change expressions; a badge shows the number of open to-dos
+- **One character, or your own image**: the built-in buddy is drawn as a shape rather
+  than an image, so it stays sharp at any size and inverts with your system appearance —
+  white with a dark outline in light mode, black with a light outline in dark mode. It
+  blinks, and a badge shows the number of open to-dos. You can also add any image as your
+  own character and name it in Settings
 - **Click → list toggle**: click the character to open the to-do panel next to it;
   drag the character to move (the list follows)
 - **Throwing**: grab and flick the character — it flies with momentum, bounces off the
@@ -138,7 +140,7 @@ System Settings → General → Login Items → add `build/DeskBuddy.app`.
 ## Project Layout
 
 - `Sources/DeskBuddy/App.swift` — entry point, character/list panels (NSPanel subclasses), click/drag/throw handling, menus, settings window, URL scheme
-- `Sources/DeskBuddy/CharacterView.swift` — the three built-in characters (Shape drawing + animation), custom image rendering
+- `Sources/DeskBuddy/CharacterView.swift` — the built-in character (Shape drawing + animation), custom image rendering
 - `Sources/DeskBuddy/CustomCharacters.swift` — custom character images, display names, image cache
 - `Sources/DeskBuddy/WanderController.swift` — wandering (pick target → walk → rest loop)
 - `Sources/DeskBuddy/ThrowController.swift` — throw physics (gravity, restitution, friction)
@@ -153,7 +155,7 @@ System Settings → General → Login Items → add `build/DeskBuddy.app`.
 - `Sources/DeskBuddy/Resources/Localizations/` — translation tables (`ko.yml`, `en.yml`)
 - `bin/deskbuddy` — CLI for agent integration
 - `plugin/` — Claude Code plugin (skill, hook, bundled CLI)
-- `tools/make-assets.swift` — renders the website art and the app icon from the same SwiftUI shapes the app draws
+- `tools/make-assets.swift` — renders the website art and link-preview card from the same shape the app draws
 - `tools/dmg-settings.py` — disk image window layout, used by `make-dmg.sh`
 - `docs/` — the website (GitHub Pages) and `install.sh`
 

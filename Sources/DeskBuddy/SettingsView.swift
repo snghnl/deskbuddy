@@ -25,7 +25,7 @@ struct SettingsView: View {
     @ObservedObject var calendar: CalendarService
 
     @AppStorage(SettingsKeys.language) private var languageRaw = AppLanguage.system.rawValue
-    @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.slime.rawValue
+    @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.buddy.rawValue
     @AppStorage(SettingsKeys.showCalendar) private var showCalendar = true
     @AppStorage(SettingsKeys.eventAlerts) private var eventAlerts = true
     @AppStorage(SettingsKeys.eventAlertLead) private var eventAlertLead = 10
@@ -276,7 +276,7 @@ struct SettingsView: View {
         CustomCharacters.remove(name)
         customs = CustomCharacters.list()
         if characterRaw == CharacterChoice.custom(name).raw {
-            characterRaw = CharacterKind.slime.rawValue   // fall back to the slime if the active one was deleted
+            characterRaw = CharacterKind.buddy.rawValue   // fall back to the built-in one if the active character was deleted
         }
     }
 
