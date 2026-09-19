@@ -29,6 +29,9 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp "$PRODUCTS/DeskBuddy" "$APP/Contents/MacOS/"
+# Checked in rather than rendered here, so CI needs no extra tooling.
+# Regenerate with: swift tools/make-assets.swift icns
+[[ -f assets/AppIcon.icns ]] && cp assets/AppIcon.icns "$APP/Contents/Resources/"
 # SPM resource bundle (localization tables) — Bundle.module finds it in Contents/Resources
 cp -R "$PRODUCTS/DeskBuddy_DeskBuddy.bundle" "$APP/Contents/Resources/"
 
@@ -43,6 +46,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <string>com.snghnl.deskbuddy</string>
     <key>CFBundleName</key>
     <string>DeskBuddy</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

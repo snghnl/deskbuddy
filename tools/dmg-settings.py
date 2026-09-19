@@ -32,6 +32,6 @@ icon_locations = {
     "Applications": (495, 210),
 }
 
-# Volume icon, once tools/make-icon.swift has produced one
-if os.path.exists("build/AppIcon.icns"):
-    badge_icon = "build/AppIcon.icns"
+# Volume icon
+if os.path.exists("assets/AppIcon.icns"):
+    badge_icon = "assets/AppIcon.icns"

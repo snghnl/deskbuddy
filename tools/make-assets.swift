@@ -3,6 +3,7 @@
 //
 //   swift tools/make-assets.swift characters   # docs/assets/buddy-{light,dark}.png
 //   swift tools/make-assets.swift og           # docs/assets/og.jpg (link previews)
+//   swift tools/make-assets.swift icns         # assets/AppIcon.icns + docs/assets/favicon.png
 //   swift tools/make-assets.swift all
 //
 // Keep EggShape and the two palettes in step with Sources/DeskBuddy/CharacterView.swift.
@@ -61,6 +62,36 @@ struct Buddy: View {
             .offset(y: -h * 0.02)
         }
         .frame(width: w, height: h)
+    }
+}
+
+// MARK: - App icon
+//
+// Laid out on the macOS icon grid: a 824pt squircle centred on a 1024pt canvas.
+// A pale paper plate: the body is separated from it by its outline rather than by
+// a change in value, which is why the outline has to carry the icon at small sizes.
+
+enum Brand {
+    static let plateTop = Color(red: 0.99, green: 0.98, blue: 0.96)
+    static let plateBottom = Color(red: 0.90, green: 0.89, blue: 0.86)
+}
+
+struct AppIcon: View {
+    static let canvas: CGFloat = 1024
+    static let plate: CGFloat = 824
+    static let radius: CGFloat = 185
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
+                .fill(LinearGradient(colors: [Brand.plateTop, Brand.plateBottom],
+                                     startPoint: .top, endPoint: .bottom))
+                .frame(width: Self.plate, height: Self.plate)
+                .shadow(color: .black.opacity(0.25), radius: 24, y: 14)
+
+            Buddy(skin: .light, u: 8.4)
+        }
+        .frame(width: Self.canvas, height: Self.canvas)
     }
 }
 
@@ -145,9 +176,40 @@ func characters() {
     print("✅ docs/assets/buddy-{light,dark}.png")
 }
 
+/// Renders every size `iconutil` needs, then packs them into an .icns.
+@MainActor
+func icns() {
+    let iconset = "build/AppIcon.iconset"
+    try? FileManager.default.removeItem(atPath: iconset)
+    for (pt, scale) in [(16, 1), (16, 2), (32, 1), (32, 2), (128, 1), (128, 2),
+                        (256, 1), (256, 2), (512, 1), (512, 2)] {
+        let suffix = scale == 1 ? "" : "@2x"
+        let px = CGFloat(pt * scale)
+        renderPNG(AppIcon().scaleEffect(px / AppIcon.canvas),
+                  to: "\(iconset)/icon_\(pt)x\(pt)\(suffix).png", width: px, height: px)
+    }
+
+    let proc = Process()
+    proc.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
+    proc.arguments = ["-c", "icns", iconset, "-o", "assets/AppIcon.icns"]
+    try? FileManager.default.createDirectory(atPath: "assets", withIntermediateDirectories: true)
+    try! proc.run()
+    proc.waitUntilExit()
+    guard proc.terminationStatus == 0 else {
+        FileHandle.standardError.write("iconutil failed\n".data(using: .utf8)!)
+        exit(1)
+    }
+
+    renderPNG(AppIcon().scaleEffect(180 / AppIcon.canvas), to: "docs/assets/favicon.png",
+              width: 180, height: 180)
+    print("✅ assets/AppIcon.icns + docs/assets/favicon.png")
+}
+
 @MainActor
 func main() {
     switch CommandLine.arguments.dropFirst().first ?? "all" {
+    case "icns":
+        icns()
     case "characters":
         characters()
     case "og":
@@ -157,8 +219,9 @@ func main() {
         characters()
         renderJPEG(OGCard(), to: "docs/assets/og.jpg", width: 1200, height: 630)
         print("✅ docs/assets/og.jpg")
+        icns()
     default:
-        FileHandle.standardError.write("usage: make-assets.swift [characters|og|all]\n".data(using: .utf8)!)
+        FileHandle.standardError.write("usage: make-assets.swift [characters|og|icns|all]\n".data(using: .utf8)!)
         exit(1)
     }
 }

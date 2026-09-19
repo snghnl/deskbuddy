@@ -184,7 +184,7 @@ struct CharacterBody: View {
 
 /// The body: a rounded form carrying slightly more weight low than high, so it
 /// reads as sitting rather than floating.
-private struct EggShape: Shape {
+struct EggShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         let w = rect.width, h = rect.height
@@ -199,6 +199,50 @@ private struct EggShape: Shape {
                    control1: CGPoint(x: 0, y: h * 0.30), control2: CGPoint(x: w * 0.14, y: 0))
         p.closeSubpath()
         return p
+    }
+}
+
+// MARK: - Menu bar glyph
+
+/// The character as one even-odd path: a solid body with the eyes punched out.
+///
+/// The menu bar version is solid rather than outlined. At 18pt an outline reads as
+/// an empty ring and the eyes disappear, and a filled glyph also sits better next
+/// to the SF Symbols in the rest of the menu bar. The eyes are proportionally
+/// larger than on the floating character for the same reason.
+struct BuddyGlyph: Shape {
+    var eye: CGFloat = 0.20     // diameter, as a fraction of body width
+    var gap: CGFloat = 0.16     // space between the eyes, likewise
+
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        var p = EggShape().path(in: rect)
+        let d = w * eye
+        let cy = h * 0.48
+        let dx = (w * gap + d) / 2
+        for sign in [-1.0, 1.0] as [CGFloat] {
+            p.addEllipse(in: CGRect(x: w / 2 + sign * dx - d / 2, y: cy - d / 2, width: d, height: d))
+        }
+        return p
+    }
+}
+
+extension NSImage {
+    /// Status bar icon. Marked as a template so the system handles light and dark
+    /// menu bars, the highlighted state and any accent tinting; drawn on demand
+    /// rather than from a bitmap so it stays sharp at any scale.
+    static func buddyStatusGlyph(height: CGFloat = 18) -> NSImage {
+        let size = CGSize(width: (height * 56 / 60).rounded(), height: height)
+        let image = NSImage(size: size, flipped: true) { rect in
+            guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+            ctx.addPath(BuddyGlyph().path(in: rect).cgPath)
+            ctx.setFillColor(NSColor.black.cgColor)
+            ctx.fillPath(using: .evenOdd)
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "DeskBuddy"
+        return image
     }
 }
 
