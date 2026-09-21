@@ -185,10 +185,25 @@ final class BubbleController {
     }
 
     /// Shows the bubble. With autoHide it closes itself after that interval (otherwise it stays until clicked).
-    /// Placement is chosen from the screen space around the character, in the order above → below → left/right.
     func show(_ message: String, autoHide: TimeInterval? = nil) {
-        guard let characterPanel else { return }
+        guard characterPanel != nil else { return }
         current = (message, autoHide)
+        layout(message)
+
+        autoHideTask?.cancel()
+        if let autoHide {
+            autoHideTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(autoHide))
+                guard !Task.isCancelled else { return }
+                self?.hide()
+            }
+        }
+    }
+
+    /// Places and displays the message — leaves the auto-hide timer alone.
+    /// Placement is chosen from the screen space around the character, in the order above → below → left/right.
+    private func layout(_ message: String) {
+        guard let characterPanel else { return }
 
         let charFrame = characterPanel.frame
         let visible = (characterPanel.screen ?? NSScreen.main)?.visibleFrame ?? .zero
@@ -255,15 +270,14 @@ final class BubbleController {
         }
         panel.orderFrontRegardless()
         onVisibleChange?(true)
+    }
 
-        autoHideTask?.cancel()
-        if let autoHide {
-            autoHideTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(autoHide))
-                guard !Task.isCancelled else { return }
-                self?.hide()
-            }
-        }
+    /// Swaps the text of the showing (or suspended) bubble in place — no-op once it has been dismissed or replaced by another message.
+    /// The auto-hide countdown keeps running, so a ticking message still closes on schedule.
+    func replace(_ old: String, with new: String) {
+        guard let current, current.message == old else { return }
+        self.current = (new, current.autoHide)
+        if panel.isVisible { layout(new) }
     }
 
     /// Fully dismiss (click or auto-hide) — discards any suspended message too
@@ -297,14 +311,19 @@ final class BubbleController {
 
 // MARK: - Event Alert Watcher
 
-/// Checks today's events every 30 seconds and notifies once per event at the configured lead time before it starts
+/// Checks today's events every 30 seconds and notifies once per event at the configured lead time before it starts.
+/// The latest alert keeps counting down (n min → n-1 min → … → starting now) until the event starts.
 @MainActor
 final class EventNotifier {
     var onNotify: ((String) -> Void)?
+    /// Called when the latest alert's countdown text changes (old message, new message)
+    var onUpdate: ((String, String) -> Void)?
 
     private let calendar: CalendarService
     private var task: Task<Void, Never>?
     private var notifiedIDs: Set<String> = []
+    /// The alert currently counting down, with the text last sent for it
+    private var countdown: (event: CalendarEvent, message: String)?
 
     init(calendar: CalendarService) {
         self.calendar = calendar
@@ -314,26 +333,50 @@ final class EventNotifier {
         guard task == nil else { return }
         task = Task { [weak self] in
             while !Task.isCancelled {
-                self?.tick()
-                try? await Task.sleep(for: .seconds(30))
+                guard let delay = self?.tick() else { return }
+                try? await Task.sleep(for: .seconds(delay))
             }
         }
     }
 
-    private func tick() {
-        let defaults = UserDefaults.standard
-        guard calendar.access == .authorized,
-              defaults.bool(forKey: SettingsKeys.eventAlerts) else { return }
-        let leadMinutes = max(1, defaults.integer(forKey: SettingsKeys.eventAlertLead))
-
+    /// Runs one check and returns how long to wait before the next
+    private func tick() -> TimeInterval {
         let now = Date()
-        for event in calendar.events(on: now) where !event.isAllDay {
-            let seconds = event.start.timeIntervalSince(now)
-            guard seconds > 0, seconds <= Double(leadMinutes) * 60,
-                  !notifiedIDs.contains(event.id) else { continue }
-            notifiedIDs.insert(event.id)
-            let minutes = max(1, Int(seconds / 60))
-            onNotify?(L.f("bubble.event_upcoming", minutes, event.title))
+        refreshCountdown(now)
+
+        let defaults = UserDefaults.standard
+        if calendar.access == .authorized, defaults.bool(forKey: SettingsKeys.eventAlerts) {
+            let leadMinutes = max(1, defaults.integer(forKey: SettingsKeys.eventAlertLead))
+            for event in calendar.events(on: now) where !event.isAllDay {
+                let seconds = event.start.timeIntervalSince(now)
+                guard seconds > 0, seconds <= Double(leadMinutes) * 60,
+                      !notifiedIDs.contains(event.id) else { continue }
+                notifiedIDs.insert(event.id)
+                let message = Self.message(for: event, now: now)
+                countdown = (event, message)
+                onNotify?(message)
+            }
         }
+
+        // While counting down, wake just past the next whole-minute mark so the number flips on time
+        guard let countdown else { return 30 }
+        let untilFlip = countdown.event.start.timeIntervalSince(now).truncatingRemainder(dividingBy: 60)
+        return min(30, max(0, untilFlip) + 0.05)
+    }
+
+    private func refreshCountdown(_ now: Date) {
+        guard let countdown else { return }
+        let message = Self.message(for: countdown.event, now: now)
+        if message != countdown.message {
+            onUpdate?(countdown.message, message)
+        }
+        self.countdown = now < countdown.event.start ? (countdown.event, message) : nil
+    }
+
+    /// "n min" is rounded up — it reads n until less than n-1 minutes remain
+    private static func message(for event: CalendarEvent, now: Date) -> String {
+        let seconds = event.start.timeIntervalSince(now)
+        guard seconds > 0 else { return L.f("bubble.event_now", event.title) }
+        return L.f("bubble.event_upcoming", Int((seconds / 60).rounded(.up)), event.title)
     }
 }

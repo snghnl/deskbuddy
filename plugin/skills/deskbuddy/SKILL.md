@@ -45,7 +45,8 @@ Sending a command launches the app automatically if it is not running
   user may have stepped away from completes, `notify` with the key result.
   e.g. `deskbuddy notify "✅ Migration done — 37 files, tests passing"`
 - **Failures and decisions**: if something failed or needs the user's judgment,
-  send without autohide (the bubble stays until clicked, so it won't be missed).
+  send without autohide (the bubble follows the user's dismiss setting — until
+  clicked by default — so it won't be missed).
   e.g. `deskbuddy notify "⚠️ Deploy failed — check the logs"`
 - **Light progress updates**: use `--autohide 8` to keep interruptions low.
 - **Keep messages short and specific**: a one-line summary plus the next action.

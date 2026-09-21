@@ -13,6 +13,8 @@ enum SettingsKeys {
     static let showCalendar = "DeskBuddy.showCalendar"
     static let eventAlerts = "DeskBuddy.eventAlerts"
     static let eventAlertLead = "DeskBuddy.eventAlertLead"
+    /// Seconds before notification bubbles close themselves; 0 keeps them until clicked
+    static let bubbleAutoHide = "DeskBuddy.bubbleAutoHide"
     static let character = "DeskBuddy.character"
     static let throwEnabled = "DeskBuddy.throwEnabled"
     static let wander = "DeskBuddy.wander"
@@ -33,6 +35,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.showCalendar) private var showCalendar = true
     @AppStorage(SettingsKeys.eventAlerts) private var eventAlerts = true
     @AppStorage(SettingsKeys.eventAlertLead) private var eventAlertLead = 10
+    @AppStorage(SettingsKeys.bubbleAutoHide) private var bubbleAutoHide = 0
     @AppStorage(SettingsKeys.throwEnabled) private var throwEnabled = true
     @AppStorage(SettingsKeys.wander) private var wanderEnabled = false
     @AppStorage(SettingsKeys.hotkeyKeyCode) private var hotkeyKeyCode = -1
@@ -55,8 +58,21 @@ struct SettingsView: View {
                     Text("English").tag(AppLanguage.english.rawValue)
                 }
                 .pickerStyle(.menu)
+
+                Picker(L.s("settings.bubble_auto_hide"), selection: $bubbleAutoHide) {
+                    Text(L.s("settings.when_clicked")).tag(0)
+                    ForEach([5, 10, 30], id: \.self) { seconds in
+                        Text(L.f("settings.after_seconds", seconds)).tag(seconds)
+                    }
+                    Text(L.s("settings.after_1min")).tag(60)
+                }
+                .pickerStyle(.menu)
             } header: {
                 Text(L.s("settings.general"))
+            } footer: {
+                Text(L.s("settings.bubble_auto_hide_footer"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {

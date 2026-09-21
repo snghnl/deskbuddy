@@ -193,8 +193,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "notify":
             guard let message = query("message") ?? query("text"), !message.isEmpty else { return }
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            let autoHide = query("autohide").flatMap(Double.init)
-            bubble.show(message, autoHide: autoHide)   // stays until clicked by default
+            // An explicit autohide wins; otherwise follow the user's dismiss setting
+            let autoHide = query("autohide").flatMap(Double.init) ?? notificationAutoHide
+            bubble.show(message, autoHide: autoHide)
 
         case "add":
             guard let title = query("title"), !title.isEmpty else { return }
@@ -225,6 +226,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Speech bubble · event alerts
 
+    /// User-chosen delay before notification bubbles close themselves — nil keeps them until clicked
+    private var notificationAutoHide: TimeInterval? {
+        let seconds = UserDefaults.standard.integer(forKey: SettingsKeys.bubbleAutoHide)
+        return seconds > 0 ? TimeInterval(seconds) : nil
+    }
+
     private func setupBubble() {
         bubble = BubbleController(characterPanel: characterPanel)
         bubble.onVisibleChange = { [weak self] visible in
@@ -234,7 +241,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         eventNotifier = EventNotifier(calendar: calendarService)
         eventNotifier.onNotify = { [weak self] message in
             guard let self, characterPanel.isVisible else { return }
-            bubble.show(message)   // stays until clicked
+            bubble.show(message, autoHide: notificationAutoHide)
+        }
+        eventNotifier.onUpdate = { [weak self] old, new in
+            self?.bubble.replace(old, with: new)
         }
         eventNotifier.start()
 
@@ -245,7 +255,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSSound(named: "Glass")?.play()
             // Announce with the linked to-do's title when there is one
             let title = timer.todoID.flatMap { id in self.store.todos.first { $0.id == id }?.title }
-            bubble.show(L.f("timer.done_bubble", title ?? timer.label))   // stays until clicked
+            bubble.show(L.f("timer.done_bubble", title ?? timer.label), autoHide: notificationAutoHide)
         }
     }
 

@@ -93,7 +93,7 @@ External scripts and agents (Claude Code, background workers, cron jobs) can tal
 DeskBuddy:
 
 ```sh
-bin/deskbuddy notify "Build finished!"            # speech bubble (stays until clicked)
+bin/deskbuddy notify "Build finished!"            # speech bubble (stays until clicked, or per Settings)
 bin/deskbuddy notify "heads up" --autohide 8      # auto-dismiss after 8s
 bin/deskbuddy add "Review the PR" --memo "not urgent"
 bin/deskbuddy list                                # open to-dos
