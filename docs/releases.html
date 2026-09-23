@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Releases — DeskBuddy</title>
+<meta name="description" content="Every DeskBuddy release and the notes that shipped with it.">
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DeskBuddy releases">
+<meta property="og:description" content="Every DeskBuddy release and the notes that shipped with it.">
+<meta property="og:image" content="https://deskbuddy.snghnl.com/assets/og.jpg">
+<meta property="og:url" content="https://deskbuddy.snghnl.com/releases.html">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="stylesheet" href="site.css">
+<style>
+/* Page-only: the release list and the notes GitHub renders for us */
+main { padding-bottom: 8px; }
+nav a[aria-current] { color: var(--fg); }
+.release { padding: 40px 0; border-top: 1px solid var(--line); }
+.release:first-of-type { border-top: 0; padding-top: 30px; }
+.release-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.notes { margin-top: 16px; color: var(--fg-dim); font-size: 15px; line-height: 1.7; }
+.notes :is(h1, h2, h3) { color: var(--fg); font-size: 16px; font-weight: 640; margin: 26px 0 0; }
+.notes :is(h1, h2, h3):first-child { margin-top: 0; }
+.notes p, .notes ul, .notes ol { margin: 10px 0 0; }
+.notes :is(ul, ol) { padding-left: 20px; }
+.notes li { margin: 5px 0; }
+.notes code { background: var(--bg-sunk); padding: 2px 6px; border-radius: 5px; font-size: 13px; color: var(--fg); }
+.notes pre { margin-top: 16px; }
+.notes pre code { background: none; padding: 0; color: inherit; font-size: 13.5px; }
+.notes img { max-width: 100%; }
+.release .row { margin-top: 22px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a href="index.html" style="display: contents">
+      <img class="light" src="assets/buddy-light.png" alt="">
+      <img class="dark" src="assets/buddy-dark.png" alt="">
+      <span class="name">DeskBuddy</span>
+    </a>
+    <span class="spacer"></span>
+    <a href="index.html#install">Install</a>
+    <a href="index.html#features">Features</a>
+    <a href="index.html#agents">For agents</a>
+    <a href="releases.html" aria-current="page">Releases</a>
+    <a href="https://github.com/snghnl/deskbuddy">GitHub</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <span class="eyebrow">Changelog</span>
+    <h1>Releases</h1>
+    <p class="lede">
+      What changed, version by version. DeskBuddy watches for these on its own —
+      <b>Settings&nbsp;→&nbsp;Updates</b> installs them without a trip back here.
+    </p>
+  </div>
+</header>
+
+<main class="wrap" id="list">
+  <p class="meta" id="status">Loading releases…</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>DeskBuddy</span>
+    <a href="https://github.com/snghnl/deskbuddy">Source</a>
+    <a href="releases.html">Releases</a>
+    <a href="https://github.com/snghnl/deskbuddy/issues">Issues</a>
+    <a href="https://github.com/snghnl/deskbuddy/blob/main/LICENSE">MIT License</a>
+    <span class="spacer"></span>
+  </div>
+</footer>
+
+<script>
+const REPO = "snghnl/deskbuddy";
+const list = document.getElementById("list");
+const status = document.getElementById("status");
+
+// The html media type hands back notes GitHub has already rendered and sanitized,
+// so this page needs no markdown parser and stays in step with the release page.
+fetch(`https://api.github.com/repos/${REPO}/releases?per_page=20`, {
+  headers: { Accept: "application/vnd.github.html+json" },
+})
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+  .then(render)
+  .catch(showFallback);
+
+function render(releases) {
+  const published = releases.filter((r) => !r.draft);
+  if (!published.length) return showFallback();
+
+  status.remove();
+  published.forEach((release, index) => {
+    list.append(card(release, index === 0));
+  });
+
+  // Arriving at /releases.html#v0.14.0 only works once the cards exist
+  if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+}
+
+function card(release, latest) {
+  const article = document.createElement("article");
+  article.className = "release";
+  article.id = release.tag_name;
+
+  const date = new Date(release.published_at || release.created_at);
+  const badge = release.prerelease ? "pre-release" : latest ? "latest" : "";
+
+  const head = document.createElement("div");
+  head.className = "release-head";
+  head.innerHTML = `
+    <h2>${escapeHTML(release.tag_name)}</h2>
+    <span class="meta">
+      <time datetime="${date.toISOString()}">${date.toLocaleDateString("en-US", {
+        year: "numeric", month: "short", day: "numeric",
+      })}</time>${badge ? ` · <b>${badge}</b>` : ""}
+    </span>`;
+  article.append(head);
+
+  const notes = document.createElement("div");
+  notes.className = "notes";
+  if (release.body_html) {
+    notes.innerHTML = release.body_html;
+    scrub(notes);
+  } else {
+    notes.innerHTML = "<p>No notes for this release.</p>";
+  }
+  article.append(notes);
+
+  const dmg = release.assets.find((a) => a.name.endsWith(".dmg"));
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `
+    ${dmg ? `<a class="btn" href="${dmg.browser_download_url}">Download .dmg</a>` : ""}
+    <a class="btn ghost" href="${release.html_url}">On GitHub</a>`;
+  article.append(row);
+
+  return article;
+}
+
+// Belt and braces: the API already sanitizes, and only we write release notes,
+// but nothing here needs to run scripts or frame anything.
+function scrub(root) {
+  root.querySelectorAll("script, iframe, object, embed, form").forEach((el) => el.remove());
+  root.querySelectorAll("*").forEach((el) => {
+    [...el.attributes].forEach((attr) => {
+      if (attr.name.startsWith("on")) el.removeAttribute(attr.name);
+    });
+  });
+}
+
+function escapeHTML(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showFallback() {
+  status.innerHTML =
+    `Could not load the releases just now — ` +
+    `<a href="https://github.com/${REPO}/releases">read them on GitHub</a>.`;
+}
+</script>
+
+<!-- Vercel Web Analytics. Cookieless, and served from a first-party path, so it
+     needs no consent banner. The path is handled by Vercel's edge, so on the
+     github.io mirror this 404s and simply records nothing. -->
+<script defer src="/_vercel/insights/script.js"></script>
+
+</body>
+</html>
