@@ -127,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appState = AppState()
     private let calendarService = CalendarService()
     private let timerCenter = TimerCenter()
+    private let updateService = UpdateService()
 
     /// Situations where wandering must pause temporarily, e.g. while a menu is open
     private var wanderSuspended = false
@@ -139,6 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SettingsKeys.showCalendar: true,
             SettingsKeys.eventAlerts: true,
             SettingsKeys.eventAlertLead: 10,
+            SettingsKeys.autoUpdateCheck: true,
         ])
         setupCharacterPanel()
         setupListPanel()
@@ -154,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupTabShortcuts()
         setupBubble()
+        setupUpdates()
     }
 
     /// One-time migration of settings from the pre-release bundle id
@@ -257,6 +260,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let title = timer.todoID.flatMap { id in self.store.todos.first { $0.id == id }?.title }
             bubble.show(L.f("timer.done_bubble", title ?? timer.label), autoHide: notificationAutoHide)
         }
+    }
+
+    // MARK: - Updates
+
+    private func setupUpdates() {
+        updateService.onUpdateFound = { [weak self] update in
+            guard let self else { return }
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+            bubble.show(L.f("bubble.update_available", update.tag), autoHide: notificationAutoHide) {
+                [weak self] in self?.openSettings()
+            }
+        }
+        announceFinishedUpdate()
+        updateService.startAutoChecks()
+    }
+
+    /// Says hello after a self-update. The new build is signed with a different
+    /// ad-hoc signature, so macOS treats it as a different app and drops the
+    /// calendar permission with it — worth mentioning while it is still fresh.
+    private func announceFinishedUpdate() {
+        let defaults = UserDefaults.standard
+        guard let previous = defaults.string(forKey: SettingsKeys.updatedFrom) else { return }
+        defaults.removeObject(forKey: SettingsKeys.updatedFrom)
+
+        let current = UpdateService.currentVersion.description
+        guard previous != current else { return }
+        let message = calendarService.access == .authorized
+            ? L.f("bubble.updated", current)
+            : L.f("bubble.updated_relink_calendar", current)
+        bubble.show(message, autoHide: notificationAutoHide) { [weak self] in self?.openSettings() }
     }
 
     /// ⌘1/⌘2/⌘3 switch tabs while the list panel is up
@@ -549,7 +582,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(calendar: calendarService, store: store)))
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(calendar: calendarService, store: store, updates: updateService)))
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             window.center()

@@ -31,6 +31,17 @@ look](docs/install.sh) before piping it into a shell.
 
 Already installed the hard way? `xattr -dr com.apple.quarantine /Applications/DeskBuddy.app`
 
+### Updating
+
+DeskBuddy asks GitHub for the latest release once a day, and the buddy speaks up
+when it finds one. **Settings → Updates** shows the installed version and installs
+the update in place: it downloads the release zip, matches it against the release's
+`checksums.txt`, swaps the app and relaunches.
+
+Every build carries a different ad-hoc signature, so macOS treats an updated
+DeskBuddy as a new app and drops its calendar permission along the way. Reconnect
+it in **Settings → Integrations** afterwards — the app says so when it happens.
+
 ## Build & Run
 
 ```sh

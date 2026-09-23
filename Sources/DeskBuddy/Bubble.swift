@@ -121,8 +121,6 @@ private final class TapCatcherView: NSView {
 /// Shows a speech bubble above the character's head. It is a child window of the character panel, so it moves along when the character is dragged.
 @MainActor
 final class BubbleController {
-    /// Called when the bubble is clicked (the controller handles dismissal; only extra behavior is delegated)
-    var onTap: (() -> Void)?
     /// Called when visibility changes (used to sync the character's expression)
     var onVisibleChange: ((Bool) -> Void)?
 
@@ -131,7 +129,7 @@ final class BubbleController {
     private weak var characterPanel: NSPanel?
     private var autoHideTask: Task<Void, Never>?
     /// The message currently showing or suspended — kept until dismissed
-    private var current: (message: String, autoHide: TimeInterval?)?
+    private var current: (message: String, autoHide: TimeInterval?, onTap: (() -> Void)?)?
 
     init(characterPanel: NSPanel) {
         self.characterPanel = characterPanel
@@ -167,8 +165,10 @@ final class BubbleController {
             ])
         }
         catcher.onClick = { [weak self] in
+            // Read the action before hiding — hide() clears the message it belongs to
+            let action = self?.current?.onTap
             self?.hide()
-            self?.onTap?()
+            action?()
         }
         panel.contentView = container
     }
@@ -185,9 +185,10 @@ final class BubbleController {
     }
 
     /// Shows the bubble. With autoHide it closes itself after that interval (otherwise it stays until clicked).
-    func show(_ message: String, autoHide: TimeInterval? = nil) {
+    /// `onTap` runs when this particular message is clicked — it is dropped along with the message.
+    func show(_ message: String, autoHide: TimeInterval? = nil, onTap: (() -> Void)? = nil) {
         guard characterPanel != nil else { return }
-        current = (message, autoHide)
+        current = (message, autoHide, onTap)
         layout(message)
 
         autoHideTask?.cancel()
@@ -276,7 +277,7 @@ final class BubbleController {
     /// The auto-hide countdown keeps running, so a ticking message still closes on schedule.
     func replace(_ old: String, with new: String) {
         guard let current, current.message == old else { return }
-        self.current = (new, current.autoHide)
+        self.current = (new, current.autoHide, current.onTap)
         if panel.isVisible { layout(new) }
     }
 
@@ -295,7 +296,7 @@ final class BubbleController {
     /// If there is a suspended message, shows it again relative to the character's current position
     func resume() {
         if let current {
-            show(current.message, autoHide: current.autoHide)
+            show(current.message, autoHide: current.autoHide, onTap: current.onTap)
         }
     }
 

@@ -84,6 +84,13 @@ jobs:
       - name: Package zip
         run: ditto -c -k --keepParent build/DeskBuddy.app "DeskBuddy-${GITHUB_REF_NAME}.zip"
 
+      - name: Checksums
+        # The in-app updater downloads the zip and checks it against this list
+        run: |
+          cp build/DeskBuddy.dmg DeskBuddy.dmg
+          shasum -a 256 DeskBuddy.dmg "DeskBuddy-${GITHUB_REF_NAME}.zip" > checksums.txt
+          cat checksums.txt
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -93,5 +100,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             build/DeskBuddy.dmg \
             "DeskBuddy-${GITHUB_REF_NAME}.zip" \
+            checksums.txt \
             --title "DeskBuddy $GITHUB_REF_NAME" \
             --generate-notes

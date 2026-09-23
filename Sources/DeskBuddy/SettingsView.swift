@@ -22,11 +22,17 @@ enum SettingsKeys {
     static let hotkeyModifiers = "DeskBuddy.hotkeyModifiers"
     static let hotkeyDisplay = "DeskBuddy.hotkeyDisplay"
     static let historyClearedAt = "DeskBuddy.historyClearedAt"
+    static let autoUpdateCheck = "DeskBuddy.autoUpdateCheck"
+    /// Tag of the newest release the buddy has already announced — keeps it from nagging
+    static let lastNotifiedVersion = "DeskBuddy.lastNotifiedVersion"
+    /// Version we updated away from, read once on the next launch to announce the update
+    static let updatedFrom = "DeskBuddy.updatedFrom"
 }
 
 struct SettingsView: View {
     @ObservedObject var calendar: CalendarService
     @ObservedObject var store: TodoStore
+    @ObservedObject var updates: UpdateService
 
     @State private var confirmingDelete = false
 
@@ -41,6 +47,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.hotkeyKeyCode) private var hotkeyKeyCode = -1
     @AppStorage(SettingsKeys.hotkeyModifiers) private var hotkeyModifiers = 0
     @AppStorage(SettingsKeys.hotkeyDisplay) private var hotkeyDisplay = ""
+    @AppStorage(SettingsKeys.autoUpdateCheck) private var autoUpdateCheck = true
 
     @State private var recording = false
     @State private var keyMonitor: Any?
@@ -198,6 +205,17 @@ struct SettingsView: View {
             } message: {
                 Text(L.s("settings.history_confirm_message"))
             }
+
+            Section {
+                LabeledContent(L.s("settings.current_version")) {
+                    Text(UpdateService.currentVersion.description)
+                        .foregroundStyle(.secondary)
+                }
+                updateRow
+                Toggle(L.s("settings.auto_update_check"), isOn: $autoUpdateCheck)
+            } header: {
+                Text(L.s("settings.updates"))
+            }
         }
         .formStyle(.grouped)
         .frame(width: 380, height: 500)
@@ -222,6 +240,75 @@ struct SettingsView: View {
         renameTarget = name
         renameText = CustomCharacters.displayName(name)
         showRename = true
+    }
+
+    // MARK: - Updates
+
+    @ViewBuilder
+    private var updateRow: some View {
+        switch updates.phase {
+        case .checking:
+            progressRow(L.s("settings.checking_for_updates"))
+
+        case .downloading:
+            progressRow(L.s("settings.downloading_update"))
+
+        case .installing:
+            progressRow(L.s("settings.installing_update"))
+
+        case .available(let tag):
+            LabeledContent(L.f("settings.update_available", tag)) {
+                HStack(spacing: 10) {
+                    if let notes = updates.pending?.notes {
+                        Link(L.s("settings.release_notes"), destination: notes)
+                            .font(.caption)
+                    }
+                    Button(L.s("settings.install_update")) {
+                        guard let update = updates.pending else { return }
+                        Task { await updates.install(update) }
+                    }
+                }
+            }
+
+        case .idle, .upToDate, .failed:
+            LabeledContent(L.s("settings.update_status")) {
+                HStack(spacing: 10) {
+                    if !checkResultText.isEmpty {
+                        Text(checkResultText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .help(checkResultText)
+                    }
+                    Button(L.s("settings.check_for_updates")) {
+                        Task { await updates.check(userInitiated: true) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func progressRow(_ label: String) -> some View {
+        LabeledContent(L.s("settings.update_status")) {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text(label).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var checkResultText: String {
+        switch updates.phase {
+        case .upToDate:
+            if let checked = updates.lastChecked {
+                L.f("settings.up_to_date_at", checked.formatted(date: .omitted, time: .shortened))
+            } else {
+                L.s("settings.up_to_date")
+            }
+        case .failed(let message): message
+        default: ""
+        }
     }
 
     // MARK: - Calendar integration
