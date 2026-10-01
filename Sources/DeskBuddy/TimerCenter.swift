@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 
 /// A pomodoro-style countdown timer, optionally linked to a to-do.
 struct BuddyTimer: Identifiable, Codable, Equatable {
@@ -26,15 +27,16 @@ struct BuddyTimer: Identifiable, Codable, Equatable {
 /// Owns all timers: ticking, firing, and persistence.
 /// Runs its own loop so timers fire even while the list panel is closed.
 @MainActor
-final class TimerCenter: ObservableObject {
-    @Published private(set) var timers: [BuddyTimer] = [] {
+@Observable
+final class TimerCenter {
+    private(set) var timers: [BuddyTimer] = [] {
         didSet { save() }
     }
 
     /// Called once per expired timer (bubble + sound are wired in AppDelegate)
-    var onFire: ((BuddyTimer) -> Void)?
+    @ObservationIgnored var onFire: ((BuddyTimer) -> Void)?
 
-    private var task: Task<Void, Never>?
+    @ObservationIgnored private var task: Task<Void, Never>?
     private let storageKey = "DeskBuddy.timers"
 
     init() {

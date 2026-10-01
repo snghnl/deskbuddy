@@ -30,8 +30,8 @@ enum SettingsKeys {
 }
 
 struct SettingsView: View {
-    @ObservedObject var calendar: CalendarService
-    @ObservedObject var store: TodoStore
+    let calendar: CalendarService
+    let store: TodoStore
     @ObservedObject var updates: UpdateService
 
     @State private var confirmingDelete = false

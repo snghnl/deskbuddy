@@ -3,8 +3,8 @@ import SwiftUI
 /// Timer tab — pomodoro-style circular timers, several can run at once.
 /// Each timer card manages its own to-do link and has an always-visible remove button.
 struct TimerTabView: View {
-    @ObservedObject var timers: TimerCenter
-    @ObservedObject var store: TodoStore
+    let timers: TimerCenter
+    let store: TodoStore
 
     @State private var customMinutes = ""
 
@@ -87,7 +87,7 @@ private struct TimerCard: View {
     let timer: BuddyTimer
     let now: Date
     let timers: TimerCenter
-    @ObservedObject var store: TodoStore
+    let store: TodoStore
 
     @State private var hoveringRing = false
 

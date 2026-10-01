@@ -3,8 +3,8 @@ import SwiftUI
 /// Tab showing completion history as a monthly calendar.
 /// Days with more completions are shaded darker; tapping a date lists that day's completed items below.
 struct CalendarTabView: View {
-    @ObservedObject var store: TodoStore
-    @ObservedObject var calendar: CalendarService
+    let store: TodoStore
+    let calendar: CalendarService
     let onSelect: (UUID) -> Void
 
     @AppStorage(SettingsKeys.showCalendar) private var showEvents = true

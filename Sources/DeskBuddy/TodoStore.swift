@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 struct Todo: Identifiable, Codable, Equatable {
     var id = UUID()
@@ -23,8 +24,9 @@ struct CompletedGroup: Identifiable {
 }
 
 @MainActor
-final class TodoStore: ObservableObject {
-    @Published var todos: [Todo] = [] {
+@Observable
+final class TodoStore {
+    var todos: [Todo] = [] {
         didSet { scheduleSave() }
     }
 
@@ -35,7 +37,10 @@ final class TodoStore: ObservableObject {
     /// Stored as a watermark rather than a per-item flag on purpose: a new non-optional
     /// field on `Todo` would make the synthesized decoder throw on every existing
     /// todos.json, and `load()` swallows that error — every item would silently vanish.
-    @Published var historyClearedAt: Date? {
+    ///
+    /// Read as the initial value rather than assigned in init: under @Observable an
+    /// assignment in init fires didSet and would write the value straight back.
+    var historyClearedAt: Date? = TodoStore.savedHistoryClearedAt() {
         didSet {
             let defaults = UserDefaults.standard
             if let at = historyClearedAt {
@@ -47,17 +52,13 @@ final class TodoStore: ObservableObject {
     }
 
     private let fileURL: URL
-    private var saveTask: Task<Void, Never>?
+    @ObservationIgnored private var saveTask: Task<Void, Never>?
 
     init() {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let dir = support.appendingPathComponent("DeskBuddy", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("todos.json")
-
-        // Assigning in init does not fire didSet, so this does not write back
-        historyClearedAt = (UserDefaults.standard.object(forKey: SettingsKeys.historyClearedAt) as? Double)
-            .map(Date.init(timeIntervalSinceReferenceDate:))
 
         // Migrate data from the FloatingTodo era
         let legacy = support.appendingPathComponent("FloatingTodo/todos.json")
@@ -69,6 +70,10 @@ final class TodoStore: ObservableObject {
         load()
     }
 
+    private nonisolated static func savedHistoryClearedAt() -> Date? {
+        (UserDefaults.standard.object(forKey: SettingsKeys.historyClearedAt) as? Double)
+            .map(Date.init(timeIntervalSinceReferenceDate:))
+    }
 
     func add(_ title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)

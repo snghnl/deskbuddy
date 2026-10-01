@@ -47,7 +47,7 @@ private enum Skin {
 /// The character floating on screen. Click/drag events are handled directly by the
 /// panel (window), so this view does nothing but draw.
 struct CharacterView: View {
-    @ObservedObject var store: TodoStore
+    let store: TodoStore
     @ObservedObject var appState: AppState
 
     @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.buddy.rawValue

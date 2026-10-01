@@ -11,10 +11,10 @@ enum TimerRowState {
 }
 
 struct TodoListView: View {
-    @ObservedObject var store: TodoStore
+    let store: TodoStore
     @ObservedObject var appState: AppState
-    @ObservedObject var calendar: CalendarService
-    @ObservedObject var timers: TimerCenter
+    let calendar: CalendarService
+    let timers: TimerCenter
 
     @State private var newTitle = ""
     @State private var selectedID: UUID?

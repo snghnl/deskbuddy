@@ -21,13 +21,14 @@ enum CalendarAccess {
 /// Reads today's events from the macOS calendar (including Google accounts) via EventKit.
 /// macOS handles syncing, so we only need to follow local DB changes (EKEventStoreChanged).
 @MainActor
-final class CalendarService: ObservableObject {
-    @Published private(set) var access: CalendarAccess
+@Observable
+final class CalendarService {
+    private(set) var access: CalendarAccess
     /// Incremented whenever the calendar DB changes — views observing this value call events(on:) again
-    @Published private(set) var revision = 0
+    private(set) var revision = 0
 
     private let store = EKEventStore()
-    private var changeObserver: NSObjectProtocol?
+    @ObservationIgnored private var changeObserver: NSObjectProtocol?
 
     init() {
         access = Self.currentAccess()
