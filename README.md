@@ -115,13 +115,14 @@ bin/deskbuddy done a42620c8                       # complete by id prefix or tit
 bin/deskbuddy toggle                              # open/close the list
 bin/deskbuddy timer 25 "Write the report"         # start a 25-minute timer
 bin/deskbuddy run todo.list                       # run any command by name, print its answer
+bin/deskbuddy ui panel.json                       # show a panel, wait, print what the user did
 ```
 
 While DeskBuddy runs, the CLI talks to it over a socket
 (`~/Library/Application Support/DeskBuddy/deskbuddy.sock`, readable only by you), so
 errors come back with a message and a non-zero exit. When the app is not running,
 notify/add/done/toggle go through the `deskbuddy://` URL scheme, which launches it, and
-list reads `plugins/todo/todos.json` directly (or the older `todos.json`, for apps before 0.18). timer and run need the socket, so they launch the app
+list reads `plugins/todo/todos.json` directly (or the older `todos.json`, for apps before 0.18). timer, run and ui need the socket, so they launch the app
 first. To put the CLI on PATH:
 `ln -s "$(pwd)/bin/deskbuddy" /usr/local/bin/deskbuddy`
 
@@ -137,6 +138,31 @@ Commands, for `deskbuddy run <command> name=value ...` or `deskbuddy://<command>
 | `todo.show` | `id` (full UUID) — opens the list on that to-do's detail |
 | `todo.list` | — (answers with every to-do, as in todos.json) |
 | `pomodoro.start` | `minutes`, `label` (optional), `todo` (UUID to link, optional) |
+| `a2ui.show` | `payload` (an A2UI document) — answers once the user acts or closes the panel |
+
+### Panels (A2UI, experimental)
+
+`deskbuddy ui` shows a native panel next to the buddy, built from a JSON description, and
+waits for the user. It prints what they did, as `{"action": "...", "values": {...}}` (the
+action is `null` if they closed the panel). The format is a small A2UI-style subset:
+components `text`, `button`, `row`, `column`, `card`, `divider`, `textField` and `select`,
+nested through `children`.
+
+```json
+{"type": "column", "children": [
+  {"type": "text", "text": "Start Pomodoro?", "style": "title"},
+  {"type": "select", "id": "minutes", "label": "Duration",
+   "options": [{"label": "25 minutes", "value": "25"}, {"label": "50 minutes", "value": "50"}]},
+  {"type": "row", "align": "trailing", "children": [
+    {"type": "button", "label": "Start", "style": "primary",
+     "action": {"command": "pomodoro.start", "arguments": {"minutes": {"input": "minutes"}}}}]}]}
+```
+
+A button either runs a command, with `{"input": "<id>"}` for what the user entered, or has a
+`name` that is simply reported back. Only `buddy.say`, `list.toggle`, `todo.add`,
+`todo.complete`, `todo.show` and `pomodoro.start` may run from a panel; a document naming
+another command is refused before anything shows. Full reference:
+`Sources/A2UIPlugin/A2UIDocument.swift`.
 
 The short URL forms the CLI has always used keep working:
 

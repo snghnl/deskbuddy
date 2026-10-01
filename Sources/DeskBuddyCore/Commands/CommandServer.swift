@@ -11,7 +11,9 @@ import os
 ///     ← {"ok": true, "result": …}     or     ← {"ok": false, "error": "…"}
 ///
 /// Only the user can connect (the socket is 0600). Commands run on the main actor like every
-/// other way in; reading and writing the socket happen off it.
+/// other way in; reading and writing the socket happen off it. A command may take its time to
+/// answer (`CommandRegistry.respondLater`); other connections are served meanwhile, and a
+/// client that hangs up before the answer cancels it.
 public final class CommandServer: @unchecked Sendable {   // `source` is only touched on the main actor
     private let path: String
     private let commands: CommandRegistry
@@ -95,30 +97,51 @@ public final class CommandServer: @unchecked Sendable {   // `source` is only to
             return
         }
         let request = try? JSONDecoder().decode(Request.self, from: line)
-        DispatchQueue.main.async { [weak self] in
-            guard let self else {
-                close(client)
-                return
-            }
-            let reply = MainActor.assumeIsolated { self.reply(to: request) }
-            DispatchQueue.global(qos: .userInitiated).async {
-                Self.write(reply, to: client)
-                close(client)
-            }
+
+        // This thread waits for the answer, which may take as long as the user does
+        let answered = DispatchSemaphore(value: 0)
+        let reply = ReplyBox()
+        let task = Task { @MainActor [commands] in
+            reply.data = await Self.reply(to: request, commands: commands)
+            answered.signal()
         }
+
+        // The client sends nothing after its request, so the socket turning readable means it
+        // hung up. A command still waiting on the user is then cancelled.
+        let hangup = DispatchSource.makeReadSource(fileDescriptor: client, queue: .global(qos: .utility))
+        let watching = DispatchGroup()
+        watching.enter()
+        hangup.setEventHandler {
+            task.cancel()
+            hangup.cancel()
+        }
+        hangup.setCancelHandler { watching.leave() }
+        hangup.resume()
+
+        answered.wait()
+        hangup.cancel()
+        watching.wait()   // no more events will touch the socket once it is closed
+        Self.write(reply.data ?? Self.encode(Reply(error: "no answer")), to: client)
+        close(client)
     }
 
     @MainActor
-    private func reply(to request: Request?) -> Data {
+    private static func reply(to request: Request?, commands: CommandRegistry) async -> Data {
         guard let request else {
-            return Self.encode(Reply(error: #"expected {"command": "...", "arguments": {...}}"#))
+            return encode(Reply(error: #"expected {"command": "...", "arguments": {...}}"#))
         }
         do {
-            let answer = try commands.execute(request.command, CommandArguments(request.arguments ?? [:]))
-            return Self.encode(Reply(result: answer))
+            let answer = try await commands.perform(request.command, CommandArguments(request.arguments ?? [:]))
+            return encode(Reply(result: answer))
+        } catch is CancellationError {
+            return encode(Reply(error: "cancelled"))
         } catch {
-            return Self.encode(Reply(error: String(describing: error)))
+            return encode(Reply(error: String(describing: error)))
         }
+    }
+
+    private final class ReplyBox: @unchecked Sendable {   // written once before the semaphore, read after
+        var data: Data?
     }
 
     // MARK: - Wire format

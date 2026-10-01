@@ -28,6 +28,25 @@ final class CommandRegistryTests: XCTestCase {
         }
     }
 
+    func testACommandThatAnswersLaterIsWaitedForByPerformButNotByExecute() async throws {
+        let commands = CommandRegistry()
+        var started = 0
+        commands.respondLater(to: "ask.user") { arguments in
+            started += 1
+            await Task.yield()
+            return "picked \(arguments["option"] ?? "")"
+        }
+
+        let answer = try await commands.perform("ask.user", CommandArguments(["option": "SQLite"]))
+        XCTAssertEqual(answer as? String, "picked SQLite")
+
+        // From a URL there is no one to answer to: it starts, and nothing waits
+        XCTAssertNil(try commands.execute("ask.user"))
+        await Task.yield()
+        await Task.yield()
+        XCTAssertEqual(started, 2)
+    }
+
     func testArgumentsReadAsNumbersOnlyWhenTheyAreNumbers() {
         let arguments = CommandArguments(["minutes": "25", "autohide": "2.5", "label": "focus"])
 

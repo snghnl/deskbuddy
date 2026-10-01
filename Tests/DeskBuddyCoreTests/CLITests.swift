@@ -133,6 +133,28 @@ final class CLITests: XCTestCase {
         XCTAssertEqual(malformed.err, "deskbuddy: expected name=value, got name\n")
     }
 
+    func testUIShowsTheFilesPanelAndPrintsWhatTheUserDid() throws {
+        var shown: String?
+        commands.respondLater(to: "a2ui.show") { arguments in
+            shown = arguments["payload"]
+            return Answer(action: "continue", values: ["db": "SQLite"])
+        }
+        let document = #"{"type": "button", "label": "Go", "action": {"name": "continue"}}"#
+        let file = sandbox.appendingPathComponent("panel.json")
+        try document.write(to: file, atomically: true, encoding: .utf8)
+
+        let result = run("ui", file.path)
+
+        XCTAssertEqual(result.status, 0)
+        XCTAssertEqual(shown, document)
+        XCTAssertEqual(try JSONDecoder().decode(Answer.self, from: Data(result.out.utf8)), Answer(action: "continue", values: ["db": "SQLite"]))
+    }
+
+    private struct Answer: Codable, Equatable {
+        let action: String
+        let values: [String: String]
+    }
+
     // MARK: - Without the socket
 
     func testWithoutTheAppWritesFallBackToTheURLScheme() throws {

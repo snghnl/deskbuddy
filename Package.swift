@@ -42,10 +42,21 @@ let package = Package(
             dependencies: ["DeskBuddyCore", "TodoAPI"],
             path: "Sources/CalendarPlugin"
         ),
+        // What the A2UI feature offers others: show a described UI, hear what the user did
+        .target(
+            name: "A2UIAPI",
+            path: "Sources/A2UIAPI"
+        ),
+        // Renders UI described in DeskBuddy's A2UI subset as native panels
+        .target(
+            name: "A2UIPlugin",
+            dependencies: ["DeskBuddyCore", "A2UIAPI"],
+            path: "Sources/A2UIPlugin"
+        ),
         // Puts the plugins together: registers them and hosts the UI they contribute to
         .executableTarget(
             name: "DeskBuddy",
-            dependencies: ["DeskBuddyCore", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin"],
+            dependencies: ["DeskBuddyCore", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin", "A2UIPlugin"],
             path: "Sources/DeskBuddy"
         ),
         // The app's own logic, such as moving old data into plugin storage
@@ -63,6 +74,11 @@ let package = Package(
             name: "TodoPluginTests",
             dependencies: ["TodoPlugin", "DeskBuddyCore", "TodoAPI"],
             path: "Tests/TodoPluginTests"
+        ),
+        .testTarget(
+            name: "A2UIPluginTests",
+            dependencies: ["A2UIPlugin", "A2UIAPI", "DeskBuddyCore"],
+            path: "Tests/A2UIPluginTests"
         ),
         .testTarget(
             name: "CalendarPluginTests",

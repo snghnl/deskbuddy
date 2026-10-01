@@ -56,6 +56,44 @@ final class CommandServerTests: XCTestCase {
         XCTAssertEqual(garbage["ok"] as? Bool, false)
     }
 
+    func testWaitsForACommandThatAnswersLaterWhileServingOthers() throws {
+        let pending = Pending()
+        commands.respondLater(to: "ask.user") { _ in try await pending.answer() }
+        commands.respond(to: "who") { _ in "still here" }
+        XCTAssertTrue(server.start())
+
+        let reply = ReplyBox()
+        let answered = expectation(description: "answered")
+        let path = self.path
+        DispatchQueue.global().async {
+            reply.text = Self.send(#"{"command": "ask.user"}"#, to: path)
+            answered.fulfill()
+        }
+        wait(until: { pending.isWaiting })
+
+        // Another connection gets through while the first waits on the user
+        XCTAssertEqual(try exchange(#"{"command": "who"}"#)["result"] as? String, "still here")
+        pending.resume(with: "SQLite")
+
+        wait(for: [answered], timeout: 5)
+        XCTAssertEqual(reply.text, #"{"ok":true,"result":"SQLite"}"# + "\n")
+    }
+
+    func testAClientThatHangsUpCancelsTheCommandItWaitedFor() throws {
+        let pending = Pending()
+        commands.respondLater(to: "ask.user") { _ in try await pending.answer() }
+        XCTAssertTrue(server.start())
+
+        let fd = try XCTUnwrap(Self.connect(to: path))
+        let request = Array(#"{"command": "ask.user"}"#.utf8 + [UInt8(ascii: "\n")])
+        XCTAssertEqual(write(fd, request, request.count), request.count)
+        wait(until: { pending.isWaiting })
+
+        close(fd)
+
+        wait(until: { pending.wasCancelled })
+    }
+
     func testLeavesASocketAnotherServerIsListeningOnAlone() throws {
         commands.respond(to: "who") { _ in "first" }
         XCTAssertTrue(server.start())
@@ -112,19 +150,37 @@ final class CommandServerTests: XCTestCase {
         return try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8), options: .fragmentsAllowed) as? [String: Any])
     }
 
-    private nonisolated static func send(_ line: String, to path: String) -> String? {
+    /// Lets the main actor run until `condition` holds, failing after a few seconds
+    private func wait(until condition: @escaping @MainActor () -> Bool) {
+        let met = expectation(description: "condition")
+        Task { @MainActor in
+            while !condition() { try? await Task.sleep(for: .milliseconds(10)) }
+            met.fulfill()
+        }
+        wait(for: [met], timeout: 5)
+    }
+
+    private nonisolated static func connect(to path: String) -> Int32? {
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { return nil }
-        defer { close(fd) }
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
         withUnsafeMutableBytes(of: &address.sun_path) { raw in
             raw.copyBytes(from: Array(path.utf8) + [0])
         }
         let connected = withUnsafePointer(to: &address) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
         }
-        guard connected == 0 else { return nil }
+        guard connected == 0 else {
+            close(fd)
+            return nil
+        }
+        return fd
+    }
+
+    private nonisolated static func send(_ line: String, to path: String) -> String? {
+        guard let fd = connect(to: path) else { return nil }
+        defer { close(fd) }
         let request = Array((line + "\n").utf8)
         guard write(fd, request, request.count) == request.count else { return nil }
         var received = [UInt8]()
@@ -140,4 +196,32 @@ final class CommandServerTests: XCTestCase {
 
 private final class ReplyBox: @unchecked Sendable {
     var text: String?
+}
+
+/// An answer the test hands over when it chooses, standing in for the user
+@MainActor
+private final class Pending {
+    private var continuation: CheckedContinuation<String, Error>?
+    private(set) var isWaiting = false
+    private(set) var wasCancelled = false
+
+    func answer() async throws -> String {
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                self.continuation = continuation
+                isWaiting = true
+            }
+        } onCancel: {
+            Task { @MainActor in
+                self.wasCancelled = true
+                self.continuation?.resume(throwing: CancellationError())
+                self.continuation = nil
+            }
+        }
+    }
+
+    func resume(with answer: String) {
+        continuation?.resume(returning: answer)
+        continuation = nil
+    }
 }
