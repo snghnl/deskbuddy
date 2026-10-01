@@ -1,10 +1,12 @@
 import SwiftUI
+import TodoAPI
 
 /// Timer tab — pomodoro-style circular timers, several can run at once.
 /// Each timer card manages its own to-do link and has an always-visible remove button.
 struct TimerTabView: View {
     let timers: TimerCenter
-    let store: TodoStore
+    /// nil when the to-do feature is not there — timers then simply cannot be linked
+    let todos: (any TodoService)?
 
     @State private var customMinutes = ""
 
@@ -28,7 +30,7 @@ struct TimerTabView: View {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())],
                                   alignment: .center, spacing: 12) {
                             ForEach(timers.timers) { timer in
-                                TimerCard(timer: timer, now: context.date, timers: timers, store: store)
+                                TimerCard(timer: timer, now: context.date, timers: timers, todos: todos)
                             }
                         }
                     }
@@ -87,12 +89,12 @@ private struct TimerCard: View {
     let timer: BuddyTimer
     let now: Date
     let timers: TimerCenter
-    let store: TodoStore
+    let todos: (any TodoService)?
 
     @State private var hoveringRing = false
 
-    private var linkedTodo: Todo? {
-        timer.todoID.flatMap { id in store.todos.first { $0.id == id } }
+    private var linkedTodo: TodoSummary? {
+        timer.todoID.flatMap { todos?.todo($0) }
     }
 
     var body: some View {
@@ -158,35 +160,44 @@ private struct TimerCard: View {
     }
 
     /// Always shows the short duration label; the linked to-do's title appears only as a hover tooltip
+    @ViewBuilder
     private var linkMenu: some View {
-        Menu {
-            if timer.todoID != nil {
-                Button(L.s("timer.unlink")) {
-                    timers.link(timer.id, todoID: nil)
+        if let todos {
+            Menu {
+                if timer.todoID != nil {
+                    Button(L.s("timer.unlink")) {
+                        timers.link(timer.id, todoID: nil)
+                    }
+                    Divider()
                 }
-                Divider()
-            }
-            ForEach(store.activeTodos) { todo in
-                Button(todo.title) {
-                    timers.link(timer.id, todoID: todo.id)
+                ForEach(todos.active) { todo in
+                    Button(todo.title) {
+                        timers.link(timer.id, todoID: todo.id)
+                    }
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    // Accent-colored link icon signals a linked timer at a glance
+                    Image(systemName: "link")
+                        .font(.system(size: 8, weight: timer.todoID == nil ? .regular : .bold))
+                        .foregroundStyle(timer.todoID == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.accentColor))
+                    durationLabel
                 }
             }
-        } label: {
-            HStack(spacing: 3) {
-                // Accent-colored link icon signals a linked timer at a glance
-                Image(systemName: "link")
-                    .font(.system(size: 8, weight: timer.todoID == nil ? .regular : .bold))
-                    .foregroundStyle(timer.todoID == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.accentColor))
-                Text(timer.label)
-                    .font(.system(size: 10))
-                    .lineLimit(1)
-                    .foregroundStyle(.secondary)
-            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help(linkedTodo?.title ?? L.s("timer.link"))
+        } else {
+            durationLabel
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help(linkedTodo?.title ?? L.s("timer.link"))
+    }
+
+    private var durationLabel: some View {
+        Text(timer.label)
+            .font(.system(size: 10))
+            .lineLimit(1)
+            .foregroundStyle(.secondary)
     }
 
     private var timeText: String {
@@ -195,5 +206,22 @@ private struct TimerCard: View {
         return h > 0
             ? String(format: "%d:%02d:%02d", h, m, s)
             : String(format: "%02d:%02d", m, s)
+    }
+}
+
+/// The timer icon on the To Do row of a to-do with a linked timer — accented while one runs
+struct TimerStateIcon: View {
+    let timers: TimerCenter
+    let todoID: UUID
+
+    var body: some View {
+        let linked = timers.timers.filter { $0.todoID == todoID }
+        if !linked.isEmpty {
+            let running = linked.contains { $0.isRunning }
+            Image(systemName: "timer")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(running ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
+                .help(running ? L.s("timer.running") : L.s("timer.pause"))
+        }
     }
 }

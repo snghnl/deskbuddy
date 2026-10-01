@@ -1,11 +1,7 @@
 import DeskBuddyCore
 import SwiftUI
+import TodoAPI
 import UniformTypeIdentifiers
-
-/// Timer status shown on a to-do row
-enum TimerRowState {
-    case running, paused
-}
 
 /// What's typed into the to-do input. Kept outside the view because switching tabs or opening
 /// a to-do's detail tears the input down, and the text should still be there on the way back.
@@ -52,21 +48,15 @@ struct TodoInputBar: View {
 /// The To Do tab
 struct ActiveTodoList: View {
     let store: TodoStore
-    let timers: TimerCenter
+    let slots: SlotRegistry
 
     @Environment(\.listPage) private var listPage
     @State private var draggedID: UUID?
 
     private var activeTodos: [Todo] { store.activeTodos }
 
-    /// Whether a timer linked to this to-do is running or paused
-    private func timerState(for todo: Todo) -> TimerRowState? {
-        let linked = timers.timers.filter { $0.todoID == todo.id }
-        guard !linked.isEmpty else { return nil }
-        return linked.contains { $0.isRunning } ? .running : .paused
-    }
-
     var body: some View {
+        let accessories = slots.contributions(to: TodoSlots.rowAccessory)
         ScrollView {
             LazyVStack(spacing: 2) {
                 if activeTodos.isEmpty {
@@ -76,7 +66,7 @@ struct ActiveTodoList: View {
                         .padding(.vertical, 16)
                 }
                 ForEach(activeTodos) { todo in
-                    TodoRow(todo: todo, store: store, timerState: timerState(for: todo)) {
+                    TodoRow(todo: todo, store: store, accessories: accessories) {
                         listPage.present(TodoDetailPage(id: todo.id, store: store))
                     }
                     .opacity(draggedID == todo.id ? 0.35 : 1)
@@ -217,8 +207,8 @@ struct HistorySettingsRows: View {
 struct TodoRow: View {
     let todo: Todo
     let store: TodoStore
-    /// Timer state for this to-do: .running / .paused / nil (shown as a small timer icon)
-    var timerState: TimerRowState? = nil
+    /// Shown after the title. Only the To Do tab passes these.
+    var accessories: [TodoRowAccessory] = []
     let onSelect: () -> Void
     @State private var hovering = false
 
@@ -244,11 +234,8 @@ struct TodoRow: View {
                         .font(.system(size: 8))
                         .foregroundStyle(.tertiary)
                 }
-                if let timerState {
-                    Image(systemName: "timer")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(timerState == .running ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
-                        .help(timerState == .running ? L.s("timer.running") : L.s("timer.pause"))
+                ForEach(accessories, id: \.id) { accessory in
+                    accessory.content(todo.id)
                 }
                 Spacer(minLength: 0)
             }

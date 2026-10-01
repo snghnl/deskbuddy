@@ -1,18 +1,23 @@
 import DeskBuddyCore
 import SwiftUI
+import TodoAPI
 
-/// What the built-in features put on the shared UI. A stand-in for the feature plugins: each
-/// block moves into its plugin's `activate` once that feature moves out of the app target.
+/// What the built-in features offer each other and put on the shared UI. A stand-in for the
+/// feature plugins: each block moves into its plugin's `activate` once that feature moves out
+/// of the app target.
 @MainActor
 enum FeatureContributions {
     static func register(
-        in slots: SlotRegistry,
+        services: ServiceRegistry,
+        slots: SlotRegistry,
         store: TodoStore,
         timers: TimerCenter,
         calendar: CalendarService,
         appState: AppState
     ) {
         // MARK: To-dos
+
+        services.provide(TodoService.self, store)
 
         let draft = TodoDraft()
         slots.contribute(CoreSlots.listTabs, ListTab(
@@ -21,7 +26,7 @@ enum FeatureContributions {
             count: { store.activeTodos.count },
             toolbar: { AnyView(TodoInputBar(store: store, appState: appState, draft: draft)) }
         ) {
-            ActiveTodoList(store: store, timers: timers)
+            ActiveTodoList(store: store, slots: slots)
         })
         slots.contribute(CoreSlots.listTabs, ListTab(
             id: "todo.done", order: 200,
@@ -78,7 +83,10 @@ enum FeatureContributions {
             title: { L.s("timer.tab") },
             count: { timers.timers.count }
         ) {
-            TimerTabView(timers: timers, store: store)
+            TimerTabView(timers: timers, todos: services.resolve(TodoService.self))
+        })
+        slots.contribute(TodoSlots.rowAccessory, TodoRowAccessory(id: "pomodoro.state", order: 100) { todoID in
+            TimerStateIcon(timers: timers, todoID: todoID)
         })
     }
 }

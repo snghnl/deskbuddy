@@ -1,6 +1,7 @@
 import AppKit
 import DeskBuddyCore
 import SwiftUI
+import TodoAPI
 
 // Borderless panels cannot become key windows by default, which blocks text input — allow it via subclass
 final class FloatingPanel: NSPanel {
@@ -147,7 +148,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Before any UI is built, so the services and contributions are there when views first look
         plugins.activateAll()
         FeatureContributions.register(
-            in: plugins.slots, store: store, timers: timerCenter, calendar: calendarService, appState: appState
+            services: plugins.services, slots: plugins.slots,
+            store: store, timers: timerCenter, calendar: calendarService, appState: appState
         )
         setupCharacterPanel()
         setupListPanel()
@@ -268,7 +270,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
             NSSound(named: "Glass")?.play()
             // Announce with the linked to-do's title when there is one
-            let title = timer.todoID.flatMap { id in self.store.todos.first { $0.id == id }?.title }
+            let title = timer.todoID.flatMap { self.plugins.services.resolve(TodoService.self)?.todo($0)?.title }
             bubble.show(L.f("timer.done_bubble", title ?? timer.label), autoHide: notificationAutoHide)
         }
     }

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import TodoAPI
 
 struct Todo: Identifiable, Codable, Equatable {
     var id = UUID()
@@ -181,5 +182,14 @@ final class TodoStore {
                 try? data.write(to: url, options: .atomic)
             }
         }
+    }
+}
+extension TodoStore: TodoService {
+    var active: [TodoSummary] {
+        activeTodos.map { TodoSummary(id: $0.id, title: $0.title) }
+    }
+
+    func todo(_ id: UUID) -> TodoSummary? {
+        todos.first { $0.id == id }.map { TodoSummary(id: $0.id, title: $0.title) }
     }
 }

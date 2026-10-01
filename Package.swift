@@ -13,9 +13,15 @@ let package = Package(
             name: "DeskBuddyCore",
             path: "Sources/DeskBuddyCore"
         ),
+        // The to-do feature's public API: types and protocols other features may depend on
+        .target(
+            name: "TodoAPI",
+            dependencies: ["DeskBuddyCore"],
+            path: "Sources/TodoAPI"
+        ),
         .executableTarget(
             name: "DeskBuddy",
-            dependencies: ["DeskBuddyCore", "Yams"],
+            dependencies: ["DeskBuddyCore", "TodoAPI", "Yams"],
             path: "Sources/DeskBuddy",
             resources: [
                 .copy("Resources/Localizations")
