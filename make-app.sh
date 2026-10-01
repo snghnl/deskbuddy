@@ -17,12 +17,15 @@ cd "$(dirname "$0")"
 VERSION="${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo 0.0.0)}"
 
 if [[ "${1:-}" == "--universal" ]]; then
-  swift build -c release --arch arm64 --arch x86_64
-  PRODUCTS=.build/apple/Products/Release
+  BUILD_ARGS=(-c release --arch arm64 --arch x86_64)
 else
-  swift build -c release
-  PRODUCTS=.build/release
+  BUILD_ARGS=(-c release)
 fi
+swift build "${BUILD_ARGS[@]}"
+# Ask SwiftPM where the products went rather than assuming: the multi-arch output moved
+# from .build/apple to .build/out between toolchains, and a hardcoded path packages
+# whatever stale build happens to still be there.
+PRODUCTS=$(swift build "${BUILD_ARGS[@]}" --show-bin-path)
 
 APP=build/DeskBuddy.app
 rm -rf "$APP"
