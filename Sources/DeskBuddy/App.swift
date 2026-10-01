@@ -3,6 +3,7 @@ import DeskBuddyCore
 import os
 import PomodoroPlugin
 import SwiftUI
+import TodoPlugin
 
 // Borderless panels cannot become key windows by default, which blocks text input — allow it via subclass
 final class FloatingPanel: NSPanel {
@@ -126,7 +127,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
     private var bubble: BubbleController!
     private var eventNotifier: EventNotifier!
-    private let store = TodoStore()
     private let appState = AppState()
     private let calendarService = CalendarService()
     private let updateService = UpdateService()
@@ -147,9 +147,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SettingsKeys.autoUpdateCheck: true,
         ])
         // Before any UI is built, so the services and contributions are there when views first look
+        let todos = TodoPlugin()
+        plugins.register(todos)
         plugins.register(PomodoroPlugin())
         plugins.activateAll()
-        FeatureContributions.register(plugins: plugins, store: store, calendar: calendarService, appState: appState)
+        if let store = todos.store {
+            FeatureContributions.register(plugins: plugins, todos: store, calendar: calendarService)
+        }
         registerCommands()
         startCommandServer()
         setupCharacterPanel()

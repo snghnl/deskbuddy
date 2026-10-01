@@ -39,9 +39,8 @@ final class PomodoroPluginTests: XCTestCase {
     }
 
     func testDeletingAToDoUnlinksItsTimersAndKeepsThemRunning() throws {
-        let defaults = try scratchDefaults()
         let manager = PluginManager(buddy: QuietBuddy())
-        let plugin = PomodoroPlugin(defaults: defaults)
+        let plugin = PomodoroPlugin(defaults: MemoryDefaults())
         manager.register(plugin)
         manager.activateAll()
         let deleted = UUID(), kept = UUID()
@@ -55,24 +54,25 @@ final class PomodoroPluginTests: XCTestCase {
         XCTAssertEqual(timers.map(\.todoID), [nil, nil, kept])
         XCTAssertTrue(timers.allSatisfy(\.isRunning))
     }
-
-    /// Empty defaults for timers the test starts, wiped afterwards along with the plist
-    /// cfprefsd leaves behind, so the user's own timers are never touched
-    private func scratchDefaults() throws -> UserDefaults {
-        let suite = "com.snghnl.deskbuddy.PomodoroPluginTests"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defaults.removePersistentDomain(forName: suite)
-        addTeardownBlock {
-            defaults.removePersistentDomain(forName: suite)
-            let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            try? FileManager.default.removeItem(at: library.appendingPathComponent("Preferences/\(suite).plist"))
-        }
-        return defaults
-    }
 }
 
 @MainActor
 private final class QuietBuddy: Buddy {
     func say(_ message: String) {}
     func say(_ message: String, closingAfter seconds: TimeInterval) {}
+}
+
+/// Settings kept in memory only, so a test never writes a preferences file
+private final class MemoryDefaults: UserDefaults, @unchecked Sendable {
+    private var values: [String: Any] = [:]
+
+    init() {
+        super.init(suiteName: nil)!
+    }
+
+    override func object(forKey key: String) -> Any? { values[key] }
+    override func data(forKey key: String) -> Data? { values[key] as? Data }
+    override func set(_ value: Any?, forKey key: String) { values[key] = value }
+    override func set(_ value: Double, forKey key: String) { values[key] = value }
+    override func removeObject(forKey key: String) { values[key] = nil }
 }

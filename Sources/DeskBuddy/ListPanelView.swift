@@ -23,6 +23,7 @@ struct ListPanelView: View {
             }
         }
         .environment(\.listPage, ListPageAction(present: { page = $0 }, dismiss: { page = nil }))
+        .environment(\.listPanelVisible, appState.listVisible)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(

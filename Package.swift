@@ -24,6 +24,12 @@ let package = Package(
             dependencies: ["DeskBuddyCore"],
             path: "Sources/TodoAPI"
         ),
+        // To-dos: the To Do and Done tabs, the detail page, the history in Settings
+        .target(
+            name: "TodoPlugin",
+            dependencies: ["DeskBuddyCore", "TodoAPI"],
+            path: "Sources/TodoPlugin"
+        ),
         // Countdown timers, optionally linked to to-dos
         .target(
             name: "PomodoroPlugin",
@@ -32,13 +38,18 @@ let package = Package(
         ),
         .executableTarget(
             name: "DeskBuddy",
-            dependencies: ["DeskBuddyCore", "TodoAPI", "PomodoroPlugin"],
+            dependencies: ["DeskBuddyCore", "TodoAPI", "TodoPlugin", "PomodoroPlugin"],
             path: "Sources/DeskBuddy"
         ),
         .testTarget(
             name: "DeskBuddyCoreTests",
             dependencies: ["DeskBuddyCore"],
             path: "Tests/DeskBuddyCoreTests"
+        ),
+        .testTarget(
+            name: "TodoPluginTests",
+            dependencies: ["TodoPlugin", "DeskBuddyCore", "TodoAPI"],
+            path: "Tests/TodoPluginTests"
         ),
         .testTarget(
             name: "PomodoroPluginTests",

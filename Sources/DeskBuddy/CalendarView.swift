@@ -1,5 +1,6 @@
 import DeskBuddyCore
 import SwiftUI
+import TodoPlugin
 
 /// Tab showing completion history as a monthly calendar.
 /// Days with more completions are shaded darker; tapping a date lists that day's completed items below.

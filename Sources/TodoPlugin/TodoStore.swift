@@ -3,10 +3,12 @@ import Foundation
 import Observation
 import TodoAPI
 
-struct Todo: Identifiable, Codable, Equatable {
-    var id = UUID()
+// `package` marks what the Calendar tab reads until Calendar moves out of the app (PR 10)
+
+package struct Todo: Identifiable, Codable, Equatable {
+    package var id = UUID()
     var title: String
-    var isDone = false
+    package var isDone = false
     var createdAt = Date()
     var memo: String?
     /// When the item was completed — used to group by date in the Done tab
@@ -15,7 +17,7 @@ struct Todo: Identifiable, Codable, Equatable {
 
 extension Todo {
     /// Completion time — legacy data has no completedAt, so fall back to the creation time
-    var completionDate: Date { completedAt ?? createdAt }
+    package var completionDate: Date { completedAt ?? createdAt }
 }
 
 /// A group of completed items bucketed by day in the Done tab
@@ -27,8 +29,8 @@ struct CompletedGroup: Identifiable {
 
 @MainActor
 @Observable
-final class TodoStore {
-    var todos: [Todo] = [] {
+package final class TodoStore {
+    package internal(set) var todos: [Todo] = [] {
         didSet { scheduleSave() }
     }
 
@@ -39,45 +41,48 @@ final class TodoStore {
     /// Stored as a watermark rather than a per-item flag on purpose: a new non-optional
     /// field on `Todo` would make the synthesized decoder throw on every existing
     /// todos.json, and `load()` swallows that error — every item would silently vanish.
-    ///
-    /// Read as the initial value rather than assigned in init: under @Observable an
-    /// assignment in init fires didSet and would write the value straight back.
-    var historyClearedAt: Date? = TodoStore.savedHistoryClearedAt() {
+    var historyClearedAt: Date? {
         didSet {
-            let defaults = UserDefaults.standard
             if let at = historyClearedAt {
-                defaults.set(at.timeIntervalSinceReferenceDate, forKey: SettingsKeys.historyClearedAt)
+                defaults.set(at.timeIntervalSinceReferenceDate, forKey: Self.historyClearedAtKey)
             } else {
-                defaults.removeObject(forKey: SettingsKeys.historyClearedAt)
+                defaults.removeObject(forKey: Self.historyClearedAtKey)
             }
         }
     }
 
-    /// Where deletions are announced. Set when the to-do feature starts; nil until then.
-    @ObservationIgnored var events: EventBus?
+    /// The folder the CLI reads todos.json from when the app is not running
+    static var defaultDirectory: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("DeskBuddy", isDirectory: true)
+    }
 
+    private static let historyClearedAtKey = "DeskBuddy.historyClearedAt"
+
+    /// Where deletions are announced
+    @ObservationIgnored private let events: EventBus
+    @ObservationIgnored private let defaults: UserDefaults
     private let fileURL: URL
     @ObservationIgnored private var saveTask: Task<Void, Never>?
 
-    init() {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let dir = support.appendingPathComponent("DeskBuddy", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        fileURL = dir.appendingPathComponent("todos.json")
+    /// Keeps the to-dos in `directory`/todos.json and the Done-tab watermark in `defaults`
+    init(directory: URL, defaults: UserDefaults, events: EventBus) {
+        self.events = events
+        self.defaults = defaults
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        fileURL = directory.appendingPathComponent("todos.json")
 
         // Migrate data from the FloatingTodo era
-        let legacy = support.appendingPathComponent("FloatingTodo/todos.json")
+        let legacy = directory.deletingLastPathComponent().appendingPathComponent("FloatingTodo/todos.json")
         if !FileManager.default.fileExists(atPath: fileURL.path),
            FileManager.default.fileExists(atPath: legacy.path) {
             try? FileManager.default.copyItem(at: legacy, to: fileURL)
         }
 
-        load()
-    }
-
-    private nonisolated static func savedHistoryClearedAt() -> Date? {
-        (UserDefaults.standard.object(forKey: SettingsKeys.historyClearedAt) as? Double)
+        // If this goes through didSet, it only writes the same value back
+        historyClearedAt = (defaults.object(forKey: Self.historyClearedAtKey) as? Double)
             .map(Date.init(timeIntervalSinceReferenceDate:))
+        load()
     }
 
     func add(_ title: String) {
@@ -96,7 +101,7 @@ final class TodoStore {
     func remove(_ todo: Todo) {
         guard todos.contains(where: { $0.id == todo.id }) else { return }
         todos.removeAll { $0.id == todo.id }
-        events?.emit(TodoDeleted(id: todo.id))
+        events.emit(TodoDeleted(id: todo.id))
     }
 
     /// Move the dragged item to the target item's position
@@ -135,7 +140,7 @@ final class TodoStore {
         let deleted = completedTodos.map(\.id)
         todos.removeAll { $0.isDone }
         historyClearedAt = nil   // nothing left to hide
-        for id in deleted { events?.emit(TodoDeleted(id: id)) }
+        for id in deleted { events.emit(TodoDeleted(id: id)) }
     }
 
     // MARK: - Per-tab lists
@@ -193,11 +198,11 @@ final class TodoStore {
     }
 }
 extension TodoStore: TodoService {
-    var active: [TodoSummary] {
+    package var active: [TodoSummary] {
         activeTodos.map { TodoSummary(id: $0.id, title: $0.title) }
     }
 
-    func todo(_ id: UUID) -> TodoSummary? {
+    package func todo(_ id: UUID) -> TodoSummary? {
         todos.first { $0.id == id }.map { TodoSummary(id: $0.id, title: $0.title) }
     }
 }

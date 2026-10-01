@@ -126,3 +126,16 @@ public extension EnvironmentValues {
         set { self[ListPageKey.self] = newValue }
     }
 }
+
+private struct ListPanelVisibleKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+public extension EnvironmentValues {
+    /// Whether the list panel is on screen. The panel is hidden rather than torn down, so a
+    /// tab that wants focus each time it opens (the to-do input) watches this.
+    var listPanelVisible: Bool {
+        get { self[ListPanelVisibleKey.self] }
+        set { self[ListPanelVisibleKey.self] = newValue }
+    }
+}

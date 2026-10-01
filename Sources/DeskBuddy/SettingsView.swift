@@ -22,7 +22,6 @@ enum SettingsKeys {
     static let hotkeyKeyCode = "DeskBuddy.hotkeyKeyCode"
     static let hotkeyModifiers = "DeskBuddy.hotkeyModifiers"
     static let hotkeyDisplay = "DeskBuddy.hotkeyDisplay"
-    static let historyClearedAt = "DeskBuddy.historyClearedAt"
     static let autoUpdateCheck = "DeskBuddy.autoUpdateCheck"
     /// Tag of the newest release the buddy has already announced — keeps it from nagging
     static let lastNotifiedVersion = "DeskBuddy.lastNotifiedVersion"
