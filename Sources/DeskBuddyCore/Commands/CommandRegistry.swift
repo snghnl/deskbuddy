@@ -41,21 +41,37 @@ public enum CommandError: Error, Equatable, CustomStringConvertible {
 /// command needs no new routing. Names are namespaced by the owning plugin's id.
 @MainActor
 public final class CommandRegistry {
-    public typealias Handler = @MainActor (CommandArguments) throws -> Void
+    private typealias Handler = @MainActor (CommandArguments) throws -> (any Encodable)?
 
     private var handlers: [String: Handler] = [:]
 
     public init() {}
 
-    public func register(_ name: String, _ handler: @escaping Handler) {
-        assert(handlers[name] == nil, "Command \(name) is registered twice")
-        handlers[name] = handler
+    /// For commands that do something and have nothing to say back
+    public func register(_ name: String, _ perform: @escaping @MainActor (CommandArguments) throws -> Void) {
+        add(name) { arguments in
+            try perform(arguments)
+            return nil
+        }
     }
 
-    /// Runs the command. Throws `CommandError.unknownCommand` when nothing registered `name`,
-    /// and passes on whatever the handler throws.
-    public func execute(_ name: String, _ arguments: CommandArguments = CommandArguments()) throws {
+    /// For commands that answer with a value, such as a list. Only callers that can take an
+    /// answer — the CLI over the command socket — see it; a URL drops it.
+    public func respond(to name: String, _ answer: @escaping @MainActor (CommandArguments) throws -> any Encodable) {
+        add(name) { try answer($0) }
+    }
+
+    /// Runs the command and returns its answer, if it gives one. Throws
+    /// `CommandError.unknownCommand` when nothing registered `name`, and passes on whatever
+    /// the handler throws.
+    @discardableResult
+    public func execute(_ name: String, _ arguments: CommandArguments = CommandArguments()) throws -> (any Encodable)? {
         guard let handler = handlers[name] else { throw CommandError.unknownCommand(name) }
-        try handler(arguments)
+        return try handler(arguments)
+    }
+
+    private func add(_ name: String, _ handler: @escaping Handler) {
+        assert(handlers[name] == nil, "Command \(name) is registered twice")
+        handlers[name] = handler
     }
 }

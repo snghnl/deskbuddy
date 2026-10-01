@@ -1,12 +1,13 @@
 ---
 name: deskbuddy
 description: >
-  Send speech-bubble notifications to the user and manage their to-dos through
-  DeskBuddy (a floating character on the macOS screen). Use when: (1) a
-  long-running task (build, tests, migration, deploy, lengthy analysis) finishes
-  and the user should be notified (2) the user says "notify me", "remind me", or
-  mentions "deskbuddy" (3) adding, listing, or completing the user's to-dos
-  ("add a to-do", "what's on my list", "mark this done"). macOS only.
+  Send speech-bubble notifications to the user, manage their to-dos, and start
+  timers through DeskBuddy (a floating character on the macOS screen). Use when:
+  (1) a long-running task (build, tests, migration, deploy, lengthy analysis)
+  finishes and the user should be notified (2) the user says "notify me",
+  "remind me", or mentions "deskbuddy" (3) adding, listing, or completing the
+  user's to-dos ("add a to-do", "what's on my list", "mark this done") (4) the
+  user asks for a timer, a pomodoro, or a focus session. macOS only.
 ---
 
 # DeskBuddy Integration
@@ -34,10 +35,14 @@ deskbuddy list                            # Open to-dos (id prefix + title)
 deskbuddy list --json                     # Full data as JSON (for parsing)
 deskbuddy done <id prefix|title part>     # Mark as done
 deskbuddy toggle                          # Open/close the to-do list panel
+deskbuddy timer 25 "label"                # Start a countdown timer (label optional)
 ```
 
 Sending a command launches the app automatically if it is not running
-(except `list`, which reads the data file directly and works either way).
+(except `list`, which reads the data file directly when the app is off).
+While the app runs, a failed command prints `deskbuddy: <reason>` to stderr and
+exits non-zero — read it rather than assuming success. `timer` needs
+DeskBuddy 0.16 or later.
 
 ## Usage guidelines
 
@@ -54,5 +59,8 @@ Sending a command launches the app automatically if it is not running
 - **To-do flow**: `list` to check → do the work → `done <id>` → `notify` to
   report. `done` also matches on partial titles but fails when ambiguous, so
   prefer the id prefix.
+- **Timers**: when the user asks for a focus session, a pomodoro, or "remind me
+  in N minutes", start one with `timer`. DeskBuddy rings and shows a bubble when
+  it runs out, so there is no need to wait and `notify` yourself.
 - **Don't spam**: do not notify on every turn. Short interactive work where the
   user is watching the terminal needs no bubbles.

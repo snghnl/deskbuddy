@@ -111,12 +111,30 @@ bin/deskbuddy list                                # open to-dos
 bin/deskbuddy list --json                         # full data as JSON (for agents)
 bin/deskbuddy done a42620c8                       # complete by id prefix or title part
 bin/deskbuddy toggle                              # open/close the list
+bin/deskbuddy timer 25 "Write the report"         # start a 25-minute timer
+bin/deskbuddy run todo.list                       # run any command by name, print its answer
 ```
 
-Writes (notify/add/done/toggle) go through the `deskbuddy://` URL scheme, so the app
-launches automatically if it is not running. Reads (list) go straight to todos.json and
-work either way. To put the CLI on PATH:
+While DeskBuddy runs, the CLI talks to it over a socket
+(`~/Library/Application Support/DeskBuddy/deskbuddy.sock`, readable only by you), so
+errors come back with a message and a non-zero exit. When the app is not running,
+notify/add/done/toggle go through the `deskbuddy://` URL scheme, which launches it, and
+list reads todos.json directly. timer and run need the socket, so they launch the app
+first. To put the CLI on PATH:
 `ln -s "$(pwd)/bin/deskbuddy" /usr/local/bin/deskbuddy`
+
+Commands, for `deskbuddy run <command> name=value ...` or `deskbuddy://<command>?name=value`:
+
+| Command | Arguments |
+|---|---|
+| `buddy.say` | `message`, `autohide` (seconds, optional) |
+| `list.toggle` | — |
+| `todo.add` | `title`, `memo` (optional) |
+| `todo.complete` | `id` (full UUID) |
+| `todo.list` | — (answers with every to-do, as in todos.json) |
+| `pomodoro.start` | `minutes`, `label` (optional), `todo` (UUID to link, optional) |
+
+The short URL forms the CLI has always used keep working:
 
 - `deskbuddy://notify?message=...&autohide=8`
 - `deskbuddy://add?title=...&memo=...`

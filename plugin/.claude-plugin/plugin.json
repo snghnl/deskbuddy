@@ -1,7 +1,7 @@
 {
   "name": "deskbuddy",
-  "version": "0.2.0",
-  "description": "DeskBuddy (macOS floating desktop buddy) integration — lets agents send speech-bubble notifications and read/add/complete to-dos. Includes a hook that alerts you via the buddy when Claude Code is waiting for input.",
+  "version": "0.3.0",
+  "description": "DeskBuddy (macOS floating desktop buddy) integration — lets agents send speech-bubble notifications, read/add/complete to-dos, and start timers. Includes a hook that alerts you via the buddy when Claude Code is waiting for input.",
   "author": {
     "name": "snghnl",
     "url": "https://github.com/snghnl/deskbuddy"

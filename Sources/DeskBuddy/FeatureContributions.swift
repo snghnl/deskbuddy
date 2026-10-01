@@ -16,6 +16,8 @@ enum FeatureContributions {
 
         services.provide(TodoService.self, store)
 
+        // The same shape as todos.json, so `deskbuddy list --json` reads the same either way
+        plugins.commands.respond(to: "todo.list") { _ in store.todos }
         plugins.commands.register("todo.add") { arguments in
             guard let title = arguments["title"], !title.isEmpty else { throw CommandError.missingArgument("title") }
             store.add(title)

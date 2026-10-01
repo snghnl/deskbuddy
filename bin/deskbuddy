@@ -10,16 +10,128 @@
 #   deskbuddy list --all                      Include completed items
 #   deskbuddy done <id prefix|title part>     Mark a to-do as done
 #   deskbuddy toggle                          Open/close the to-do list panel
+#   deskbuddy timer <minutes> [label]         Start a countdown timer
+#   deskbuddy run <command> [name=value ...]  Run any DeskBuddy command, print its answer
 #
-# notify/add/done/toggle use the deskbuddy:// URL scheme, so the app launches
-# automatically if it is not running. list reads the data file directly and
-# works regardless of whether the app is running.
+# While the app runs, commands go over its socket, so errors come back here.
+# Otherwise notify/add/done/toggle use the deskbuddy:// URL scheme, which
+# launches the app, and list reads the data file directly. timer and run need
+# the socket, so they start the app first if it is not running.
 set -e
 
 DATA="$HOME/Library/Application Support/DeskBuddy/todos.json"
+# DESKBUDDY_SOCKET points the CLI at another socket (tests use it)
+SOCKET="${DESKBUDDY_SOCKET:-$HOME/Library/Application Support/DeskBuddy/deskbuddy.sock}"
 
 urlencode() {
   python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
+}
+
+# Runs a command in the app over its socket and prints the answer, if any, as JSON.
+# Exits 0 when done, 1 when the app refused (reason on stderr), 3 when nothing listens.
+call() {
+  python3 - "$SOCKET" "$@" <<'PY'
+import json, socket, sys
+path, command, *pairs = sys.argv[1:]
+arguments = {}
+for pair in pairs:
+    name, sep, value = pair.partition("=")
+    if not sep:
+        print(f"deskbuddy: expected name=value, got {pair}", file=sys.stderr)
+        sys.exit(1)
+    arguments[name] = value
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.connect(path)
+except OSError:
+    sys.exit(3)
+try:
+    s.settimeout(10)
+    s.sendall((json.dumps({"command": command, "arguments": arguments}) + "\n").encode())
+    data = b""
+    while not data.endswith(b"\n"):
+        chunk = s.recv(65536)
+        if not chunk:
+            break
+        data += chunk
+    reply = json.loads(data) if data else {}
+except (OSError, ValueError):
+    reply = {}
+if not reply.get("ok"):
+    print(f"deskbuddy: {reply.get('error', 'DeskBuddy did not answer')}", file=sys.stderr)
+    sys.exit(1)
+if "result" in reply:
+    print(json.dumps(reply["result"], ensure_ascii=False))
+PY
+}
+
+# The bundle of the DeskBuddy that is running, if one is — the first one launched when
+# there are several
+running_app() {
+  local asn
+  for asn in $(lsappinfo find bundleid=com.snghnl.deskbuddy 2>/dev/null); do
+    lsappinfo info -only bundlepath "$asn" | sed -n 's/^"LSBundlePath"="\(.*\)"$/\1/p'
+    return
+  done
+}
+
+# Opens a deskbuddy:// URL in the copy that is running — it may still be starting up and
+# not have opened its socket yet — rather than whichever copy macOS opens URLs with, which
+# may be another one (a development build next to the installed app). With none running,
+# macOS launches its default copy.
+open_url() {
+  local app
+  app=$(running_app)
+  if [[ -n "$app" ]]; then
+    open -g -a "$app" "$1"
+  else
+    open -g "$1"
+  fi
+}
+
+# Runs a command over the socket, or opens the URL when the app is not listening —
+# not running yet, or a version from before the socket
+call_or_open() {
+  local url="$1"; shift
+  local code=0
+  call "$@" || code=$?
+  if (( code == 3 )); then
+    open_url "$url"
+  elif (( code != 0 )); then
+    exit $code
+  fi
+}
+
+# Runs a command only the socket can carry. Starts the app if none is running; one that
+# is running may just not have opened its socket yet, so that one gets the time to.
+call_launching() {
+  local code=0
+  call "$@" || code=$?
+  if (( code == 3 )); then
+    [[ -n "$(running_app)" ]] || open -g -b com.snghnl.deskbuddy
+    for _ in {1..20}; do
+      sleep 0.25
+      code=0
+      call "$@" || code=$?
+      (( code == 3 )) || break
+    done
+    if (( code == 3 )); then
+      echo "deskbuddy: DeskBuddy is not answering — this needs DeskBuddy 0.16 or later" >&2
+      exit 1
+    fi
+  fi
+  (( code == 0 )) || exit $code
+}
+
+# The to-dos as JSON: from the running app, or from the data file when it is not running
+todos_json() {
+  local code=0
+  call todo.list || code=$?
+  if (( code == 3 )); then
+    cat "$DATA" 2>/dev/null || echo "[]"
+  elif (( code != 0 )); then
+    return $code
+  fi
 }
 
 cmd="${1:-}"
@@ -27,24 +139,29 @@ case "$cmd" in
   notify)
     message="${2:?usage: deskbuddy notify \"message\" [--autohide seconds]}"
     url="deskbuddy://notify?message=$(urlencode "$message")"
+    args=(message="$message")
     if [[ "${3:-}" == "--autohide" && -n "${4:-}" ]]; then
       url+="&autohide=$4"
+      args+=(autohide="$4")
     fi
-    open -g "$url"
+    call_or_open "$url" buddy.say "${args[@]}"
     ;;
   add)
     title="${2:?usage: deskbuddy add \"title\" [--memo \"note\"]}"
     url="deskbuddy://add?title=$(urlencode "$title")"
+    args=(title="$title")
     if [[ "${3:-}" == "--memo" && -n "${4:-}" ]]; then
       url+="&memo=$(urlencode "$4")"
+      args+=(memo="$4")
     fi
-    open -g "$url"
+    call_or_open "$url" todo.add "${args[@]}"
     ;;
   list)
-    python3 - "$DATA" "${2:-}" <<'PY'
-import json, sys, os
-path, flag = sys.argv[1], sys.argv[2]
-todos = json.load(open(path)) if os.path.exists(path) else []
+    todos=$(todos_json)
+    TODOS="$todos" python3 - "${2:-}" <<'PY'
+import json, os, sys
+flag = sys.argv[1]
+todos = json.loads(os.environ["TODOS"] or "[]")
 if flag == "--json":
     print(json.dumps(todos, ensure_ascii=False, indent=2))
     sys.exit()
@@ -61,15 +178,16 @@ PY
     ;;
   done)
     target="${2:?usage: deskbuddy done <id prefix|title part>}"
-    full_id=$(python3 - "$DATA" "$target" <<'PY'
-import json, sys, os
-path, target = sys.argv[1], sys.argv[2].lower()
-todos = json.load(open(path)) if os.path.exists(path) else []
+    todos=$(todos_json)
+    full_id=$(TODOS="$todos" python3 - "$target" <<'PY'
+import json, os, sys
+target = sys.argv[1].lower()
+todos = json.loads(os.environ["TODOS"] or "[]")
 active = [t for t in todos if not t["isDone"]]
 hits = [t for t in active
         if t["id"].lower().startswith(target) or target in t["title"].lower()]
 if not hits:
-    print(f"No matching to-do: {sys.argv[2]}", file=sys.stderr); sys.exit(1)
+    print(f"No matching to-do: {sys.argv[1]}", file=sys.stderr); sys.exit(1)
 if len(hits) > 1:
     print("Multiple matches — specify by id:", file=sys.stderr)
     for t in hits:
@@ -78,14 +196,27 @@ if len(hits) > 1:
 print(hits[0]["id"])
 PY
     )
-    open -g "deskbuddy://done?id=$full_id"
+    call_or_open "deskbuddy://done?id=$full_id" todo.complete id="$full_id"
     echo "Marked done: $target"
     ;;
   toggle)
-    open -g "deskbuddy://toggle"
+    call_or_open "deskbuddy://toggle" list.toggle
+    ;;
+  timer)
+    minutes="${2:?usage: deskbuddy timer <minutes> [label]}"
+    args=(minutes="$minutes")
+    if [[ -n "${3:-}" ]]; then
+      args+=(label="$3")
+    fi
+    call_launching pomodoro.start "${args[@]}"
+    echo "Started a ${minutes}-minute timer"
+    ;;
+  run)
+    command="${2:?usage: deskbuddy run <command> [name=value ...]}"
+    call_launching "$command" "${@:3}"
     ;;
   *)
-    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+    awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
     exit 1
     ;;
 esac

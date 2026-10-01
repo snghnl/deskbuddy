@@ -131,6 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let calendarService = CalendarService()
     private let updateService = UpdateService()
     private lazy var plugins = PluginManager(buddy: self)
+    private var commandServer: CommandServer?
 
     /// Situations where wandering must pause temporarily, e.g. while a menu is open
     private var wanderSuspended = false
@@ -150,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         plugins.activateAll()
         FeatureContributions.register(plugins: plugins, store: store, calendar: calendarService, appState: appState)
         registerCommands()
+        startCommandServer()
         setupCharacterPanel()
         setupListPanel()
         setupStatusItem()
@@ -168,6 +170,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        commandServer?.stop()
         plugins.deactivateAll()
     }
 
@@ -222,6 +225,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             // Nobody waits on a URL for an answer, so the log is all there is
             commandLog.error("\(url.absoluteString, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    /// Lets the CLI run commands and get their answer back. bin/deskbuddy looks for the
+    /// socket at this same path; if it is not there, the CLI falls back to the URL scheme.
+    private func startCommandServer() {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let server = CommandServer(path: support.appendingPathComponent("DeskBuddy/deskbuddy.sock").path,
+                                   commands: plugins.commands)
+        if server.start() {
+            commandServer = server
         }
     }
 
