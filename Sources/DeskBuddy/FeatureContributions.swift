@@ -7,16 +7,32 @@ import TodoAPI
 /// of the app target.
 @MainActor
 enum FeatureContributions {
-    static func register(
-        services: ServiceRegistry,
-        slots: SlotRegistry,
-        store: TodoStore,
-        calendar: CalendarService,
-        appState: AppState
-    ) {
+    static func register(plugins: PluginManager, store: TodoStore, calendar: CalendarService, appState: AppState) {
+        let services = plugins.services
+        let slots = plugins.slots
+        let buddy = plugins.buddy
+
         // MARK: To-dos
 
         services.provide(TodoService.self, store)
+
+        plugins.commands.register("todo.add") { arguments in
+            guard let title = arguments["title"], !title.isEmpty else { throw CommandError.missingArgument("title") }
+            store.add(title)
+            if let memo = arguments["memo"], !memo.isEmpty,
+               let added = store.todos.first(where: { $0.title == title.trimmingCharacters(in: .whitespacesAndNewlines) }) {
+                store.updateMemo(added.id, memo)
+            }
+            buddy.say(L.f("bubble.added", title), closingAfter: 5)
+        }
+        plugins.commands.register("todo.complete") { arguments in
+            guard let id = arguments["id"] else { throw CommandError.missingArgument("id") }
+            guard let todo = store.todos.first(where: { $0.id.uuidString.caseInsensitiveCompare(id) == .orderedSame }) else {
+                throw CommandError.invalidArgument(name: "id", value: id)
+            }
+            if !todo.isDone { store.toggle(todo) }
+            buddy.say(L.f("bubble.done", todo.title), closingAfter: 5)
+        }
 
         let draft = TodoDraft()
         slots.contribute(CoreSlots.listTabs, ListTab(

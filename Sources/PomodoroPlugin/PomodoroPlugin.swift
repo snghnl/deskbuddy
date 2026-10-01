@@ -25,6 +25,19 @@ public final class PomodoroPlugin: DeskBuddyPlugin {
             buddy.say(L.f("timer.done_bubble", title ?? timer.label))
         }
 
+        // The Timer tab's buttons call TimerCenter.start directly; this is the same start for
+        // callers outside the app, e.g. deskbuddy://pomodoro.start?minutes=25
+        context.commands.register("pomodoro.start") { arguments in
+            guard let minutes = arguments.int("minutes"), minutes > 0 else {
+                throw CommandError.invalidArgument(name: "minutes", value: arguments["minutes"] ?? "")
+            }
+            timers.start(
+                minutes: minutes,
+                label: arguments["label"] ?? L.f("timer.min_chip", minutes),
+                todoID: arguments["todo"].flatMap(UUID.init(uuidString:))
+            )
+        }
+
         context.slots.contribute(CoreSlots.listTabs, ListTab(
             id: "pomodoro.timers", order: 400,
             title: { L.s("timer.tab") },

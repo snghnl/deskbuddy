@@ -1,5 +1,6 @@
 import AppKit
 import DeskBuddyCore
+import os
 import PomodoroPlugin
 import SwiftUI
 
@@ -147,10 +148,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Before any UI is built, so the services and contributions are there when views first look
         plugins.register(PomodoroPlugin())
         plugins.activateAll()
-        FeatureContributions.register(
-            services: plugins.services, slots: plugins.slots,
-            store: store, calendar: calendarService, appState: appState
-        )
+        FeatureContributions.register(plugins: plugins, store: store, calendar: calendarService, appState: appState)
+        registerCommands()
         setupCharacterPanel()
         setupListPanel()
         setupStatusItem()
@@ -190,6 +189,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - URL scheme (agent integration)
 
+    /// The short names the CLI and the Claude Code hook have always used
+    private static let urlAliases = [
+        "notify": "buddy.say",
+        "add": "todo.add",
+        "done": "todo.complete",
+        "toggle": "list.toggle",
+    ]
+
+    private let commandLog = Logger(subsystem: "com.snghnl.deskbuddy", category: "commands")
+
+    /// deskbuddy://<command>?<arguments> runs a registered command, e.g.
+    /// deskbuddy://pomodoro.start?minutes=25. The older short forms still work:
     /// deskbuddy://notify?message=...&autohide=8
     /// deskbuddy://add?title=...&memo=...
     /// deskbuddy://done?id=<uuid>
@@ -199,44 +210,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleURL(_ url: URL) {
-        guard url.scheme == "deskbuddy" else { return }
-        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        func query(_ name: String) -> String? {
-            components?.queryItems?.first { $0.name == name }?.value
+        guard url.scheme == "deskbuddy", let host = url.host else { return }
+        let command = Self.urlAliases[host] ?? host
+        var values: [String: String] = [:]
+        for item in URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        where values[item.name] == nil {   // the first of a repeated name wins
+            values[item.name] = item.value ?? ""
         }
+        do {
+            try plugins.commands.execute(command, CommandArguments(values))
+        } catch {
+            // Nobody waits on a URL for an answer, so the log is all there is
+            commandLog.error("\(url.absoluteString, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+    }
 
-        switch url.host {
-        case "notify":
-            guard let message = query("message") ?? query("text"), !message.isEmpty else { return }
-            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            // An explicit autohide wins; otherwise follow the user's dismiss setting
-            let autoHide = query("autohide").flatMap(Double.init) ?? notificationAutoHide
-            bubble.show(message, autoHide: autoHide)
-
-        case "add":
-            guard let title = query("title"), !title.isEmpty else { return }
-            store.add(title)
-            if let memo = query("memo"), !memo.isEmpty,
-               let added = store.todos.first(where: { $0.title == title.trimmingCharacters(in: .whitespacesAndNewlines) }) {
-                store.updateMemo(added.id, memo)
+    /// Commands for what the app itself owns: the bubble and the list panel
+    private func registerCommands() {
+        plugins.commands.register("buddy.say") { [weak self] arguments in
+            guard let self else { return }
+            guard let message = arguments["message"] ?? arguments["text"], !message.isEmpty else {
+                throw CommandError.missingArgument("message")
             }
-            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            bubble.show(L.f("bubble.added", title), autoHide: 5)
-
-        case "done":
-            guard let id = query("id"),
-                  let todo = store.todos.first(where: { $0.id.uuidString.caseInsensitiveCompare(id) == .orderedSame })
-            else { return }
-            if !todo.isDone { store.toggle(todo) }
-            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            bubble.show(L.f("bubble.done", todo.title), autoHide: 5)
-
-        case "toggle":
+            // An explicit autohide wins; otherwise follow the user's dismiss setting
+            if let seconds = arguments.double("autohide") {
+                say(message, closingAfter: seconds)
+            } else {
+                say(message)
+            }
+        }
+        plugins.commands.register("list.toggle") { [weak self] _ in
+            guard let self else { return }
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
             toggleList()
-
-        default:
-            break
         }
     }
 
@@ -708,8 +714,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 /// What plugins get to do with the character
 extension AppDelegate: Buddy {
     func say(_ message: String) {
+        show(message, autoHide: notificationAutoHide)
+    }
+
+    func say(_ message: String, closingAfter seconds: TimeInterval) {
+        show(message, autoHide: seconds)
+    }
+
+    private func show(_ message: String, autoHide: TimeInterval?) {
         if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-        bubble.show(message, autoHide: notificationAutoHide)
+        bubble.show(message, autoHide: autoHide)
     }
 }
 

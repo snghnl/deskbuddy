@@ -15,6 +15,18 @@ final class PomodoroPluginTests: XCTestCase {
         XCTAssertEqual(manager.slots.contributions(to: TodoSlots.rowAccessory).map(\.id), ["pomodoro.state"])
     }
 
+    func testStartCommandRejectsMinutesThatAreNotAPositiveNumber() {
+        let manager = PluginManager(buddy: QuietBuddy())
+        manager.register(PomodoroPlugin())
+        manager.activateAll()
+
+        for minutes in ["0", "-5", "soon"] {
+            XCTAssertThrowsError(try manager.commands.execute("pomodoro.start", CommandArguments(["minutes": minutes]))) {
+                XCTAssertEqual($0 as? CommandError, .invalidArgument(name: "minutes", value: minutes))
+            }
+        }
+    }
+
     func testActivatesWithoutTheToDoFeature() {
         let manager = PluginManager(buddy: QuietBuddy())
         manager.register(PomodoroPlugin())
@@ -30,4 +42,5 @@ final class PomodoroPluginTests: XCTestCase {
 @MainActor
 private final class QuietBuddy: Buddy {
     func say(_ message: String) {}
+    func say(_ message: String, closingAfter seconds: TimeInterval) {}
 }
