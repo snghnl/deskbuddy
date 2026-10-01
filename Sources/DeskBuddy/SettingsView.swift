@@ -1,4 +1,5 @@
 import AppKit
+import DeskBuddyCore
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -30,17 +31,11 @@ enum SettingsKeys {
 }
 
 struct SettingsView: View {
-    let calendar: CalendarService
-    let store: TodoStore
     @ObservedObject var updates: UpdateService
-
-    @State private var confirmingDelete = false
+    let slots: SlotRegistry
 
     @AppStorage(SettingsKeys.language) private var languageRaw = AppLanguage.system.rawValue
     @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.buddy.rawValue
-    @AppStorage(SettingsKeys.showCalendar) private var showCalendar = true
-    @AppStorage(SettingsKeys.eventAlerts) private var eventAlerts = true
-    @AppStorage(SettingsKeys.eventAlertLead) private var eventAlertLead = 10
     @AppStorage(SettingsKeys.bubbleAutoHide) private var bubbleAutoHide = 0
     @AppStorage(SettingsKeys.throwEnabled) private var throwEnabled = true
     @AppStorage(SettingsKeys.wander) private var wanderEnabled = false
@@ -58,163 +53,18 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section {
-                Picker(L.s("settings.language"), selection: $languageRaw) {
-                    Text(L.s("settings.follow_system")).tag(AppLanguage.system.rawValue)
-                    Text("한국어").tag(AppLanguage.korean.rawValue)
-                    Text("English").tag(AppLanguage.english.rawValue)
-                }
-                .pickerStyle(.menu)
-
-                Picker(L.s("settings.bubble_auto_hide"), selection: $bubbleAutoHide) {
-                    Text(L.s("settings.when_clicked")).tag(0)
-                    ForEach([5, 10, 30], id: \.self) { seconds in
-                        Text(L.f("settings.after_seconds", seconds)).tag(seconds)
-                    }
-                    Text(L.s("settings.after_1min")).tag(60)
-                }
-                .pickerStyle(.menu)
-            } header: {
-                Text(L.s("settings.general"))
-            } footer: {
-                Text(L.s("settings.bubble_auto_hide_footer"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(CharacterKind.allCases) { kind in
-                            characterOption(.builtin(kind), label: kind.label)
-                        }
-                        ForEach(customs, id: \.self) { name in
-                            characterOption(.custom(name), label: CustomCharacters.displayName(name), deletable: true)
-                                .contextMenu {
-                                    Button(L.s("settings.rename")) { beginRename(name) }
-                                    Button(L.s("settings.delete"), role: .destructive) { removeCustom(name) }
-                                }
-                        }
-                        addCharacterButton
-                    }
-                    .padding(.vertical, 2)
-                }
-
-                Toggle(L.s("settings.throwable"), isOn: $throwEnabled)
-                Toggle(L.s("settings.wander"), isOn: $wanderEnabled)
-            } header: {
-                Text(L.s("settings.character"))
-            } footer: {
-                Text(L.s("settings.character_footer"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                calendarIntegrationRow
-                if calendar.access == .authorized {
-                    Toggle(L.s("settings.show_events"), isOn: $showCalendar)
-                    Toggle(L.s("settings.event_alerts"), isOn: $eventAlerts)
-                    if eventAlerts {
-                        Picker(L.s("settings.alert_timing"), selection: $eventAlertLead) {
-                            Text(L.s("settings.before_5min")).tag(5)
-                            Text(L.s("settings.before_10min")).tag(10)
-                            Text(L.s("settings.before_15min")).tag(15)
-                            Text(L.s("settings.before_30min")).tag(30)
-                        }
-                        .pickerStyle(.menu)
+            ForEach(sections, id: \.id) { section in
+                Section {
+                    section.content()
+                } header: {
+                    Text(section.title())
+                } footer: {
+                    if let footer = section.footer {
+                        Text(footer())
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
-            } header: {
-                Text(L.s("settings.integrations"))
-            } footer: {
-                Text(L.s("settings.integrations_footer"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                HStack {
-                    Text(L.s("settings.hotkey_action"))
-                    Spacer()
-                    Button {
-                        recording ? stopRecording() : startRecording()
-                    } label: {
-                        Text(recording
-                             ? L.s("settings.press_keys")
-                             : (hotkeyDisplay.isEmpty ? L.s("settings.record_shortcut") : hotkeyDisplay))
-                            .frame(minWidth: 130)
-                    }
-                    if !hotkeyDisplay.isEmpty && !recording {
-                        Button(action: clearHotkey) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help(L.s("settings.remove_shortcut"))
-                    }
-                }
-            } header: {
-                Text(L.s("settings.global_shortcut"))
-            } footer: {
-                Text(L.s("settings.hotkey_footer"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            // Every row is label-plus-trailing-control, matching the rest of the form
-            Section {
-                LabeledContent(L.s("settings.history_total")) {
-                    Text(L.f("settings.history_count", store.completedTodos.count))
-                        .foregroundStyle(.secondary)
-                }
-
-                if store.hiddenCompletedCount > 0 {
-                    LabeledContent(L.s("settings.history_hidden_label")) {
-                        HStack(spacing: 8) {
-                            Text(L.f("settings.history_count", store.hiddenCompletedCount))
-                                .foregroundStyle(.secondary)
-                            Button(L.s("settings.history_restore")) { store.restoreClearedHistory() }
-                        }
-                    }
-                }
-
-                LabeledContent(L.s("settings.history_delete_label")) {
-                    // Ellipsis: macOS convention for an action that asks first
-                    Button(L.s("settings.history_delete_button"), role: .destructive) {
-                        confirmingDelete = true
-                    }
-                    .disabled(store.completedTodos.isEmpty)
-                }
-            } header: {
-                Text(L.s("settings.history"))
-            } footer: {
-                Text(L.s("settings.history_footer"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .confirmationDialog(
-                L.f("settings.history_confirm_title", store.completedTodos.count),
-                isPresented: $confirmingDelete,
-                titleVisibility: .visible
-            ) {
-                Button(L.s("settings.history_confirm_delete"), role: .destructive) {
-                    store.deleteCompleted()
-                }
-                Button(L.s("settings.cancel"), role: .cancel) {}
-            } message: {
-                Text(L.s("settings.history_confirm_message"))
-            }
-
-            Section {
-                LabeledContent(L.s("settings.current_version")) {
-                    Text(UpdateService.currentVersion.description)
-                        .foregroundStyle(.secondary)
-                }
-                updateRow
-                Toggle(L.s("settings.auto_update_check"), isOn: $autoUpdateCheck)
-            } header: {
-                Text(L.s("settings.updates"))
             }
         }
         .formStyle(.grouped)
@@ -234,6 +84,99 @@ struct SettingsView: View {
             }
             Button(L.s("settings.cancel"), role: .cancel) { renameTarget = nil }
         }
+    }
+
+    /// The built-in sections, merged by order with the ones features contribute
+    private var sections: [SettingsSection] {
+        let builtIn = [
+            SettingsSection(id: "general", order: 100,
+                            title: { L.s("settings.general") },
+                            footer: { L.s("settings.bubble_auto_hide_footer") }) { generalRows },
+            SettingsSection(id: "character", order: 200,
+                            title: { L.s("settings.character") },
+                            footer: { L.s("settings.character_footer") }) { characterRows },
+            SettingsSection(id: "shortcut", order: 400,
+                            title: { L.s("settings.global_shortcut") },
+                            footer: { L.s("settings.hotkey_footer") }) { shortcutRows },
+            SettingsSection(id: "updates", order: 600,
+                            title: { L.s("settings.updates") }) { updatesRows },
+        ]
+        return (builtIn + slots.contributions(to: CoreSlots.settingsSections)).sorted { $0.order < $1.order }
+    }
+
+    @ViewBuilder
+    private var generalRows: some View {
+        Picker(L.s("settings.language"), selection: $languageRaw) {
+            Text(L.s("settings.follow_system")).tag(AppLanguage.system.rawValue)
+            Text("한국어").tag(AppLanguage.korean.rawValue)
+            Text("English").tag(AppLanguage.english.rawValue)
+        }
+        .pickerStyle(.menu)
+
+        Picker(L.s("settings.bubble_auto_hide"), selection: $bubbleAutoHide) {
+            Text(L.s("settings.when_clicked")).tag(0)
+            ForEach([5, 10, 30], id: \.self) { seconds in
+                Text(L.f("settings.after_seconds", seconds)).tag(seconds)
+            }
+            Text(L.s("settings.after_1min")).tag(60)
+        }
+        .pickerStyle(.menu)
+    }
+
+    @ViewBuilder
+    private var characterRows: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(CharacterKind.allCases) { kind in
+                    characterOption(.builtin(kind), label: kind.label)
+                }
+                ForEach(customs, id: \.self) { name in
+                    characterOption(.custom(name), label: CustomCharacters.displayName(name), deletable: true)
+                        .contextMenu {
+                            Button(L.s("settings.rename")) { beginRename(name) }
+                            Button(L.s("settings.delete"), role: .destructive) { removeCustom(name) }
+                        }
+                }
+                addCharacterButton
+            }
+            .padding(.vertical, 2)
+        }
+
+        Toggle(L.s("settings.throwable"), isOn: $throwEnabled)
+        Toggle(L.s("settings.wander"), isOn: $wanderEnabled)
+    }
+
+    private var shortcutRows: some View {
+        HStack {
+            Text(L.s("settings.hotkey_action"))
+            Spacer()
+            Button {
+                recording ? stopRecording() : startRecording()
+            } label: {
+                Text(recording
+                     ? L.s("settings.press_keys")
+                     : (hotkeyDisplay.isEmpty ? L.s("settings.record_shortcut") : hotkeyDisplay))
+                    .frame(minWidth: 130)
+            }
+            if !hotkeyDisplay.isEmpty && !recording {
+                Button(action: clearHotkey) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(L.s("settings.remove_shortcut"))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var updatesRows: some View {
+        LabeledContent(L.s("settings.current_version")) {
+            Text(UpdateService.currentVersion.description)
+                .foregroundStyle(.secondary)
+        }
+        updateRow
+        Toggle(L.s("settings.auto_update_check"), isOn: $autoUpdateCheck)
     }
 
     private func beginRename(_ name: String) {
@@ -308,37 +251,6 @@ struct SettingsView: View {
             }
         case .failed(let message): message
         default: ""
-        }
-    }
-
-    // MARK: - Calendar integration
-
-    @ViewBuilder
-    private var calendarIntegrationRow: some View {
-        switch calendar.access {
-        case .notDetermined:
-            HStack {
-                Text(L.s("settings.calendar"))
-                Spacer()
-                Button(L.s("settings.connect")) { calendar.requestAccess() }
-            }
-        case .denied:
-            HStack {
-                Text(L.s("settings.calendar"))
-                Spacer()
-                Text(L.s("settings.access_denied"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Button(L.s("settings.open_system_settings")) { calendar.openPrivacySettings() }
-            }
-        case .authorized:
-            HStack {
-                Text(L.s("settings.calendar"))
-                Spacer()
-                Label(L.s("settings.connected"), systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            }
         }
     }
 

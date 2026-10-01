@@ -4,6 +4,7 @@ import os
 @MainActor
 public final class PluginManager {
     public let services = ServiceRegistry()
+    public let slots = SlotRegistry()
 
     private var registered: [any DeskBuddyPlugin] = []
     /// In activation order — deactivated in reverse
@@ -23,7 +24,7 @@ public final class PluginManager {
     public func activateAll() {
         for plugin in registered where !active.contains(where: { $0.manifest.id == plugin.manifest.id }) {
             do {
-                try plugin.activate(PluginContext(services: services))
+                try plugin.activate(PluginContext(services: services, slots: slots))
                 active.append(plugin)
             } catch {
                 log.error("\(plugin.manifest.id, privacy: .public) failed to activate: \(String(describing: error), privacy: .public)")

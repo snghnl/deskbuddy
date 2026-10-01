@@ -1,3 +1,4 @@
+import DeskBuddyCore
 import SwiftUI
 
 // MARK: - Character Kinds
@@ -47,14 +48,18 @@ private enum Skin {
 /// The character floating on screen. Click/drag events are handled directly by the
 /// panel (window), so this view does nothing but draw.
 struct CharacterView: View {
-    let store: TodoStore
+    let slots: SlotRegistry
     @ObservedObject var appState: AppState
 
     @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.buddy.rawValue
     @State private var blinking = false
 
     private var choice: CharacterChoice { .parse(characterRaw) }
-    private var remaining: Int { store.todos.filter { !$0.isDone }.count }
+
+    /// The first badge contribution with something to count
+    private var badge: Int {
+        slots.contributions(to: CoreSlots.buddyBadge).lazy.map { $0.count() }.first { $0 > 0 } ?? 0
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -72,8 +77,8 @@ struct CharacterView: View {
                     .scaleEffect(x: appState.facingRight ? 1 : -1)   // Face the direction of travel
             }
 
-            if remaining > 0 {
-                Text("\(remaining)")
+            if badge > 0 {
+                Text("\(badge)")
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5)
@@ -252,8 +257,8 @@ extension NSImage {
 @MainActor
 final class AppState: ObservableObject {
     @Published var listVisible = false
-    /// Current tab of the list panel (also switched with the ⌘1/2/3 shortcuts)
-    @Published var tab: TodoTab = .active
+    /// Id of the list panel's selected tab (also switched with ⌘1–⌘9); nil means the first tab
+    @Published var tab: String?
     /// Whether the character is walking while roaming freely
     @Published var walking = false
     /// Facing direction

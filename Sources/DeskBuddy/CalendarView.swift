@@ -1,3 +1,4 @@
+import DeskBuddyCore
 import SwiftUI
 
 /// Tab showing completion history as a monthly calendar.
@@ -5,18 +6,17 @@ import SwiftUI
 struct CalendarTabView: View {
     let store: TodoStore
     let calendar: CalendarService
-    let onSelect: (UUID) -> Void
 
+    @Environment(\.listPage) private var listPage
     @AppStorage(SettingsKeys.showCalendar) private var showEvents = true
     @State private var month: Date
     @State private var selectedDay: Date
 
     private let cal = Calendar.current
 
-    init(store: TodoStore, calendar: CalendarService, onSelect: @escaping (UUID) -> Void) {
+    init(store: TodoStore, calendar: CalendarService) {
         self.store = store
         self.calendar = calendar
-        self.onSelect = onSelect
         let cal = Calendar.current
         _month = State(initialValue: cal.dateInterval(of: .month, for: Date())?.start ?? Date())
         _selectedDay = State(initialValue: cal.startOfDay(for: Date()))
@@ -196,7 +196,9 @@ struct CalendarTabView: View {
                     .padding(.vertical, 10)
             } else {
                 ForEach(items) { todo in
-                    TodoRow(todo: todo, store: store) { onSelect(todo.id) }
+                    TodoRow(todo: todo, store: store) {
+                        listPage.present(TodoDetailPage(id: todo.id, store: store))
+                    }
                 }
             }
         }
@@ -261,5 +263,60 @@ struct CalendarTabView: View {
         return minutes % 60 == 0
             ? L.f("calendar.in_hours", minutes / 60)
             : L.f("calendar.in_hours_minutes", minutes / 60, minutes % 60)
+    }
+}
+
+/// The calendar rows in Settings
+struct CalendarSettingsRows: View {
+    let calendar: CalendarService
+
+    @AppStorage(SettingsKeys.showCalendar) private var showCalendar = true
+    @AppStorage(SettingsKeys.eventAlerts) private var eventAlerts = true
+    @AppStorage(SettingsKeys.eventAlertLead) private var eventAlertLead = 10
+
+    var body: some View {
+        integrationRow
+        if calendar.access == .authorized {
+            Toggle(L.s("settings.show_events"), isOn: $showCalendar)
+            Toggle(L.s("settings.event_alerts"), isOn: $eventAlerts)
+            if eventAlerts {
+                Picker(L.s("settings.alert_timing"), selection: $eventAlertLead) {
+                    Text(L.s("settings.before_5min")).tag(5)
+                    Text(L.s("settings.before_10min")).tag(10)
+                    Text(L.s("settings.before_15min")).tag(15)
+                    Text(L.s("settings.before_30min")).tag(30)
+                }
+                .pickerStyle(.menu)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var integrationRow: some View {
+        switch calendar.access {
+        case .notDetermined:
+            HStack {
+                Text(L.s("settings.calendar"))
+                Spacer()
+                Button(L.s("settings.connect")) { calendar.requestAccess() }
+            }
+        case .denied:
+            HStack {
+                Text(L.s("settings.calendar"))
+                Spacer()
+                Text(L.s("settings.access_denied"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button(L.s("settings.open_system_settings")) { calendar.openPrivacySettings() }
+            }
+        case .authorized:
+            HStack {
+                Text(L.s("settings.calendar"))
+                Spacer()
+                Label(L.s("settings.connected"), systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+        }
     }
 }

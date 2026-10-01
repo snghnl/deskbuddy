@@ -32,4 +32,5 @@ public struct PluginManifest: Equatable {
 /// plugin-scoped storage can be bound to the plugin they belong to.
 public struct PluginContext {
     public let services: ServiceRegistry
+    public let slots: SlotRegistry
 }

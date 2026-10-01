@@ -1,27 +1,63 @@
+import DeskBuddyCore
 import SwiftUI
 import UniformTypeIdentifiers
-
-enum TodoTab: Hashable {
-    case active, done, calendar, timer
-}
 
 /// Timer status shown on a to-do row
 enum TimerRowState {
     case running, paused
 }
 
-struct TodoListView: View {
+/// What's typed into the to-do input. Kept outside the view because switching tabs or opening
+/// a to-do's detail tears the input down, and the text should still be there on the way back.
+@MainActor
+@Observable
+final class TodoDraft {
+    var title = ""
+}
+
+/// The input above the To Do tab
+struct TodoInputBar: View {
     let store: TodoStore
     @ObservedObject var appState: AppState
-    let calendar: CalendarService
+    @Bindable var draft: TodoDraft
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "plus")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.tertiary)
+            TextField(L.s("list.add_placeholder"), text: $draft.title)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .focused($focused)
+                .onSubmit {
+                    store.add(draft.title)
+                    draft.title = ""
+                    focused = true
+                }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+        // Focus as soon as the list opens or this tab is picked (click or ⌘1) so typing works immediately
+        .onAppear { focused = true }
+        .onChange(of: appState.listVisible) { _, visible in
+            if visible {
+                focused = true
+            }
+        }
+    }
+}
+
+/// The To Do tab
+struct ActiveTodoList: View {
+    let store: TodoStore
     let timers: TimerCenter
 
-    @State private var newTitle = ""
-    @State private var selectedID: UUID?
+    @Environment(\.listPage) private var listPage
     @State private var draggedID: UUID?
-    @FocusState private var inputFocused: Bool
 
-    private var tab: TodoTab { appState.tab }
+    private var activeTodos: [Todo] { store.activeTodos }
 
     /// Whether a timer linked to this to-do is running or paused
     private func timerState(for todo: Todo) -> TimerRowState? {
@@ -30,141 +66,7 @@ struct TodoListView: View {
         return linked.contains { $0.isRunning } ? .running : .paused
     }
 
-    private var activeTodos: [Todo] { store.activeTodos }
-    private var completedGroups: [CompletedGroup] { store.completedGroups }
-    private var doneCount: Int { store.visibleCompleted.count }
-
     var body: some View {
-        Group {
-            if let id = selectedID, let todo = store.todos.first(where: { $0.id == id }) {
-                TodoDetailView(todo: todo, store: store) { selectedID = nil }
-            } else {
-                listPage
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(.white.opacity(0.15), lineWidth: 1)
-        )
-        // Shows the resize grip (the actual drag handling is done by ResizeGripView)
-        .overlay(alignment: .bottomTrailing) {
-            Image(systemName: "line.3.horizontal.decrease")
-                .font(.system(size: 8, weight: .bold))
-                .rotationEffect(.degrees(-45))
-                .foregroundStyle(.tertiary)
-                .padding(7)
-        }
-        // Focus the input as soon as the list opens (whether by click or shortcut) so typing works immediately
-        .onChange(of: appState.listVisible) { _, visible in
-            if visible {
-                appState.tab = .active
-                inputFocused = true
-            }
-        }
-        // Also allow immediate typing when returning to the To Do tab via ⌘1
-        .onChange(of: appState.tab) { _, newTab in
-            if newTab == .active, appState.listVisible {
-                inputFocused = true
-            }
-        }
-    }
-
-    private var listPage: some View {
-        VStack(spacing: 0) {
-            header
-            if tab == .active { input }
-            Divider().opacity(0.4)
-            switch tab {
-            case .active: list
-            case .done: completedList
-            case .calendar: CalendarTabView(store: store, calendar: calendar) { selectedID = $0 }
-            case .timer: TimerTabView(timers: timers, store: store)
-            }
-        }
-    }
-
-    private var header: some View {
-        HStack(spacing: 4) {
-            tabButton(L.s("list.to_do"), count: activeTodos.count, tab: .active).help("⌘1")
-            tabButton(L.s("list.done"), count: doneCount, tab: .done).help("⌘2")
-            tabButton(L.s("list.calendar"), count: 0, tab: .calendar).help("⌘3")
-            tabButton(L.s("timer.tab"), count: timers.timers.count, tab: .timer).help("⌘4")
-            Spacer(minLength: 0)
-            Menu {
-                // Hides rather than deletes, so no destructive styling and no second
-                // confirmation — the permanent version lives in Settings.
-                Button(L.f("list.clear_from_list", doneCount)) {
-                    store.clearCompletedFromList()
-                }
-                .disabled(doneCount == 0)
-
-                if store.hiddenCompletedCount > 0 {
-                    Button(L.f("list.restore_history", store.hiddenCompletedCount)) {
-                        store.restoreClearedHistory()
-                    }
-                }
-                Divider()
-                Button(L.s("app.quit")) { NSApp.terminate(nil) }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-        }
-        .padding(.horizontal, 10)
-        .padding(.top, 9)
-        .padding(.bottom, 7)
-    }
-
-    private func tabButton(_ title: String, count: Int, tab target: TodoTab) -> some View {
-        let selected = tab == target
-        return Button {
-            withAnimation(.easeOut(duration: 0.15)) { appState.tab = target }
-        } label: {
-            HStack(spacing: 4) {
-                Text(title)
-                    .font(.system(size: 11, weight: selected ? .semibold : .regular))
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .opacity(0.7)
-                }
-            }
-            .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(
-                Capsule().fill(selected ? Color.primary.opacity(0.1) : .clear)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var input: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "plus")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.tertiary)
-            TextField(L.s("list.add_placeholder"), text: $newTitle)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .focused($inputFocused)
-                .onSubmit {
-                    store.add(newTitle)
-                    newTitle = ""
-                    inputFocused = true
-                }
-        }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
-    }
-
-    private var list: some View {
         ScrollView {
             LazyVStack(spacing: 2) {
                 if activeTodos.isEmpty {
@@ -174,16 +76,18 @@ struct TodoListView: View {
                         .padding(.vertical, 16)
                 }
                 ForEach(activeTodos) { todo in
-                    TodoRow(todo: todo, store: store, timerState: timerState(for: todo)) { selectedID = todo.id }
-                        .opacity(draggedID == todo.id ? 0.35 : 1)
-                        .onDrag {
-                            draggedID = todo.id
-                            return NSItemProvider(object: todo.id.uuidString as NSString)
-                        }
-                        .onDrop(
-                            of: [.plainText],
-                            delegate: TodoReorderDelegate(targetID: todo.id, draggedID: $draggedID, store: store)
-                        )
+                    TodoRow(todo: todo, store: store, timerState: timerState(for: todo)) {
+                        listPage.present(TodoDetailPage(id: todo.id, store: store))
+                    }
+                    .opacity(draggedID == todo.id ? 0.35 : 1)
+                    .onDrag {
+                        draggedID = todo.id
+                        return NSItemProvider(object: todo.id.uuidString as NSString)
+                    }
+                    .onDrop(
+                        of: [.plainText],
+                        delegate: TodoReorderDelegate(targetID: todo.id, draggedID: $draggedID, store: store)
+                    )
                 }
             }
             .padding(.horizontal, 6)
@@ -197,8 +101,17 @@ struct TodoListView: View {
         }
         .animation(.spring(duration: 0.25), value: store.todos)
     }
+}
 
-    private var completedList: some View {
+/// The Done tab
+struct CompletedTodoList: View {
+    let store: TodoStore
+
+    @Environment(\.listPage) private var listPage
+
+    private var completedGroups: [CompletedGroup] { store.completedGroups }
+
+    var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 2, pinnedViews: [.sectionHeaders]) {
                 if completedGroups.isEmpty {
@@ -211,7 +124,9 @@ struct TodoListView: View {
                 ForEach(completedGroups) { group in
                     Section {
                         ForEach(group.items) { todo in
-                            TodoRow(todo: todo, store: store) { selectedID = todo.id }
+                            TodoRow(todo: todo, store: store) {
+                                listPage.present(TodoDetailPage(id: todo.id, store: store))
+                            }
                         }
                     } header: {
                         HStack(spacing: 6) {
@@ -234,6 +149,68 @@ struct TodoListView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.spring(duration: 0.25), value: store.todos)
+    }
+}
+
+/// A to-do's detail as a list panel page. Looks the to-do up on every render so changes made
+/// elsewhere show up, and goes back to the list if the to-do is deleted while open.
+struct TodoDetailPage: View {
+    let id: UUID
+    let store: TodoStore
+
+    @Environment(\.listPage) private var listPage
+
+    var body: some View {
+        if let todo = store.todos.first(where: { $0.id == id }) {
+            TodoDetailView(todo: todo, store: store) { listPage.dismiss() }
+        } else {
+            Color.clear.onAppear { listPage.dismiss() }
+        }
+    }
+}
+
+/// The completion history rows in Settings
+struct HistorySettingsRows: View {
+    let store: TodoStore
+
+    @State private var confirmingDelete = false
+
+    // Every row is label-plus-trailing-control, matching the rest of the form
+    var body: some View {
+        LabeledContent(L.s("settings.history_total")) {
+            Text(L.f("settings.history_count", store.completedTodos.count))
+                .foregroundStyle(.secondary)
+        }
+
+        if store.hiddenCompletedCount > 0 {
+            LabeledContent(L.s("settings.history_hidden_label")) {
+                HStack(spacing: 8) {
+                    Text(L.f("settings.history_count", store.hiddenCompletedCount))
+                        .foregroundStyle(.secondary)
+                    Button(L.s("settings.history_restore")) { store.restoreClearedHistory() }
+                }
+            }
+        }
+
+        LabeledContent(L.s("settings.history_delete_label")) {
+            // Ellipsis: macOS convention for an action that asks first
+            Button(L.s("settings.history_delete_button"), role: .destructive) {
+                confirmingDelete = true
+            }
+            .disabled(store.completedTodos.isEmpty)
+        }
+        .confirmationDialog(
+            L.f("settings.history_confirm_title", store.completedTodos.count),
+            isPresented: $confirmingDelete,
+            titleVisibility: .visible
+        ) {
+            Button(L.s("settings.history_confirm_delete"), role: .destructive) {
+                store.deleteCompleted()
+            }
+            Button(L.s("settings.cancel"), role: .cancel) {}
+        } message: {
+            Text(L.s("settings.history_confirm_message"))
+        }
     }
 }
 

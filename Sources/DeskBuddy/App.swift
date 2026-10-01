@@ -144,8 +144,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SettingsKeys.eventAlertLead: 10,
             SettingsKeys.autoUpdateCheck: true,
         ])
-        // Before any UI is built, so the services plugins provide are there when views first look
+        // Before any UI is built, so the services and contributions are there when views first look
         plugins.activateAll()
+        FeatureContributions.register(
+            in: plugins.slots, store: store, timers: timerCenter, calendar: calendarService, appState: appState
+        )
         setupCharacterPanel()
         setupListPanel()
         setupStatusItem()
@@ -300,23 +303,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bubble.show(message, autoHide: notificationAutoHide) { [weak self] in self?.openSettings() }
     }
 
-    /// ⌘1/⌘2/⌘3 switch tabs while the list panel is up
+    /// ⌘1–⌘9 switch tabs while the list panel is up, in tab order
     private func setupTabShortcuts() {
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self,
                   listPanel.isVisible, listPanel.isKeyWindow,
-                  event.modifierFlags.intersection([.command, .option, .control]) == .command
+                  event.modifierFlags.intersection([.command, .option, .control]) == .command,
+                  let digit = event.charactersIgnoringModifiers.flatMap({ Int($0) }), digit >= 1
             else { return event }
 
-            let tab: TodoTab? = switch event.charactersIgnoringModifiers {
-            case "1": .active
-            case "2": .done
-            case "3": .calendar
-            case "4": .timer
-            default: nil
-            }
-            guard let tab else { return event }
-            withAnimation(.easeOut(duration: 0.15)) { self.appState.tab = tab }
+            let tabs = plugins.slots.contributions(to: CoreSlots.listTabs)
+            guard digit <= tabs.count else { return event }
+            withAnimation(.easeOut(duration: 0.15)) { self.appState.tab = tabs[digit - 1].id }
             return nil   // consume the event
         }
     }
@@ -346,7 +344,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         characterPanel.isReleasedWhenClosed = false
 
         let container = NSView()
-        let hosting = NSHostingView(rootView: CharacterView(store: store, appState: appState))
+        let hosting = NSHostingView(rootView: CharacterView(slots: plugins.slots, appState: appState))
         let catcher = ClickCatcherView()
         catcher.onClick = { [weak self] in self?.toggleList() }
         catcher.onMoved = { [weak self] in
@@ -399,7 +397,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // AppKit owns the window size; the SwiftUI view just fills whatever it is given
         let container = NSView()
-        let hosting = NSHostingView(rootView: TodoListView(store: store, appState: appState, calendar: calendarService, timers: timerCenter))
+        let hosting = NSHostingView(rootView: ListPanelView(appState: appState, slots: plugins.slots))
         hosting.sizingOptions = []
         let grip = ResizeGripView()
         grip.onResize = { [weak self] size in self?.applyListSize(size) }
@@ -590,7 +588,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(calendar: calendarService, store: store, updates: updateService)))
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(updates: updateService, slots: plugins.slots)))
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             window.center()
