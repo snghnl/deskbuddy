@@ -8,12 +8,20 @@ import TodoAPI
 public final class PomodoroPlugin: DeskBuddyPlugin {
     public let manifest = PluginManifest(id: "pomodoro", name: "Pomodoro", version: "1.0.0")
 
-    private var timers: TimerCenter?
+    private(set) var timers: TimerCenter?
+    private let defaults: UserDefaults
 
-    public init() {}
+    public convenience init() {
+        self.init(defaults: .standard)
+    }
+
+    /// Tests pass their own `defaults` so they never touch the user's timers
+    init(defaults: UserDefaults) {
+        self.defaults = defaults
+    }
 
     public func activate(_ context: PluginContext) throws {
-        let timers = TimerCenter()
+        let timers = TimerCenter(defaults: defaults)
         self.timers = timers
         let services = context.services
 
@@ -36,6 +44,11 @@ public final class PomodoroPlugin: DeskBuddyPlugin {
                 label: arguments["label"] ?? L.f("timer.min_chip", minutes),
                 todoID: arguments["todo"].flatMap(UUID.init(uuidString:))
             )
+        }
+
+        // A deleted to-do takes its links with it; the to-do feature does not know who linked to it
+        context.events.subscribe(TodoDeleted.self) { event in
+            timers.unlinkAll(from: event.id)
         }
 
         context.slots.contribute(CoreSlots.listTabs, ListTab(

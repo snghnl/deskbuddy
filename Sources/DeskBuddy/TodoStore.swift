@@ -53,6 +53,9 @@ final class TodoStore {
         }
     }
 
+    /// Where deletions are announced. Set when the to-do feature starts; nil until then.
+    @ObservationIgnored var events: EventBus?
+
     private let fileURL: URL
     @ObservationIgnored private var saveTask: Task<Void, Never>?
 
@@ -91,7 +94,9 @@ final class TodoStore {
     }
 
     func remove(_ todo: Todo) {
+        guard todos.contains(where: { $0.id == todo.id }) else { return }
         todos.removeAll { $0.id == todo.id }
+        events?.emit(TodoDeleted(id: todo.id))
     }
 
     /// Move the dragged item to the target item's position
@@ -127,8 +132,10 @@ final class TodoStore {
     /// Removes completed items for good. There is no undo and no backup — the next
     /// save overwrites todos.json with what is left.
     func deleteCompleted() {
+        let deleted = completedTodos.map(\.id)
         todos.removeAll { $0.isDone }
         historyClearedAt = nil   // nothing left to hide
+        for id in deleted { events?.emit(TodoDeleted(id: id)) }
     }
 
     // MARK: - Per-tab lists

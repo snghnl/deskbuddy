@@ -27,6 +27,18 @@ public protocol TodoService: AnyObject {
     func todo(_ id: UUID) -> TodoSummary?
 }
 
+/// A to-do is gone for good — removed from the list, or wiped with the rest of the history.
+/// Hiding completed to-dos from the Done tab is not a deletion.
+public struct TodoDeleted: DeskBuddyEvent {
+    public static let name = "todo.deleted"
+
+    public let id: UUID
+
+    public init(id: UUID) {
+        self.id = id
+    }
+}
+
 public enum TodoSlots {
     /// Small views after the title on the rows of the To Do tab, e.g. a timer icon
     public static let rowAccessory = SlotID<TodoRowAccessory>("todo.row.accessory")

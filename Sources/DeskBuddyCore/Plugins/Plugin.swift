@@ -33,6 +33,7 @@ public struct PluginManifest: Equatable {
 public struct PluginContext {
     public let buddy: any Buddy
     public let commands: CommandRegistry
+    public let events: EventBus
     public let services: ServiceRegistry
     public let slots: SlotRegistry
 }

@@ -15,6 +15,7 @@ enum FeatureContributions {
         // MARK: To-dos
 
         services.provide(TodoService.self, store)
+        store.events = plugins.events
 
         // The same shape as todos.json, so `deskbuddy list --json` reads the same either way
         plugins.commands.respond(to: "todo.list") { _ in store.todos }

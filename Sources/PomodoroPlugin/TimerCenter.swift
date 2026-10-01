@@ -37,9 +37,12 @@ final class TimerCenter {
     @ObservationIgnored var onFire: ((BuddyTimer) -> Void)?
 
     @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private let defaults: UserDefaults
     private let storageKey = "DeskBuddy.timers"
 
-    init() {
+    /// Timers are saved in `defaults` under "DeskBuddy.timers"
+    init(defaults: UserDefaults) {
+        self.defaults = defaults
         restore()
         task = Task { [weak self] in
             while !Task.isCancelled {
@@ -85,6 +88,14 @@ final class TimerCenter {
         timers[i].todoID = todoID
     }
 
+    /// Drops the link from every timer that points at `todoID`, e.g. once that to-do is deleted.
+    /// The timers keep running under their own labels.
+    func unlinkAll(from todoID: UUID) {
+        for i in timers.indices where timers[i].todoID == todoID {
+            timers[i].todoID = nil
+        }
+    }
+
     private func tick() {
         // Hold fire until the plugin has wired onFire — otherwise a timer that
         // expired while the app was closed would be consumed without notifying
@@ -100,12 +111,12 @@ final class TimerCenter {
 
     private func save() {
         if let data = try? JSONEncoder().encode(timers) {
-            UserDefaults.standard.set(data, forKey: storageKey)
+            defaults.set(data, forKey: storageKey)
         }
     }
 
     private func restore() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
+        guard let data = defaults.data(forKey: storageKey),
               let decoded = try? [BuddyTimer](from: data) else { return }
         timers = decoded
     }
