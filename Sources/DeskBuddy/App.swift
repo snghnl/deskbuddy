@@ -1,4 +1,5 @@
 import AppKit
+import DeskBuddyCore
 import SwiftUI
 
 // Borderless panels cannot become key windows by default, which blocks text input — allow it via subclass
@@ -128,6 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let calendarService = CalendarService()
     private let timerCenter = TimerCenter()
     private let updateService = UpdateService()
+    private let plugins = PluginManager()
 
     /// Situations where wandering must pause temporarily, e.g. while a menu is open
     private var wanderSuspended = false
@@ -142,6 +144,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SettingsKeys.eventAlertLead: 10,
             SettingsKeys.autoUpdateCheck: true,
         ])
+        // Before any UI is built, so the services plugins provide are there when views first look
+        plugins.activateAll()
         setupCharacterPanel()
         setupListPanel()
         setupStatusItem()
@@ -157,6 +161,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupTabShortcuts()
         setupBubble()
         setupUpdates()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        plugins.deactivateAll()
     }
 
     /// One-time migration of settings from the pre-release bundle id
