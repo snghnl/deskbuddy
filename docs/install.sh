@@ -59,7 +59,7 @@ if pgrep -x DeskBuddy >/dev/null 2>&1; then
   was_running=yes
   say "→ Quitting the running copy…"
   osascript -e 'tell application "DeskBuddy" to quit' 2>/dev/null || pkill -x DeskBuddy || true
-  # Give it a moment to write out todos.json before the bundle is replaced
+  # Give it a moment to save its data before the bundle is replaced
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     pgrep -x DeskBuddy >/dev/null 2>&1 || break
     sleep 0.3

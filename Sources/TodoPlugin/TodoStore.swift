@@ -1,6 +1,7 @@
 import DeskBuddyCore
 import Foundation
 import Observation
+import os
 import TodoAPI
 
 struct Todo: Identifiable, Codable, Equatable {
@@ -38,49 +39,46 @@ final class TodoStore {
     ///
     /// Stored as a watermark rather than a per-item flag on purpose: a new non-optional
     /// field on `Todo` would make the synthesized decoder throw on every existing
-    /// todos.json, and `load()` swallows that error — every item would silently vanish.
+    /// todos.json, and every item would end up set aside as unreadable.
     var historyClearedAt: Date? {
         didSet {
-            if let at = historyClearedAt {
-                defaults.set(at.timeIntervalSinceReferenceDate, forKey: Self.historyClearedAtKey)
-            } else {
-                defaults.removeObject(forKey: Self.historyClearedAtKey)
+            do {
+                if let at = historyClearedAt {
+                    try storage.set(at, forKey: Self.historyClearedAtKey)
+                } else {
+                    try storage.remove(forKey: Self.historyClearedAtKey)
+                }
+            } catch {
+                log.error("Could not save historyClearedAt: \(String(describing: error), privacy: .public)")
             }
         }
     }
 
-    /// The folder the CLI reads todos.json from when the app is not running
-    static var defaultDirectory: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("DeskBuddy", isDirectory: true)
-    }
-
-    private static let historyClearedAtKey = "DeskBuddy.historyClearedAt"
+    /// Storage keys. The CLI reads plugins/todo/todos.json while the app is not running.
+    static let todosKey = "todos"
+    private static let historyClearedAtKey = "historyClearedAt"
 
     /// Where deletions are announced
     @ObservationIgnored private let events: EventBus
-    @ObservationIgnored private let defaults: UserDefaults
-    private let fileURL: URL
+    @ObservationIgnored private let storage: PluginStorage
     @ObservationIgnored private var saveTask: Task<Void, Never>?
+    @ObservationIgnored private let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "todo")
 
-    /// Keeps the to-dos in `directory`/todos.json and the Done-tab watermark in `defaults`
-    init(directory: URL, defaults: UserDefaults, events: EventBus) {
+    init(storage: PluginStorage, events: EventBus) {
         self.events = events
-        self.defaults = defaults
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        fileURL = directory.appendingPathComponent("todos.json")
-
-        // Migrate data from the FloatingTodo era
-        let legacy = directory.deletingLastPathComponent().appendingPathComponent("FloatingTodo/todos.json")
-        if !FileManager.default.fileExists(atPath: fileURL.path),
-           FileManager.default.fileExists(atPath: legacy.path) {
-            try? FileManager.default.copyItem(at: legacy, to: fileURL)
-        }
-
+        self.storage = storage
         // If this goes through didSet, it only writes the same value back
-        historyClearedAt = (defaults.object(forKey: Self.historyClearedAtKey) as? Double)
-            .map(Date.init(timeIntervalSinceReferenceDate:))
-        load()
+        historyClearedAt = load(Date.self, forKey: Self.historyClearedAtKey)
+        // Assigning schedules a save of what was just read, which is harmless
+        todos = load([Todo].self, forKey: Self.todosKey) ?? []
+    }
+
+    /// Writes a save that is still waiting out its delay, e.g. when the app quits
+    func flush() {
+        guard let saveTask else { return }
+        saveTask.cancel()
+        self.saveTask = nil
+        save(todos)
     }
 
     func add(_ title: String) {
@@ -176,22 +174,34 @@ final class TodoStore {
         return f.string(from: day)
     }
 
-    private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let decoded = try? JSONDecoder().decode([Todo].self, from: data) else { return }
-        todos = decoded
+    /// The stored value, or nil when there is none. One that cannot be read is moved aside
+    /// rather than left to be overwritten by the next save, so it can still be recovered.
+    private func load<Value: Decodable>(_ type: Value.Type, forKey key: String) -> Value? {
+        do {
+            return try storage.get(type, forKey: key)
+        } catch {
+            let aside = try? storage.setAside(key)
+            log.error("Could not read \(key, privacy: .public), so starting without it. It was moved to \(aside?.path ?? "nowhere", privacy: .public): \(String(describing: error), privacy: .public)")
+            return nil
+        }
     }
 
     private func scheduleSave() {
         saveTask?.cancel()
         let snapshot = todos
-        let url = fileURL
         saveTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            if let data = try? JSONEncoder().encode(snapshot) {
-                try? data.write(to: url, options: .atomic)
-            }
+            saveTask = nil
+            save(snapshot)
+        }
+    }
+
+    private func save(_ todos: [Todo]) {
+        do {
+            try storage.set(todos, forKey: Self.todosKey)
+        } catch {
+            log.error("Could not save to-dos: \(String(describing: error), privacy: .public)")
         }
     }
 }

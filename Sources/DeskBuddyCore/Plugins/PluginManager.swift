@@ -1,3 +1,4 @@
+import Foundation
 import os
 
 /// Owns the built-in plugins: registered by the app at startup, activated at launch, deactivated at quit.
@@ -14,8 +15,14 @@ public final class PluginManager {
     private var active: [any DeskBuddyPlugin] = []
     private let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "plugins")
 
-    public init(buddy: any Buddy) {
+    /// Each plugin's storage is the folder named after its id in here
+    private let storageRoot: URL
+
+    /// `storageRoot` is where plugins keep their data — the app's
+    /// `Application Support/DeskBuddy/plugins`, a temporary folder in tests
+    public init(buddy: any Buddy, storageRoot: URL) {
         self.buddy = buddy
+        self.storageRoot = storageRoot
     }
 
     public func register(_ plugin: any DeskBuddyPlugin) {
@@ -29,7 +36,9 @@ public final class PluginManager {
     public func activateAll() {
         for plugin in registered where !active.contains(where: { $0.manifest.id == plugin.manifest.id }) {
             do {
-                try plugin.activate(PluginContext(buddy: buddy, commands: commands, events: events, services: services, slots: slots))
+                let storage = PluginStorage(directory: storageRoot.appendingPathComponent(plugin.manifest.id, isDirectory: true))
+                try plugin.activate(PluginContext(buddy: buddy, commands: commands, events: events,
+                                                  services: services, slots: slots, storage: storage))
                 active.append(plugin)
             } catch {
                 log.error("\(plugin.manifest.id, privacy: .public) failed to activate: \(String(describing: error), privacy: .public)")

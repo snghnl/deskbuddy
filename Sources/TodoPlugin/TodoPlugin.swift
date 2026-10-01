@@ -12,22 +12,11 @@ public final class TodoPlugin: DeskBuddyPlugin {
 
     /// Set by `activate`
     private(set) var store: TodoStore?
-    private let directory: URL
-    private let defaults: UserDefaults
 
-    /// Keeps to-dos where they have always been, so the CLI can still read todos.json directly
-    public convenience init() {
-        self.init(directory: TodoStore.defaultDirectory, defaults: .standard)
-    }
-
-    /// Tests pass their own `directory` and `defaults` so they never touch the user's to-dos
-    init(directory: URL, defaults: UserDefaults) {
-        self.directory = directory
-        self.defaults = defaults
-    }
+    public init() {}
 
     public func activate(_ context: PluginContext) throws {
-        let store = TodoStore(directory: directory, defaults: defaults, events: context.events)
+        let store = TodoStore(storage: context.storage, events: context.events)
         self.store = store
         let commands = context.commands
         let slots = context.slots
@@ -107,7 +96,8 @@ public final class TodoPlugin: DeskBuddyPlugin {
     }
 
     public func deactivate() {
-        // Saves follow every change after a short delay, as they did before this was a plugin
+        // Saves follow changes after a short delay; one may still be waiting
+        store?.flush()
     }
 }
 

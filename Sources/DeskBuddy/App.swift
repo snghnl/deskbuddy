@@ -130,7 +130,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var bubble: BubbleController!
     private let appState = AppState()
     private let updateService = UpdateService()
-    private lazy var plugins = PluginManager(buddy: self)
+    /// Application Support/DeskBuddy: the plugins' data, the command socket, backups
+    private static let appFolder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("DeskBuddy", isDirectory: true)
+    private lazy var plugins = PluginManager(buddy: self,
+                                             storageRoot: Self.appFolder.appendingPathComponent("plugins", isDirectory: true))
     private var commandServer: CommandServer?
 
     /// Situations where wandering must pause temporarily, e.g. while a menu is open
@@ -144,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SettingsKeys.autoUpdateCheck: true,
         ])
         // Before any UI is built, so the services and contributions are there when views first look
+        StorageMigration.run(appFolder: Self.appFolder, defaults: .standard)
         plugins.register(TodoPlugin())
         plugins.register(PomodoroPlugin())
         plugins.register(CalendarPlugin())
@@ -229,8 +234,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Lets the CLI run commands and get their answer back. bin/deskbuddy looks for the
     /// socket at this same path; if it is not there, the CLI falls back to the URL scheme.
     private func startCommandServer() {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let server = CommandServer(path: support.appendingPathComponent("DeskBuddy/deskbuddy.sock").path,
+        let server = CommandServer(path: Self.appFolder.appendingPathComponent("deskbuddy.sock").path,
                                    commands: plugins.commands)
         if server.start() {
             commandServer = server

@@ -36,4 +36,6 @@ public struct PluginContext {
     public let events: EventBus
     public let services: ServiceRegistry
     public let slots: SlotRegistry
+    /// This plugin's own data, in a folder named after its id
+    public let storage: PluginStorage
 }

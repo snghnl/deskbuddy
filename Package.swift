@@ -48,6 +48,12 @@ let package = Package(
             dependencies: ["DeskBuddyCore", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin"],
             path: "Sources/DeskBuddy"
         ),
+        // The app's own logic, such as moving old data into plugin storage
+        .testTarget(
+            name: "DeskBuddyTests",
+            dependencies: ["DeskBuddy", "DeskBuddyCore", "TodoPlugin", "PomodoroPlugin"],
+            path: "Tests/DeskBuddyTests"
+        ),
         .testTarget(
             name: "DeskBuddyCoreTests",
             dependencies: ["DeskBuddyCore"],

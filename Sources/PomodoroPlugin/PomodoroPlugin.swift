@@ -9,19 +9,11 @@ public final class PomodoroPlugin: DeskBuddyPlugin {
     public let manifest = PluginManifest(id: "pomodoro", name: "Pomodoro", version: "1.0.0")
 
     private(set) var timers: TimerCenter?
-    private let defaults: UserDefaults
 
-    public convenience init() {
-        self.init(defaults: .standard)
-    }
-
-    /// Tests pass their own `defaults` so they never touch the user's timers
-    init(defaults: UserDefaults) {
-        self.defaults = defaults
-    }
+    public init() {}
 
     public func activate(_ context: PluginContext) throws {
-        let timers = TimerCenter(defaults: defaults)
+        let timers = TimerCenter(storage: context.storage)
         self.timers = timers
         let services = context.services
 

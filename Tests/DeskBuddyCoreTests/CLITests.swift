@@ -168,13 +168,26 @@ final class CLITests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: sandbox.appendingPathComponent("bin/opened").path))
     }
 
-    func testWithoutTheAppListReadsTheDataFile() throws {
+    func testWithoutTheAppListReadsTheToDoPluginsFile() throws {
         server.stop()
-        let data = sandbox.appendingPathComponent("Library/Application Support/DeskBuddy")
-        try FileManager.default.createDirectory(at: data, withIntermediateDirectories: true)
-        try JSONEncoder().encode(Self.todos).write(to: data.appendingPathComponent("todos.json"))
+        try writeTodos(Self.todos, to: "Library/Application Support/DeskBuddy/plugins/todo")
+        // Left behind by an older app; the plugin's file wins
+        try writeTodos([], to: "Library/Application Support/DeskBuddy")
 
         XCTAssertEqual(run("list").out, "[ ] a42620c8  Buy milk  📝\n")
+    }
+
+    func testWithoutTheAppListReadsWhereOlderAppsKeptToDos() throws {
+        server.stop()
+        try writeTodos(Self.todos, to: "Library/Application Support/DeskBuddy")
+
+        XCTAssertEqual(run("list").out, "[ ] a42620c8  Buy milk  📝\n")
+    }
+
+    private func writeTodos(_ todos: [TodoFixture], to folder: String) throws {
+        let data = sandbox.appendingPathComponent(folder)
+        try FileManager.default.createDirectory(at: data, withIntermediateDirectories: true)
+        try JSONEncoder().encode(todos).write(to: data.appendingPathComponent("todos.json"))
     }
 
     func testWithoutAnAnsweringAppTimerGivesUpWithAReason() throws {

@@ -7,7 +7,7 @@ import XCTest
 @MainActor
 final class CalendarPluginTests: XCTestCase {
     func testActivationAddsTheCalendarTabAndItsSettings() {
-        let manager = PluginManager(buddy: QuietBuddy())
+        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: unusedStorageRoot())
         manager.register(CalendarPlugin())
 
         manager.activateAll()
@@ -18,7 +18,7 @@ final class CalendarPluginTests: XCTestCase {
     }
 
     func testActivatesWithoutTheToDoFeature() {
-        let manager = PluginManager(buddy: QuietBuddy())
+        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: unusedStorageRoot())
         manager.register(CalendarPlugin())
 
         manager.activateAll()
@@ -30,7 +30,7 @@ final class CalendarPluginTests: XCTestCase {
     }
 
     func testAlertDefaultsAreInPlaceOnceActivated() {
-        let manager = PluginManager(buddy: QuietBuddy())
+        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: unusedStorageRoot())
         manager.register(CalendarPlugin())
 
         manager.activateAll()
@@ -49,4 +49,9 @@ private final class QuietBuddy: Buddy {
     func say(_ message: String, closingAfter seconds: TimeInterval) {}
     func replace(_ old: String, with new: String) {}
     func openList(on page: AnyView) {}
+}
+
+/// Calendar keeps nothing in plugin storage; this folder is never created
+private func unusedStorageRoot() -> URL {
+    FileManager.default.temporaryDirectory.appendingPathComponent("CalendarPluginTests-unused-\(UUID().uuidString)")
 }

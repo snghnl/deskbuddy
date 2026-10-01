@@ -6,8 +6,8 @@ import XCTest
 
 @MainActor
 final class PomodoroPluginTests: XCTestCase {
-    func testActivationAddsTheTimerTabAndTheToDoRowIcon() {
-        let manager = PluginManager(buddy: QuietBuddy())
+    func testActivationAddsTheTimerTabAndTheToDoRowIcon() throws {
+        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: try scratchDirectory())
         manager.register(PomodoroPlugin())
 
         manager.activateAll()
@@ -16,8 +16,8 @@ final class PomodoroPluginTests: XCTestCase {
         XCTAssertEqual(manager.slots.contributions(to: TodoSlots.rowAccessory).map(\.id), ["pomodoro.state"])
     }
 
-    func testStartCommandRejectsMinutesThatAreNotAPositiveNumber() {
-        let manager = PluginManager(buddy: QuietBuddy())
+    func testStartCommandRejectsMinutesThatAreNotAPositiveNumber() throws {
+        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: try scratchDirectory())
         manager.register(PomodoroPlugin())
         manager.activateAll()
 
@@ -28,8 +28,8 @@ final class PomodoroPluginTests: XCTestCase {
         }
     }
 
-    func testActivatesWithoutTheToDoFeature() {
-        let manager = PluginManager(buddy: QuietBuddy())
+    func testActivatesWithoutTheToDoFeature() throws {
+        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: try scratchDirectory())
         manager.register(PomodoroPlugin())
 
         manager.activateAll()
@@ -40,8 +40,8 @@ final class PomodoroPluginTests: XCTestCase {
     }
 
     func testDeletingAToDoUnlinksItsTimersAndKeepsThemRunning() throws {
-        let manager = PluginManager(buddy: QuietBuddy())
-        let plugin = PomodoroPlugin(defaults: MemoryDefaults())
+        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: try scratchDirectory())
+        let plugin = PomodoroPlugin()
         manager.register(plugin)
         manager.activateAll()
         let deleted = UUID(), kept = UUID()
@@ -55,6 +55,25 @@ final class PomodoroPluginTests: XCTestCase {
         XCTAssertEqual(timers.map(\.todoID), [nil, nil, kept])
         XCTAssertTrue(timers.allSatisfy(\.isRunning))
     }
+
+    func testTimersSurviveARestart() throws {
+        let storage = PluginStorage(directory: try scratchDirectory())
+        let timers = TimerCenter(storage: storage)
+        timers.start(minutes: 25, label: "Focus")
+        timers.pause(try XCTUnwrap(timers.timers.first).id)
+
+        let reopened = TimerCenter(storage: storage)
+
+        XCTAssertEqual(reopened.timers, timers.timers)
+    }
+
+    /// An empty folder for the plugin's storage, removed afterwards
+    private func scratchDirectory() throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("PomodoroPluginTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        return directory
+    }
 }
 
 @MainActor
@@ -66,17 +85,3 @@ private final class QuietBuddy: Buddy {
     func openList(on page: AnyView) {}
 }
 
-/// Settings kept in memory only, so a test never writes a preferences file
-private final class MemoryDefaults: UserDefaults, @unchecked Sendable {
-    private var values: [String: Any] = [:]
-
-    init() {
-        super.init(suiteName: nil)!
-    }
-
-    override func object(forKey key: String) -> Any? { values[key] }
-    override func data(forKey key: String) -> Data? { values[key] as? Data }
-    override func set(_ value: Any?, forKey key: String) { values[key] = value }
-    override func set(_ value: Double, forKey key: String) { values[key] = value }
-    override func removeObject(forKey key: String) { values[key] = nil }
-}

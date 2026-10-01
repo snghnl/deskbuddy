@@ -1,5 +1,7 @@
 import AppKit
+import DeskBuddyCore
 import Observation
+import os
 
 /// A pomodoro-style countdown timer, optionally linked to a to-do.
 struct BuddyTimer: Identifiable, Codable, Equatable {
@@ -37,12 +39,12 @@ final class TimerCenter {
     @ObservationIgnored var onFire: ((BuddyTimer) -> Void)?
 
     @ObservationIgnored private var task: Task<Void, Never>?
-    @ObservationIgnored private let defaults: UserDefaults
-    private let storageKey = "DeskBuddy.timers"
+    @ObservationIgnored private let storage: PluginStorage
+    @ObservationIgnored private let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "pomodoro")
+    private static let storageKey = "timers"
 
-    /// Timers are saved in `defaults` under "DeskBuddy.timers"
-    init(defaults: UserDefaults) {
-        self.defaults = defaults
+    init(storage: PluginStorage) {
+        self.storage = storage
         restore()
         task = Task { [weak self] in
             while !Task.isCancelled {
@@ -110,21 +112,20 @@ final class TimerCenter {
     // MARK: - Persistence
 
     private func save() {
-        if let data = try? JSONEncoder().encode(timers) {
-            defaults.set(data, forKey: storageKey)
+        do {
+            try storage.set(timers, forKey: Self.storageKey)
+        } catch {
+            log.error("Could not save timers: \(String(describing: error), privacy: .public)")
         }
     }
 
+    /// Timers that cannot be read are moved aside, not overwritten, and the plugin starts with none
     private func restore() {
-        guard let data = defaults.data(forKey: storageKey),
-              let decoded = try? [BuddyTimer](from: data) else { return }
-        timers = decoded
-    }
-}
-
-private extension Array where Element == BuddyTimer {
-    init?(from data: Data) {
-        guard let decoded = try? JSONDecoder().decode([BuddyTimer].self, from: data) else { return nil }
-        self = decoded
+        do {
+            timers = try storage.get([BuddyTimer].self, forKey: Self.storageKey) ?? []
+        } catch {
+            let aside = try? storage.setAside(Self.storageKey)
+            log.error("Could not read timers, so starting without them. They were moved to \(aside?.path ?? "nowhere", privacy: .public): \(String(describing: error), privacy: .public)")
+        }
     }
 }

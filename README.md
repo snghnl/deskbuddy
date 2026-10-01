@@ -96,7 +96,9 @@ During development you can also just `swift run`. No Xcode project — plain Swi
 - Add (Enter), check off, hover-to-delete, drag to reorder
 - Tooltips show when each item was added; a detail page holds the title, memo, and timestamps
 - Character position and list size persist across restarts
-- Menu bar icon (no Dock icon); data lives in `~/Library/Application Support/DeskBuddy/todos.json`
+- Menu bar icon (no Dock icon); each feature keeps its data in
+  `~/Library/Application Support/DeskBuddy/plugins/<feature>/` — to-dos in `plugins/todo/todos.json`.
+  0.18 moved them there from the folder above and kept the originals in its `backups/` folder
 
 ## Agent Integration (CLI / URL scheme)
 
@@ -119,7 +121,7 @@ While DeskBuddy runs, the CLI talks to it over a socket
 (`~/Library/Application Support/DeskBuddy/deskbuddy.sock`, readable only by you), so
 errors come back with a message and a non-zero exit. When the app is not running,
 notify/add/done/toggle go through the `deskbuddy://` URL scheme, which launches it, and
-list reads todos.json directly. timer and run need the socket, so they launch the app
+list reads `plugins/todo/todos.json` directly (or the older `todos.json`, for apps before 0.18). timer and run need the socket, so they launch the app
 first. To put the CLI on PATH:
 `ln -s "$(pwd)/bin/deskbuddy" /usr/local/bin/deskbuddy`
 
@@ -131,6 +133,8 @@ Commands, for `deskbuddy run <command> name=value ...` or `deskbuddy://<command>
 | `list.toggle` | — |
 | `todo.add` | `title`, `memo` (optional) |
 | `todo.complete` | `id` (full UUID) |
+| `todo.toggle` / `todo.remove` | `id` (full UUID) — quietly, like the row's buttons |
+| `todo.show` | `id` (full UUID) — opens the list on that to-do's detail |
 | `todo.list` | — (answers with every to-do, as in todos.json) |
 | `pomodoro.start` | `minutes`, `label` (optional), `todo` (UUID to link, optional) |
 

@@ -116,33 +116,57 @@ final class TodoPluginTests: XCTestCase {
         XCTAssertNil(todos.active.first?.completedAt)
     }
 
-    func testToDosAndHiddenHistorySurviveARestart() async throws {
-        let directory = try scratchDirectory()
-        let defaults = MemoryDefaults()
-        let store = TodoStore(directory: directory, defaults: defaults, events: EventBus())
+    func testToDosAndHiddenHistorySurviveARestart() throws {
+        let storage = PluginStorage(directory: try scratchDirectory())
+        let store = TodoStore(storage: storage, events: EventBus())
         store.add("finished")
         store.toggle(store.todos[0])
         store.clearCompletedFromList()
 
-        // Saves follow changes after a short delay
-        try await Task.sleep(for: .milliseconds(600))
-        let reopened = TodoStore(directory: directory, defaults: defaults, events: EventBus())
+        store.flush()
+        let reopened = TodoStore(storage: storage, events: EventBus())
 
         XCTAssertEqual(reopened.todos, store.todos)
         XCTAssertEqual(reopened.historyClearedAt, store.historyClearedAt)
         XCTAssertEqual(reopened.hiddenCompletedCount, 1)
     }
 
-    func testKeepsToDosWhereTheCLIReadsThem() {
-        // bin/deskbuddy reads $HOME/Library/Application Support/DeskBuddy/todos.json when the app is not running
-        XCTAssertTrue(TodoStore.defaultDirectory.path.hasSuffix("/Library/Application Support/DeskBuddy"))
+    func testQuittingWritesTheSaveThatWasStillWaitingWhereTheCLIReadsIt() throws {
+        let root = try scratchDirectory()
+        let manager = PluginManager(buddy: RecordingBuddy(), storageRoot: root)
+        let plugin = TodoPlugin()
+        manager.register(plugin)
+        manager.activateAll()
+        try XCTUnwrap(plugin.store).add("Ship 0.18")
+
+        manager.deactivateAll()
+
+        // bin/deskbuddy reads plugins/todo/todos.json when the app is not running
+        let saved = try JSONDecoder().decode([Todo].self, from: Data(contentsOf: root.appendingPathComponent("todo/todos.json")))
+        XCTAssertEqual(saved.map(\.title), ["Ship 0.18"])
+    }
+
+    func testUnreadableToDosAreSetAsideNotOverwritten() throws {
+        let directory = try scratchDirectory()
+        let garbage = Data("{ not the to-do list".utf8)
+        try garbage.write(to: directory.appendingPathComponent("todos.json"))
+
+        let store = TodoStore(storage: PluginStorage(directory: directory), events: EventBus())
+        store.add("fresh start")
+        store.flush()
+
+        XCTAssertEqual(store.todos.map(\.title), ["fresh start"])
+        let kept = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+            .filter { $0.hasPrefix("todos.unreadable-") }
+        XCTAssertEqual(kept.count, 1)
+        XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent(kept[0])), garbage)
     }
 
     // MARK: - Helpers
 
     private func activatedManager(buddy: (any Buddy)? = nil) throws -> (manager: PluginManager, store: TodoStore) {
-        let manager = PluginManager(buddy: buddy ?? RecordingBuddy())
-        let plugin = TodoPlugin(directory: try scratchDirectory(), defaults: MemoryDefaults())
+        let manager = PluginManager(buddy: buddy ?? RecordingBuddy(), storageRoot: try scratchDirectory())
+        let plugin = TodoPlugin()
         manager.register(plugin)
         manager.activateAll()
         return (manager, try XCTUnwrap(plugin.store))
@@ -169,17 +193,3 @@ private final class RecordingBuddy: Buddy {
     func openList(on page: AnyView) { openedPages += 1 }
 }
 
-/// Settings kept in memory only, so a test never writes a preferences file
-private final class MemoryDefaults: UserDefaults, @unchecked Sendable {
-    private var values: [String: Any] = [:]
-
-    init() {
-        super.init(suiteName: nil)!
-    }
-
-    override func object(forKey key: String) -> Any? { values[key] }
-    override func data(forKey key: String) -> Data? { values[key] as? Data }
-    override func set(_ value: Any?, forKey key: String) { values[key] = value }
-    override func set(_ value: Double, forKey key: String) { values[key] = value }
-    override func removeObject(forKey key: String) { values[key] = nil }
-}

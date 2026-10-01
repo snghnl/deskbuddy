@@ -19,7 +19,9 @@
 # the socket, so they start the app first if it is not running.
 set -e
 
-DATA="$HOME/Library/Application Support/DeskBuddy/todos.json"
+DATA="$HOME/Library/Application Support/DeskBuddy/plugins/todo/todos.json"
+# Where DeskBuddy 0.17 and earlier kept it
+LEGACY_DATA="$HOME/Library/Application Support/DeskBuddy/todos.json"
 # DESKBUDDY_SOCKET points the CLI at another socket (tests use it)
 SOCKET="${DESKBUDDY_SOCKET:-$HOME/Library/Application Support/DeskBuddy/deskbuddy.sock}"
 
@@ -128,7 +130,7 @@ todos_json() {
   local code=0
   call todo.list || code=$?
   if (( code == 3 )); then
-    cat "$DATA" 2>/dev/null || echo "[]"
+    cat "$DATA" 2>/dev/null || cat "$LEGACY_DATA" 2>/dev/null || echo "[]"
   elif (( code != 0 )); then
     return $code
   fi
