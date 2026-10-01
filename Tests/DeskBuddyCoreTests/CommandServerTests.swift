@@ -76,7 +76,10 @@ final class CommandServerTests: XCTestCase {
         pending.resume(with: "SQLite")
 
         wait(for: [answered], timeout: 5)
-        XCTAssertEqual(reply.text, #"{"ok":true,"result":"SQLite"}"# + "\n")
+        // Key order in the reply is not fixed, so compare what it says
+        let answer = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(try XCTUnwrap(reply.text).utf8)) as? [String: Any])
+        XCTAssertEqual(answer["ok"] as? Bool, true)
+        XCTAssertEqual(answer["result"] as? String, "SQLite")
     }
 
     func testAClientThatHangsUpCancelsTheCommandItWaitedFor() throws {
