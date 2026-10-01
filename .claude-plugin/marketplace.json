@@ -8,7 +8,7 @@
     {
       "name": "deskbuddy",
       "source": "./plugin",
-      "description": "DeskBuddy (macOS floating desktop buddy) integration — speech-bubble notifications, to-do add/list/done, and an automatic waiting-for-input alert hook"
+      "description": "DeskBuddy (macOS floating desktop buddy) integration — speech-bubble notifications, to-do add/list/done, timers, questions in a panel, and an automatic waiting-for-input alert hook"
     }
   ]
 }

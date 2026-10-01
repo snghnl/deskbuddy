@@ -116,14 +116,15 @@ bin/deskbuddy toggle                              # open/close the list
 bin/deskbuddy timer 25 "Write the report"         # start a 25-minute timer
 bin/deskbuddy run todo.list                       # run any command by name, print its answer
 bin/deskbuddy ui panel.json                       # show a panel, wait, print what the user did
+bin/deskbuddy ask "Which database?" SQLite MySQL  # ask in a panel, print the answer
 ```
 
 While DeskBuddy runs, the CLI talks to it over a socket
 (`~/Library/Application Support/DeskBuddy/deskbuddy.sock`, readable only by you), so
 errors come back with a message and a non-zero exit. When the app is not running,
 notify/add/done/toggle go through the `deskbuddy://` URL scheme, which launches it, and
-list reads `plugins/todo/todos.json` directly (or the older `todos.json`, for apps before 0.18). timer, run and ui need the socket, so they launch the app
-first. To put the CLI on PATH:
+list reads `plugins/todo/todos.json` directly (or the older `todos.json`, for apps before 0.18). timer, run, ui and ask need the socket, so they launch the
+app first. ui and ask wait for the user (ask until `--timeout`); interrupting them closes the panel. To put the CLI on PATH:
 `ln -s "$(pwd)/bin/deskbuddy" /usr/local/bin/deskbuddy`
 
 Commands, for `deskbuddy run <command> name=value ...` or `deskbuddy://<command>?name=value`:
@@ -139,6 +140,7 @@ Commands, for `deskbuddy run <command> name=value ...` or `deskbuddy://<command>
 | `todo.list` | — (answers with every to-do, as in todos.json) |
 | `pomodoro.start` | `minutes`, `label` (optional), `todo` (UUID to link, optional) |
 | `a2ui.show` | `payload` (an A2UI document) — answers once the user acts or closes the panel |
+| `claude.ask` | `question`, `options` (one per line, optional), `project` (optional) — answers `{"answer": ...}` |
 
 ### Panels (A2UI, experimental)
 
@@ -184,7 +186,8 @@ bundled CLI).
 
 What's included:
 - **Skill** (`plugin/skills/deskbuddy/`): guidelines for agents — report long-running
-  work via bubbles, add/list/complete to-dos, don't spam
+  work via bubbles, add/list/complete to-dos, ask for a decision in a panel when
+  you are away from the terminal (`deskbuddy ask`), don't spam
 - **Notification hook** (`plugin/hooks/`): when Claude Code waits for permission or
   input, a bubble appears automatically (`🔔 [project] message`). Silently does nothing
   if the app isn't installed

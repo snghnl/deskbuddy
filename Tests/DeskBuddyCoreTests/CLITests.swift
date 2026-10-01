@@ -155,6 +155,56 @@ final class CLITests: XCTestCase {
         let values: [String: String]
     }
 
+    func testAskPassesTheQuestionAndPrintsOnlyTheAnswer() throws {
+        var asked: [String: String] = [:]
+        commands.respondLater(to: "claude.ask") { arguments in
+            asked = ["question": arguments["question"] ?? "", "options": arguments["options"] ?? "", "project": arguments["project"] ?? ""]
+            return ["answer": "SQLite"]
+        }
+
+        let result = run("ask", "Which database?", "PostgreSQL", "SQLite")
+
+        XCTAssertEqual(result.err, "")
+        XCTAssertEqual(result.status, 0)
+        XCTAssertEqual(result.out, "SQLite\n")
+        XCTAssertEqual(asked, ["question": "Which database?", "options": "PostgreSQL\nSQLite",
+                               "project": URL(fileURLWithPath: FileManager.default.currentDirectoryPath).lastPathComponent])
+    }
+
+    func testAskGivesUpAfterItsTimeoutAndTakesTheQuestionBack() throws {
+        var cancelled = false
+        commands.respondLater(to: "claude.ask") { _ in
+            do {
+                try await Task.sleep(for: .seconds(30))
+            } catch {
+                cancelled = true
+                throw error
+            }
+            return ["answer": "too late"]
+        }
+
+        let result = run("ask", "Proceed?", "--timeout", "1")
+
+        XCTAssertEqual(result.status, 1)
+        XCTAssertEqual(result.err, "deskbuddy: no answer within 1 seconds\n")
+        let takenBack = expectation(description: "question taken back")
+        Task { @MainActor in
+            while !cancelled { try? await Task.sleep(for: .milliseconds(20)) }
+            takenBack.fulfill()
+        }
+        wait(for: [takenBack], timeout: 5)
+    }
+
+    func testAskReportsAQuestionClosedWithoutAnAnswer() throws {
+        commands.respondLater(to: "claude.ask") { _ in throw CommandError.invalidArgument(name: "answer", value: "none") }
+
+        let result = run("ask", "Proceed?")
+
+        XCTAssertEqual(result.status, 1)
+        XCTAssertEqual(result.out, "")
+        XCTAssertEqual(result.err, "deskbuddy: invalid answer: none\n")
+    }
+
     // MARK: - Without the socket
 
     func testWithoutTheAppWritesFallBackToTheURLScheme() throws {

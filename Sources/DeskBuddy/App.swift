@@ -1,6 +1,7 @@
 import A2UIPlugin
 import AppKit
 import CalendarPlugin
+import ClaudePlugin
 import DeskBuddyCore
 import EventKit
 import os
@@ -155,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         plugins.register(PomodoroPlugin())
         plugins.register(CalendarPlugin())
         plugins.register(A2UIPlugin())
+        plugins.register(ClaudePlugin())
         plugins.activateAll()
         registerCommands()
         startCommandServer()

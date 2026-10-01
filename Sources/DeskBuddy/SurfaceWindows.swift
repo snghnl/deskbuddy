@@ -40,6 +40,8 @@ final class SurfaceWindows: SurfacePresenter {
             }
             panels[id] = panel
             panel.setContent(content)
+            // A child of a hidden window would not show
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
             place(panel)
             characterPanel.addChildWindow(panel, ordered: .above)
             panel.orderFrontRegardless()

@@ -53,10 +53,16 @@ let package = Package(
             dependencies: ["DeskBuddyCore", "A2UIAPI"],
             path: "Sources/A2UIPlugin"
         ),
+        // Claude Code's questions to the user, shown through A2UI
+        .target(
+            name: "ClaudePlugin",
+            dependencies: ["DeskBuddyCore", "A2UIAPI"],
+            path: "Sources/ClaudePlugin"
+        ),
         // Puts the plugins together: registers them and hosts the UI they contribute to
         .executableTarget(
             name: "DeskBuddy",
-            dependencies: ["DeskBuddyCore", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin", "A2UIPlugin"],
+            dependencies: ["DeskBuddyCore", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin", "A2UIPlugin", "ClaudePlugin"],
             path: "Sources/DeskBuddy"
         ),
         // The app's own logic, such as moving old data into plugin storage
@@ -79,6 +85,12 @@ let package = Package(
             name: "A2UIPluginTests",
             dependencies: ["A2UIPlugin", "A2UIAPI", "DeskBuddyCore"],
             path: "Tests/A2UIPluginTests"
+        ),
+        // Runs a question through the real A2UI plugin, the way the app wires them
+        .testTarget(
+            name: "ClaudePluginTests",
+            dependencies: ["ClaudePlugin", "A2UIPlugin", "A2UIAPI", "DeskBuddyCore"],
+            path: "Tests/ClaudePluginTests"
         ),
         .testTarget(
             name: "CalendarPluginTests",

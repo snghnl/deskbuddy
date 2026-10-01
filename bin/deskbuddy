@@ -14,11 +14,13 @@
 #   deskbuddy run <command> [name=value ...]  Run any DeskBuddy command, print its answer
 #   deskbuddy ui <file.json | ->              Show a panel described in A2UI, wait for the
 #                                             user, print what they did as JSON
+#   deskbuddy ask "question" [option ...]     Ask the user next to the buddy, print the answer
+#       [--timeout seconds]                   (exits 1 if they close it or time runs out)
 #
 # While the app runs, commands go over its socket, so errors come back here.
 # Otherwise notify/add/done/toggle use the deskbuddy:// URL scheme, which
-# launches the app, and list reads the data file directly. timer, run and ui need
-# the socket, so they start the app first if it is not running.
+# launches the app, and list reads the data file directly. timer, run, ui and ask
+# need the socket, so they start the app first if it is not running.
 set -e
 
 DATA="$HOME/Library/Application Support/DeskBuddy/plugins/todo/todos.json"
@@ -62,6 +64,10 @@ try:
             break
         data += chunk
     reply = json.loads(data) if data else {}
+except socket.timeout:
+    # Hanging up also takes back the question or panel that was waiting
+    print(f"deskbuddy: no answer within {wait} seconds", file=sys.stderr)
+    sys.exit(1)
 except (OSError, ValueError):
     reply = {}
 if not reply.get("ok"):
@@ -232,6 +238,24 @@ PY
     # The user takes as long as they take; interrupting closes the panel
     WAIT_SECONDS=forever
     call_launching a2ui.show payload="$payload"
+    ;;
+  ask)
+    question="${2:?usage: deskbuddy ask \"question\" [option ...] [--timeout seconds]}"
+    shift 2
+    choices=()   # not "options": zsh keeps its shell options in that name
+    WAIT_SECONDS=forever
+    while (( $# )); do
+      if [[ "$1" == "--timeout" ]]; then
+        WAIT_SECONDS="${2:?--timeout needs seconds}"
+        shift 2
+      else
+        choices+=("$1")
+        shift
+      fi
+    done
+    # One option per line; the folder tells apart questions from different sessions
+    answer=$(call_launching claude.ask question="$question" options="${(pj:\n:)choices}" project="${PWD:t}")
+    python3 -c 'import json, sys; print(json.loads(sys.argv[1])["answer"])' "$answer"
     ;;
   *)
     awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
