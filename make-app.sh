@@ -32,8 +32,9 @@ cp "$PRODUCTS/DeskBuddy" "$APP/Contents/MacOS/"
 # Checked in rather than rendered here, so CI needs no extra tooling.
 # Regenerate with: swift tools/make-assets.swift icns
 [[ -f assets/AppIcon.icns ]] && cp assets/AppIcon.icns "$APP/Contents/Resources/"
-# SPM resource bundle (localization tables) — Bundle.module finds it in Contents/Resources
-cp -R "$PRODUCTS/DeskBuddy_DeskBuddy.bundle" "$APP/Contents/Resources/"
+# SPM resource bundle (localization tables, owned by DeskBuddyCore) — Bundle.module looks for
+# it in Contents/Resources and stops the app if it is missing
+cp -R "$PRODUCTS/DeskBuddy_DeskBuddyCore.bundle" "$APP/Contents/Resources/"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

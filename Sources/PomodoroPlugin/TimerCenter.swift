@@ -33,7 +33,7 @@ final class TimerCenter {
         didSet { save() }
     }
 
-    /// Called once per expired timer (bubble + sound are wired in AppDelegate)
+    /// Called once per expired timer (sound and bubble are wired by PomodoroPlugin)
     @ObservationIgnored var onFire: ((BuddyTimer) -> Void)?
 
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -86,7 +86,7 @@ final class TimerCenter {
     }
 
     private func tick() {
-        // Hold fire until AppDelegate has wired onFire — otherwise a timer that
+        // Hold fire until the plugin has wired onFire — otherwise a timer that
         // expired while the app was closed would be consumed without notifying
         guard onFire != nil else { return }
         let now = Date()

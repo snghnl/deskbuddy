@@ -10,7 +10,7 @@ extension Notification.Name {
 }
 
 enum SettingsKeys {
-    static let language = "DeskBuddy.language"
+    static let language = AppLanguage.defaultsKey
     static let showCalendar = "DeskBuddy.showCalendar"
     static let eventAlerts = "DeskBuddy.eventAlerts"
     static let eventAlertLead = "DeskBuddy.eventAlertLead"

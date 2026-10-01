@@ -10,7 +10,7 @@ final class PluginManagerTests: XCTestCase {
     }
 
     func testActivatesInRegistrationOrderAndDeactivatesInReverse() {
-        let manager = PluginManager()
+        let manager = PluginManager(buddy: RecordingBuddy())
         manager.register(plugin("a"))
         manager.register(plugin("b"))
         manager.register(plugin("c"))
@@ -23,7 +23,7 @@ final class PluginManagerTests: XCTestCase {
     }
 
     func testPluginThatFailsToActivateIsNotDeactivatedAndOthersStillStart() {
-        let manager = PluginManager()
+        let manager = PluginManager(buddy: RecordingBuddy())
         manager.register(plugin("a"))
         manager.register(plugin("broken", fails: true))
         manager.register(plugin("c"))
@@ -36,7 +36,7 @@ final class PluginManagerTests: XCTestCase {
     }
 
     func testActivatingTwiceDoesNotRestartPlugins() {
-        let manager = PluginManager()
+        let manager = PluginManager(buddy: RecordingBuddy())
         manager.register(plugin("a"))
 
         manager.activateAll()
@@ -48,7 +48,7 @@ final class PluginManagerTests: XCTestCase {
     }
 
     func testServiceProvidedByOnePluginResolvesInAnother() {
-        let manager = PluginManager()
+        let manager = PluginManager(buddy: RecordingBuddy())
         var greeting: String?
         manager.register(plugin("provider") { context in
             context.services.provide(Greeter.self, EnglishGreeter())

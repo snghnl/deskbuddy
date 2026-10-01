@@ -31,6 +31,7 @@ public struct PluginManifest: Equatable {
 /// What a plugin gets to work with. Built per plugin, so later additions such as
 /// plugin-scoped storage can be bound to the plugin they belong to.
 public struct PluginContext {
+    public let buddy: any Buddy
     public let services: ServiceRegistry
     public let slots: SlotRegistry
 }

@@ -1,4 +1,5 @@
 import AppKit
+import DeskBuddyCore
 import SwiftUI
 
 // MARK: - Bubble Shape/View

@@ -1,4 +1,5 @@
 import AppKit
+import DeskBuddyCore
 
 /// The currently selected character — a built-in character or a user-added image
 enum CharacterChoice: Equatable {

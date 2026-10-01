@@ -1,4 +1,5 @@
 import AppKit
+import DeskBuddyCore
 import EventKit
 import SwiftUI
 

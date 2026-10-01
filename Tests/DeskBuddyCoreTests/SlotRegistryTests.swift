@@ -39,7 +39,7 @@ final class SlotRegistryTests: XCTestCase {
     }
 
     func testPluginContributionReachesTheSharedRegistry() {
-        let manager = PluginManager()
+        let manager = PluginManager(buddy: RecordingBuddy())
         manager.register(TabPlugin(slot: tabs))
 
         manager.activateAll()

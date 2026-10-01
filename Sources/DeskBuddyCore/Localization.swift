@@ -2,10 +2,13 @@ import Foundation
 import Yams
 
 /// UI language preference. `.system` follows the user's macOS preferred language.
-enum AppLanguage: String, CaseIterable {
+public enum AppLanguage: String, CaseIterable {
     case system
     case korean
     case english
+
+    /// UserDefaults key holding the user's choice
+    public static let defaultsKey = "DeskBuddy.language"
 }
 
 /// YAML-backed localization.
@@ -17,12 +20,15 @@ enum AppLanguage: String, CaseIterable {
 ///
 /// The language can be changed at runtime from Settings; views re-render via the
 /// `settingsChanged` notification.
-enum L {
-    static var preference: AppLanguage {
-        AppLanguage(rawValue: UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "") ?? .system
+///
+/// Lives in Core so every feature target shares one table; a table per feature can
+/// come once the features are plugins with resources of their own.
+public enum L {
+    public static var preference: AppLanguage {
+        AppLanguage(rawValue: UserDefaults.standard.string(forKey: AppLanguage.defaultsKey) ?? "") ?? .system
     }
 
-    static var isKorean: Bool {
+    public static var isKorean: Bool {
         switch preference {
         case .korean: true
         case .english: false
@@ -31,18 +37,18 @@ enum L {
     }
 
     /// Locale for custom date formatters that should follow the app language.
-    static var locale: Locale {
+    public static var locale: Locale {
         Locale(identifier: isKorean ? "ko_KR" : "en_US")
     }
 
     /// Look up a localized string by key.
-    static func s(_ key: String) -> String {
+    public static func s(_ key: String) -> String {
         let table = isKorean ? korean : english
         return table[key] ?? english[key] ?? key
     }
 
     /// Look up a `String(format:)` entry and apply the arguments.
-    static func f(_ key: String, _ args: CVarArg...) -> String {
+    public static func f(_ key: String, _ args: CVarArg...) -> String {
         String(format: s(key), arguments: args)
     }
 

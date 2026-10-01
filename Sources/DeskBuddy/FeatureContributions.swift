@@ -11,7 +11,6 @@ enum FeatureContributions {
         services: ServiceRegistry,
         slots: SlotRegistry,
         store: TodoStore,
-        timers: TimerCenter,
         calendar: CalendarService,
         appState: AppState
     ) {
@@ -74,19 +73,6 @@ enum FeatureContributions {
             footer: { L.s("settings.integrations_footer") }
         ) {
             CalendarSettingsRows(calendar: calendar)
-        })
-
-        // MARK: Timers
-
-        slots.contribute(CoreSlots.listTabs, ListTab(
-            id: "pomodoro.timers", order: 400,
-            title: { L.s("timer.tab") },
-            count: { timers.timers.count }
-        ) {
-            TimerTabView(timers: timers, todos: services.resolve(TodoService.self))
-        })
-        slots.contribute(TodoSlots.rowAccessory, TodoRowAccessory(id: "pomodoro.state", order: 100) { todoID in
-            TimerStateIcon(timers: timers, todoID: todoID)
         })
     }
 }

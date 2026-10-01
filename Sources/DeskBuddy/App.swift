@@ -1,7 +1,7 @@
 import AppKit
 import DeskBuddyCore
+import PomodoroPlugin
 import SwiftUI
-import TodoAPI
 
 // Borderless panels cannot become key windows by default, which blocks text input — allow it via subclass
 final class FloatingPanel: NSPanel {
@@ -128,9 +128,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = TodoStore()
     private let appState = AppState()
     private let calendarService = CalendarService()
-    private let timerCenter = TimerCenter()
     private let updateService = UpdateService()
-    private let plugins = PluginManager()
+    private lazy var plugins = PluginManager(buddy: self)
 
     /// Situations where wandering must pause temporarily, e.g. while a menu is open
     private var wanderSuspended = false
@@ -146,10 +145,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SettingsKeys.autoUpdateCheck: true,
         ])
         // Before any UI is built, so the services and contributions are there when views first look
+        plugins.register(PomodoroPlugin())
         plugins.activateAll()
         FeatureContributions.register(
             services: plugins.services, slots: plugins.slots,
-            store: store, timers: timerCenter, calendar: calendarService, appState: appState
+            store: store, calendar: calendarService, appState: appState
         )
         setupCharacterPanel()
         setupListPanel()
@@ -263,16 +263,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.bubble.replace(old, with: new)
         }
         eventNotifier.start()
-
-        // Finished timers announce themselves even if the character is hidden
-        timerCenter.onFire = { [weak self] timer in
-            guard let self else { return }
-            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            NSSound(named: "Glass")?.play()
-            // Announce with the linked to-do's title when there is one
-            let title = timer.todoID.flatMap { self.plugins.services.resolve(TodoService.self)?.todo($0)?.title }
-            bubble.show(L.f("timer.done_bubble", title ?? timer.label), autoHide: notificationAutoHide)
-        }
     }
 
     // MARK: - Updates
@@ -712,6 +702,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 y: vis.maxY - size.height - 24
             ))
         }
+    }
+}
+
+/// What plugins get to do with the character
+extension AppDelegate: Buddy {
+    func say(_ message: String) {
+        if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+        bubble.show(message, autoHide: notificationAutoHide)
     }
 }
 

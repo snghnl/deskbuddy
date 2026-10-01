@@ -1,3 +1,4 @@
+import DeskBuddyCore
 import Foundation
 import Observation
 import TodoAPI

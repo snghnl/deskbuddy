@@ -1,5 +1,6 @@
 import AppKit
 import CryptoKit
+import DeskBuddyCore
 import Foundation
 
 /// Dotted release version ("0.13.0"), compared piece by piece so 0.9.0 < 0.10.0.
