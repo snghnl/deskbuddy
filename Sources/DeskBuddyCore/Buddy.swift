@@ -16,10 +16,6 @@ public protocol Buddy: AnyObject {
     /// for short confirmations that should not linger.
     func say(_ message: String, closingAfter seconds: TimeInterval)
 
-    /// Changes the text of the bubble showing `old` to `new`, e.g. a countdown ticking down.
-    /// Does nothing once that bubble has closed or another message has replaced it.
-    func replace(_ old: String, with new: String)
-
     /// Opens the list panel under the buddy, covered by `page` — e.g. a to-do's detail when
     /// the todo.show command runs. Views already inside the panel use the `listPage`
     /// environment action instead.

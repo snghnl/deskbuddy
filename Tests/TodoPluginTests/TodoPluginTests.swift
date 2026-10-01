@@ -133,7 +133,7 @@ final class TodoPluginTests: XCTestCase {
 
     func testQuittingWritesTheSaveThatWasStillWaitingWhereTheCLIReadsIt() throws {
         let root = try scratchDirectory()
-        let manager = PluginManager(buddy: RecordingBuddy(), storageRoot: root)
+        let manager = PluginManager(buddy: RecordingBuddy(), presenter: NoWindows(), storageRoot: root)
         let plugin = TodoPlugin()
         manager.register(plugin)
         manager.activateAll()
@@ -165,7 +165,7 @@ final class TodoPluginTests: XCTestCase {
     // MARK: - Helpers
 
     private func activatedManager(buddy: (any Buddy)? = nil) throws -> (manager: PluginManager, store: TodoStore) {
-        let manager = PluginManager(buddy: buddy ?? RecordingBuddy(), storageRoot: try scratchDirectory())
+        let manager = PluginManager(buddy: buddy ?? RecordingBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
         let plugin = TodoPlugin()
         manager.register(plugin)
         manager.activateAll()
@@ -189,7 +189,13 @@ private final class RecordingBuddy: Buddy {
     let isVisible = true
     func say(_ message: String) { said.append(message) }
     func say(_ message: String, closingAfter seconds: TimeInterval) { said.append(message) }
-    func replace(_ old: String, with new: String) {}
     func openList(on page: AnyView) { openedPages += 1 }
 }
 
+/// Surfaces go nowhere
+@MainActor
+private final class NoWindows: SurfacePresenter {
+    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {}
+    func update(_ surface: Surface, id: SurfaceID) {}
+    func hide(_ id: SurfaceID) {}
+}

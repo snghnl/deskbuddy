@@ -7,7 +7,7 @@ import XCTest
 @MainActor
 final class PomodoroPluginTests: XCTestCase {
     func testActivationAddsTheTimerTabAndTheToDoRowIcon() throws {
-        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: try scratchDirectory())
+        let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
         manager.register(PomodoroPlugin())
 
         manager.activateAll()
@@ -17,7 +17,7 @@ final class PomodoroPluginTests: XCTestCase {
     }
 
     func testStartCommandRejectsMinutesThatAreNotAPositiveNumber() throws {
-        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: try scratchDirectory())
+        let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
         manager.register(PomodoroPlugin())
         manager.activateAll()
 
@@ -29,7 +29,7 @@ final class PomodoroPluginTests: XCTestCase {
     }
 
     func testActivatesWithoutTheToDoFeature() throws {
-        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: try scratchDirectory())
+        let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
         manager.register(PomodoroPlugin())
 
         manager.activateAll()
@@ -40,7 +40,7 @@ final class PomodoroPluginTests: XCTestCase {
     }
 
     func testDeletingAToDoUnlinksItsTimersAndKeepsThemRunning() throws {
-        let manager = PluginManager(buddy: QuietBuddy(), storageRoot: try scratchDirectory())
+        let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
         let plugin = PomodoroPlugin()
         manager.register(plugin)
         manager.activateAll()
@@ -81,7 +81,13 @@ private final class QuietBuddy: Buddy {
     let isVisible = true
     func say(_ message: String) {}
     func say(_ message: String, closingAfter seconds: TimeInterval) {}
-    func replace(_ old: String, with new: String) {}
     func openList(on page: AnyView) {}
 }
 
+/// Surfaces go nowhere
+@MainActor
+private final class NoWindows: SurfacePresenter {
+    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {}
+    func update(_ surface: Surface, id: SurfaceID) {}
+    func hide(_ id: SurfaceID) {}
+}

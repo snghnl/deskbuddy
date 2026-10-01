@@ -22,7 +22,7 @@ public final class CalendarPlugin: DeskBuddyPlugin {
         ])
 
         let calendar = CalendarService()
-        let notifier = EventNotifier(calendar: calendar, buddy: context.buddy)
+        let notifier = EventNotifier(calendar: calendar, buddy: context.buddy, surfaces: context.surfaces)
         notifier.start()
         self.notifier = notifier
 

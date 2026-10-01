@@ -9,6 +9,7 @@ public final class PluginManager {
     public let events = EventBus()
     public let services = ServiceRegistry()
     public let slots = SlotRegistry()
+    public let surfaces: SurfaceManager
 
     private var registered: [any DeskBuddyPlugin] = []
     /// In activation order — deactivated in reverse
@@ -18,10 +19,11 @@ public final class PluginManager {
     /// Each plugin's storage is the folder named after its id in here
     private let storageRoot: URL
 
-    /// `storageRoot` is where plugins keep their data — the app's
-    /// `Application Support/DeskBuddy/plugins`, a temporary folder in tests
-    public init(buddy: any Buddy, storageRoot: URL) {
+    /// `presenter` draws the surfaces plugins put up. `storageRoot` is where plugins keep their
+    /// data — the app's `Application Support/DeskBuddy/plugins`, a temporary folder in tests.
+    public init(buddy: any Buddy, presenter: any SurfacePresenter, storageRoot: URL) {
         self.buddy = buddy
+        surfaces = SurfaceManager(presenter: presenter)
         self.storageRoot = storageRoot
     }
 
@@ -37,8 +39,8 @@ public final class PluginManager {
         for plugin in registered where !active.contains(where: { $0.manifest.id == plugin.manifest.id }) {
             do {
                 let storage = PluginStorage(directory: storageRoot.appendingPathComponent(plugin.manifest.id, isDirectory: true))
-                try plugin.activate(PluginContext(buddy: buddy, commands: commands, events: events,
-                                                  services: services, slots: slots, storage: storage))
+                try plugin.activate(PluginContext(buddy: buddy, commands: commands, events: events, services: services,
+                                                  slots: slots, surfaces: surfaces, storage: storage))
                 active.append(plugin)
             } catch {
                 log.error("\(plugin.manifest.id, privacy: .public) failed to activate: \(String(describing: error), privacy: .public)")

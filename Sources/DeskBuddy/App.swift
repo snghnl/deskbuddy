@@ -128,12 +128,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeys: HotKeyCenter!
     private var settingsWindow: NSWindow?
     private var bubble: BubbleController!
+    private var surfaceWindows: SurfaceWindows!
     private let appState = AppState()
     private let updateService = UpdateService()
     /// Application Support/DeskBuddy: the plugins' data, the command socket, backups
     private static let appFolder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("DeskBuddy", isDirectory: true)
-    private lazy var plugins = PluginManager(buddy: self,
+    private lazy var plugins = PluginManager(buddy: self, presenter: self,
                                              storageRoot: Self.appFolder.appendingPathComponent("plugins", isDirectory: true))
     private var commandServer: CommandServer?
 
@@ -274,6 +275,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bubble = BubbleController(characterPanel: characterPanel)
         bubble.onVisibleChange = { [weak self] visible in
             self?.appState.talking = visible
+        }
+        surfaceWindows = SurfaceWindows(characterPanel: characterPanel, bubble: bubble) { [weak self] in
+            self?.notificationAutoHide
         }
     }
 
@@ -729,10 +733,6 @@ extension AppDelegate: Buddy {
         show(message, autoHide: seconds)
     }
 
-    func replace(_ old: String, with new: String) {
-        bubble.replace(old, with: new)
-    }
-
     func openList(on page: AnyView) {
         if !listPanel.isVisible {
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
@@ -744,6 +744,21 @@ extension AppDelegate: Buddy {
     private func show(_ message: String, autoHide: TimeInterval?) {
         if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
         bubble.show(message, autoHide: autoHide)
+    }
+}
+
+/// Plugins only put surfaces up after launch, by which time the windows exist
+extension AppDelegate: SurfacePresenter {
+    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {
+        surfaceWindows.show(surface, id: id, closed: closed)
+    }
+
+    func update(_ surface: Surface, id: SurfaceID) {
+        surfaceWindows.update(surface, id: id)
+    }
+
+    func hide(_ id: SurfaceID) {
+        surfaceWindows.hide(id)
     }
 }
 

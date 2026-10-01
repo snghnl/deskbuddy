@@ -282,6 +282,12 @@ final class BubbleController {
         if panel.isVisible { layout(new) }
     }
 
+    /// Hides `message` if it is still the one showing (or suspended); a newer message stays
+    func hide(ifShowing message: String) {
+        guard current?.message == message else { return }
+        hide()
+    }
+
     /// Fully dismiss (click or auto-hide) — discards any suspended message too
     func hide() {
         current = nil

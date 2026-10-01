@@ -71,7 +71,7 @@ final class PluginStorageTests: XCTestCase {
     }
 
     func testEachPluginGetsAFolderNamedAfterItsID() throws {
-        let manager = PluginManager(buddy: RecordingBuddy(), storageRoot: root)
+        let manager = PluginManager(buddy: RecordingBuddy(), presenter: RecordingPresenter(), storageRoot: root)
         manager.register(Saver(id: "first"))
         manager.register(Saver(id: "second"))
 

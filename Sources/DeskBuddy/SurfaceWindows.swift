@@ -1,0 +1,159 @@
+import AppKit
+import DeskBuddyCore
+import SwiftUI
+
+/// Puts plugins' surfaces on screen. A bubble goes through the buddy's speech bubble. A panel
+/// gets a floating window beside the character that follows it when dragged, shows on every
+/// Space and over full-screen apps, and takes keyboard focus without activating the app.
+@MainActor
+final class SurfaceWindows: SurfacePresenter {
+    private let characterPanel: NSPanel
+    private let bubble: BubbleController
+    /// The user's bubble delay at the moment of showing — nil keeps a bubble until clicked
+    private let bubbleAutoHide: () -> TimeInterval?
+
+    /// What each bubble surface last said, to find it again in the shared bubble
+    private var bubbleTexts: [SurfaceID: String] = [:]
+    private var panels: [SurfaceID: SurfacePanel] = [:]
+
+    init(characterPanel: NSPanel, bubble: BubbleController, bubbleAutoHide: @escaping () -> TimeInterval?) {
+        self.characterPanel = characterPanel
+        self.bubble = bubble
+        self.bubbleAutoHide = bubbleAutoHide
+    }
+
+    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {
+        hide(id)
+        switch surface {
+        case .bubble(let message):
+            bubbleTexts[id] = message
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+            bubble.show(message, autoHide: bubbleAutoHide()) { [weak self] in
+                self?.bubbleTexts[id] = nil
+                closed()
+            }
+        case .panel(let content):
+            let panel = SurfacePanel()
+            panel.onClose = { [weak self] in
+                self?.hide(id)
+                closed()
+            }
+            panels[id] = panel
+            panel.setContent(content)
+            place(panel)
+            characterPanel.addChildWindow(panel, ordered: .above)
+            panel.orderFrontRegardless()
+            panel.makeKey()
+        }
+    }
+
+    func update(_ surface: Surface, id: SurfaceID) {
+        switch surface {
+        case .bubble(let message):
+            guard let old = bubbleTexts[id] else { return }
+            bubbleTexts[id] = message
+            bubble.replace(old, with: message)
+        case .panel(let content):
+            guard let panel = panels[id] else { return }
+            panel.setContent(content)
+            place(panel)
+        }
+    }
+
+    func hide(_ id: SurfaceID) {
+        if let message = bubbleTexts.removeValue(forKey: id) {
+            bubble.hide(ifShowing: message)
+        }
+        if let panel = panels.removeValue(forKey: id) {
+            characterPanel.removeChildWindow(panel)
+            panel.orderOut(nil)
+        }
+    }
+
+    /// Beside the character, on whichever side has room, vertically centered on it
+    private func place(_ panel: SurfacePanel) {
+        let size = panel.frame.size
+        let character = characterPanel.frame
+        let visible = (characterPanel.screen ?? NSScreen.main)?.visibleFrame ?? .zero
+        let gap: CGFloat = 6
+        let x = visible.maxX - character.maxX >= size.width + gap
+            ? character.maxX + gap
+            : character.minX - size.width - gap
+        let y = character.midY - size.height / 2
+        panel.setFrameOrigin(NSPoint(
+            x: max(visible.minX + 4, min(x, visible.maxX - size.width - 4)),
+            y: max(visible.minY + 4, min(y, visible.maxY - size.height - 4))
+        ))
+    }
+}
+
+/// A plugin's panel: borderless like the list panel, with a close button and Escape to close
+private final class SurfacePanel: NSPanel {
+    var onClose: (() -> Void)?
+    private let hosting = NSHostingView(rootView: AnyView(EmptyView()))
+
+    init() {
+        super.init(contentRect: NSRect(x: 0, y: 0, width: 300, height: 120),
+                   styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        level = .floating
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+        hidesOnDeactivate = false
+        isReleasedWhenClosed = false
+        hosting.sizingOptions = []
+        contentView = hosting
+    }
+
+    // Borderless panels cannot become key by default, and then text fields cannot take input
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+
+    override func cancelOperation(_ sender: Any?) {
+        onClose?()
+    }
+
+    /// Wraps the plugin's view in the panel's chrome and sizes the window to fit it
+    func setContent(_ content: AnyView) {
+        let view = AnyView(SurfacePanelChrome(content: content) { [weak self] in self?.onClose?() })
+        hosting.rootView = view
+        var size = NSHostingController(rootView: view).sizeThatFits(in: CGSize(width: SurfacePanelChrome.maxWidth, height: 700))
+        if size.width <= 1 || size.height <= 1 {
+            size = CGSize(width: 300, height: 120)   // Last-resort fallback
+        }
+        setContentSize(size)
+    }
+}
+
+struct SurfacePanelChrome: View {
+    static let maxWidth: CGFloat = 360
+
+    let content: AnyView
+    let close: () -> Void
+
+    var body: some View {
+        content
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
+            .frame(minWidth: 240, maxWidth: Self.maxWidth, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(.white.opacity(0.15), lineWidth: 1)
+            )
+            .overlay(alignment: .topTrailing) {
+                Button(action: close) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                        .padding(8)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(L.s("surface.close"))
+            }
+    }
+}

@@ -17,9 +17,5 @@ final class RecordingBuddy: Buddy {
         said.append(message)
     }
 
-    func replace(_ old: String, with new: String) {
-        if let i = said.lastIndex(of: old) { said[i] = new }
-    }
-
     func openList(on page: AnyView) {}
 }

@@ -5,16 +5,20 @@ import Foundation
 /// The latest alert keeps counting down (n min → n-1 min → … → starting now) until the event starts.
 @MainActor
 final class EventNotifier {
+    private static let alert = SurfaceID("calendar.eventAlert")
+
     private let calendar: CalendarService
     private let buddy: any Buddy
+    private let surfaces: SurfaceManager
     private var task: Task<Void, Never>?
     private var notifiedIDs: Set<String> = []
     /// The alert currently counting down, with the text last sent for it
     private var countdown: (event: CalendarEvent, message: String)?
 
-    init(calendar: CalendarService, buddy: any Buddy) {
+    init(calendar: CalendarService, buddy: any Buddy, surfaces: SurfaceManager) {
         self.calendar = calendar
         self.buddy = buddy
+        self.surfaces = surfaces
     }
 
     func start() {
@@ -48,7 +52,7 @@ final class EventNotifier {
                 let message = Self.message(for: event, now: now)
                 countdown = (event, message)
                 // Not worth bringing a hidden buddy out for
-                if buddy.isVisible { buddy.say(message) }
+                if buddy.isVisible { surfaces.present(.bubble(message), id: Self.alert) }
             }
         }
 
@@ -62,7 +66,7 @@ final class EventNotifier {
         guard let countdown else { return }
         let message = Self.message(for: countdown.event, now: now)
         if message != countdown.message {
-            buddy.replace(countdown.message, with: message)
+            surfaces.update(Self.alert, to: .bubble(message))
         }
         self.countdown = now < countdown.event.start ? (countdown.event, message) : nil
     }
