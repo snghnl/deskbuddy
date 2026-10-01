@@ -1,5 +1,6 @@
 import DeskBuddyCore
 @testable import PomodoroPlugin
+import SwiftUI
 import TodoAPI
 import XCTest
 
@@ -58,8 +59,11 @@ final class PomodoroPluginTests: XCTestCase {
 
 @MainActor
 private final class QuietBuddy: Buddy {
+    let isVisible = true
     func say(_ message: String) {}
     func say(_ message: String, closingAfter seconds: TimeInterval) {}
+    func replace(_ old: String, with new: String) {}
+    func openList(on page: AnyView) {}
 }
 
 /// Settings kept in memory only, so a test never writes a preferences file

@@ -88,7 +88,7 @@ During development you can also just `swift run`. No Xcode project — plain Swi
   starts, the character raises a speech bubble. It stays until clicked, follows the
   character around, and repositions above/below/left/right based on screen space
 - **Language setting**: follow the system language or force Korean/English from Settings.
-  All strings live in `Sources/DeskBuddy/Resources/Localizations/*.yml` — translation
+  All strings live in `Sources/DeskBuddyCore/Resources/Localizations/*.yml` — translation
   fixes and new languages are welcome as PRs
 - **Always on top**: `NSPanel` at `.floating` level, visible on all Spaces and over
   full-screen apps
@@ -168,20 +168,20 @@ System Settings → General → Login Items → add `build/DeskBuddy.app`.
 
 ## Project Layout
 
-- `Sources/DeskBuddy/App.swift` — entry point, character/list panels (NSPanel subclasses), click/drag/throw handling, menus, settings window, URL scheme
-- `Sources/DeskBuddy/CharacterView.swift` — the built-in character (Shape drawing + animation), custom image rendering
-- `Sources/DeskBuddy/CustomCharacters.swift` — custom character images, display names, image cache
-- `Sources/DeskBuddy/WanderController.swift` — wandering (pick target → walk → rest loop)
-- `Sources/DeskBuddy/ThrowController.swift` — throw physics (gravity, restitution, friction)
-- `Sources/DeskBuddy/HotKeyCenter.swift` — Carbon global hotkey
-- `Sources/DeskBuddy/Bubble.swift` — speech bubble panel + event alert watcher
-- `Sources/DeskBuddy/CalendarService.swift` — EventKit integration (access, queries, change tracking)
-- `Sources/DeskBuddy/CalendarView.swift` — calendar tab (heatmap grid + events/completions)
-- `Sources/DeskBuddy/SettingsView.swift` — settings (language, characters, toggles, hotkey recorder)
-- `Sources/DeskBuddy/TodoListView.swift` — list (To Do/Done/Calendar tabs) + detail page
-- `Sources/DeskBuddy/TodoStore.swift` — model + JSON persistence
-- `Sources/DeskBuddy/Localization.swift` — YAML-backed localization (`L.s("key")` / `L.f("key", args...)`)
-- `Sources/DeskBuddy/Resources/Localizations/` — translation tables (`ko.yml`, `en.yml`)
+The app is a small host plus built-in plugins, each its own SwiftPM target. A plugin depends on
+DeskBuddyCore and on other features' API modules, never on another plugin.
+
+- `Sources/DeskBuddyCore/` — what plugins build on: the plugin lifecycle (`Plugins/`), services, slots
+  on the shared UI (`Slots/`), commands and the CLI socket (`Commands/`), events (`Events/`), the
+  `Buddy` protocol, and YAML-backed localization (`L.s("key")` / `L.f("key", args...)`) with its
+  tables in `Resources/Localizations/` (`ko.yml`, `en.yml`)
+- `Sources/TodoAPI/` — what the to-do feature offers others: `TodoService`, `TodoDeleted`, the to-do row slot
+- `Sources/TodoPlugin/` — to-dos: model and JSON persistence, To Do/Done tabs, detail page, history settings
+- `Sources/PomodoroPlugin/` — timers: the Timer tab, timer icons on to-do rows, the done bubble
+- `Sources/CalendarPlugin/` — the Calendar tab (completion heatmap + EventKit events), calendar settings, event alerts
+- `Sources/DeskBuddy/` — the host: registers the plugins, draws the character, list panel, speech
+  bubble and settings window, and handles click/drag/throw, wandering, the hotkey, menus, the URL
+  scheme and updates
 - `bin/deskbuddy` — CLI for agent integration
 - `plugin/` — Claude Code plugin (skill, hook, bundled CLI)
 - `tools/make-assets.swift` — renders the website art and link-preview card from the same shape the app draws

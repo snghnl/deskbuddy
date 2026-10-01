@@ -8,21 +8,19 @@ struct ListPanelView: View {
     @ObservedObject var appState: AppState
     let slots: SlotRegistry
 
-    /// Covers the whole panel while set — tabs open it through the `listPage` environment action
-    @State private var page: AnyView?
-
     private var tabs: [ListTab] { slots.contributions(to: CoreSlots.listTabs) }
     private var selectedTab: ListTab? { tabs.first { $0.id == appState.tab } ?? tabs.first }
 
     var body: some View {
         Group {
-            if let page {
+            if let page = appState.listPage {
                 page
             } else {
                 tabPage
             }
         }
-        .environment(\.listPage, ListPageAction(present: { page = $0 }, dismiss: { page = nil }))
+        // Tabs open pages through this; plugins outside the panel go through Buddy.openList
+        .environment(\.listPage, ListPageAction(present: { appState.listPage = $0 }, dismiss: { appState.listPage = nil }))
         .environment(\.listPanelVisible, appState.listVisible)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))

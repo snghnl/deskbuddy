@@ -1,32 +1,32 @@
 import DeskBuddyCore
 import SwiftUI
-import TodoPlugin
+import TodoAPI
 
 /// Tab showing completion history as a monthly calendar.
 /// Days with more completions are shaded darker; tapping a date lists that day's completed items below.
 struct CalendarTabView: View {
-    let store: TodoStore
     let calendar: CalendarService
+    /// nil without the to-do feature: then only events show
+    let todos: (any TodoService)?
+    let commands: CommandRegistry
 
-    @Environment(\.listPage) private var listPage
-    @AppStorage(SettingsKeys.showCalendar) private var showEvents = true
+    @AppStorage(CalendarSettings.showEvents) private var showEvents = true
     @State private var month: Date
     @State private var selectedDay: Date
 
     private let cal = Calendar.current
 
-    init(store: TodoStore, calendar: CalendarService) {
-        self.store = store
+    init(calendar: CalendarService, todos: (any TodoService)?, commands: CommandRegistry) {
         self.calendar = calendar
+        self.todos = todos
+        self.commands = commands
         let cal = Calendar.current
         _month = State(initialValue: cal.dateInterval(of: .month, for: Date())?.start ?? Date())
         _selectedDay = State(initialValue: cal.startOfDay(for: Date()))
     }
 
-    private var completedByDay: [Date: [Todo]] {
-        Dictionary(grouping: store.todos.filter { $0.isDone }) {
-            cal.startOfDay(for: $0.completionDate)
-        }
+    private func completed(on day: Date) -> [TodoSummary] {
+        todos?.completed(on: day) ?? []
     }
 
     var body: some View {
@@ -42,6 +42,8 @@ struct CalendarTabView: View {
             .padding(.vertical, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Pick up anything EventKit did not announce, such as the day rolling over
+        .onAppear { calendar.refresh() }
     }
 
     // MARK: - Month navigation
@@ -122,7 +124,7 @@ struct CalendarTabView: View {
     }
 
     private func dayCell(_ day: Date, hasEvent: Bool) -> some View {
-        let count = completedByDay[day]?.count ?? 0
+        let count = completed(on: day).count
         let isToday = cal.isDateInToday(day)
         let isSelected = day == selectedDay
         return Button {
@@ -162,8 +164,7 @@ struct CalendarTabView: View {
     // MARK: - Selected day's events + completed items
 
     private var dayDetail: some View {
-        let items = (completedByDay[selectedDay] ?? [])
-            .sorted { $0.completionDate > $1.completionDate }
+        let items = completed(on: selectedDay)
         // Read revision so this view re-renders when the calendar DB changes
         let events = (showEvents && calendar.revision >= 0) ? calendar.events(on: selectedDay) : []
 
@@ -197,9 +198,7 @@ struct CalendarTabView: View {
                     .padding(.vertical, 10)
             } else {
                 ForEach(items) { todo in
-                    TodoRow(todo: todo, store: store) {
-                        listPage.present(TodoDetailPage(id: todo.id, store: store))
-                    }
+                    CompletedTodoRow(todo: todo, commands: commands)
                 }
             }
         }
@@ -271,9 +270,9 @@ struct CalendarTabView: View {
 struct CalendarSettingsRows: View {
     let calendar: CalendarService
 
-    @AppStorage(SettingsKeys.showCalendar) private var showCalendar = true
-    @AppStorage(SettingsKeys.eventAlerts) private var eventAlerts = true
-    @AppStorage(SettingsKeys.eventAlertLead) private var eventAlertLead = 10
+    @AppStorage(CalendarSettings.showEvents) private var showCalendar = true
+    @AppStorage(CalendarSettings.eventAlerts) private var eventAlerts = true
+    @AppStorage(CalendarSettings.eventAlertLead) private var eventAlertLead = 10
 
     var body: some View {
         integrationRow

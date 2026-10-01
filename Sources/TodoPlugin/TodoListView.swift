@@ -144,19 +144,13 @@ struct CompletedTodoList: View {
 
 /// A to-do's detail as a list panel page. Looks the to-do up on every render so changes made
 /// elsewhere show up, and goes back to the list if the to-do is deleted while open.
-/// `package` for the Calendar tab, which opens it from its day list until PR 10.
-package struct TodoDetailPage: View {
+struct TodoDetailPage: View {
     let id: UUID
     let store: TodoStore
 
     @Environment(\.listPage) private var listPage
 
-    package init(id: UUID, store: TodoStore) {
-        self.id = id
-        self.store = store
-    }
-
-    package var body: some View {
+    var body: some View {
         if let todo = store.todos.first(where: { $0.id == id }) {
             TodoDetailView(todo: todo, store: store) { listPage.dismiss() }
         } else {
@@ -210,8 +204,7 @@ struct HistorySettingsRows: View {
     }
 }
 
-/// A to-do in a list. `package` for the Calendar tab's day list until PR 10.
-package struct TodoRow: View {
+struct TodoRow: View {
     let todo: Todo
     let store: TodoStore
     /// Shown after the title. Only the To Do tab passes these.
@@ -219,14 +212,7 @@ package struct TodoRow: View {
     let onSelect: () -> Void
     @State private var hovering = false
 
-    package init(todo: Todo, store: TodoStore, accessories: [TodoRowAccessory] = [], onSelect: @escaping () -> Void) {
-        self.todo = todo
-        self.store = store
-        self.accessories = accessories
-        self.onSelect = onSelect
-    }
-
-    package var body: some View {
+    var body: some View {
         HStack(spacing: 8) {
             Button {
                 store.toggle(todo)

@@ -1,4 +1,5 @@
 import DeskBuddyCore
+import SwiftUI
 import TodoAPI
 @testable import TodoPlugin
 import XCTest
@@ -65,6 +66,56 @@ final class TodoPluginTests: XCTestCase {
         }
     }
 
+    func testToggleRemoveAndShowCommandsActOnTheNamedToDo() throws {
+        let buddy = RecordingBuddy()
+        let (manager, store) = try activatedManager(buddy: buddy)
+        store.add("Water plants")
+        let id = try XCTUnwrap(store.todos.first).id.uuidString
+        var deleted: [String] = []
+        manager.events.subscribe(TodoDeleted.self) { deleted.append($0.id.uuidString) }
+
+        try manager.commands.execute("todo.toggle", CommandArguments(["id": id]))
+        XCTAssertEqual(store.todos.first?.isDone, true)
+        try manager.commands.execute("todo.toggle", CommandArguments(["id": id]))
+        XCTAssertEqual(store.todos.first?.isDone, false)
+
+        try manager.commands.execute("todo.show", CommandArguments(["id": id]))
+        XCTAssertEqual(buddy.openedPages, 1)
+
+        try manager.commands.execute("todo.remove", CommandArguments(["id": id]))
+        XCTAssertTrue(store.todos.isEmpty)
+        XCTAssertEqual(deleted, [id])
+        XCTAssertTrue(buddy.said.isEmpty, "row actions stay quiet")
+
+        for command in ["todo.toggle", "todo.remove", "todo.show"] {
+            XCTAssertThrowsError(try manager.commands.execute(command, CommandArguments(["id": id]))) {
+                XCTAssertEqual($0 as? CommandError, .invalidArgument(name: "id", value: id))
+            }
+        }
+    }
+
+    func testCompletedOnADayListsThatDaysCompletionsLatestFirstHiddenOnesIncluded() throws {
+        let (manager, store) = try activatedManager()
+        let todos = try XCTUnwrap(manager.services.resolve(TodoService.self))
+        let today = Date()
+        let yesterday = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: -1, to: today))
+        store.todos = [
+            Todo(title: "open"),
+            Todo(title: "earlier today", isDone: true, completedAt: today.addingTimeInterval(-60)),
+            Todo(title: "yesterday", isDone: true, completedAt: yesterday),
+            Todo(title: "later today", isDone: true, memo: "note", completedAt: today),
+        ]
+        store.clearCompletedFromList()
+
+        let done = todos.completed(on: today)
+
+        XCTAssertEqual(done.map(\.title), ["later today", "earlier today"])
+        XCTAssertEqual(done.map(\.hasMemo), [true, false])
+        XCTAssertTrue(done.allSatisfy { $0.isDone && $0.completedAt != nil })
+        XCTAssertEqual(todos.completed(on: yesterday).map(\.title), ["yesterday"])
+        XCTAssertNil(todos.active.first?.completedAt)
+    }
+
     func testToDosAndHiddenHistorySurviveARestart() async throws {
         let directory = try scratchDirectory()
         let defaults = MemoryDefaults()
@@ -89,8 +140,8 @@ final class TodoPluginTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func activatedManager() throws -> (manager: PluginManager, store: TodoStore) {
-        let manager = PluginManager(buddy: QuietBuddy())
+    private func activatedManager(buddy: (any Buddy)? = nil) throws -> (manager: PluginManager, store: TodoStore) {
+        let manager = PluginManager(buddy: buddy ?? RecordingBuddy())
         let plugin = TodoPlugin(directory: try scratchDirectory(), defaults: MemoryDefaults())
         manager.register(plugin)
         manager.activateAll()
@@ -108,9 +159,14 @@ final class TodoPluginTests: XCTestCase {
 }
 
 @MainActor
-private final class QuietBuddy: Buddy {
-    func say(_ message: String) {}
-    func say(_ message: String, closingAfter seconds: TimeInterval) {}
+private final class RecordingBuddy: Buddy {
+    private(set) var said: [String] = []
+    private(set) var openedPages = 0
+    let isVisible = true
+    func say(_ message: String) { said.append(message) }
+    func say(_ message: String, closingAfter seconds: TimeInterval) { said.append(message) }
+    func replace(_ old: String, with new: String) {}
+    func openList(on page: AnyView) { openedPages += 1 }
 }
 
 /// Settings kept in memory only, so a test never writes a preferences file

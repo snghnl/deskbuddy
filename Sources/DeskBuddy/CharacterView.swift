@@ -259,6 +259,9 @@ final class AppState: ObservableObject {
     @Published var listVisible = false
     /// Id of the list panel's selected tab (also switched with ⌘1–⌘9); nil means the first tab
     @Published var tab: String?
+    /// Covers the whole list panel while set — a to-do's detail, say. Kept while the panel is
+    /// closed, so it is still there when the panel opens again.
+    @Published var listPage: AnyView?
     /// Whether the character is walking while roaming freely
     @Published var walking = false
     /// Facing direction

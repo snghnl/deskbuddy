@@ -36,9 +36,16 @@ let package = Package(
             dependencies: ["DeskBuddyCore", "TodoAPI"],
             path: "Sources/PomodoroPlugin"
         ),
+        // The Calendar tab, calendar settings and event alerts; reads to-dos through TodoAPI
+        .target(
+            name: "CalendarPlugin",
+            dependencies: ["DeskBuddyCore", "TodoAPI"],
+            path: "Sources/CalendarPlugin"
+        ),
+        // Puts the plugins together: registers them and hosts the UI they contribute to
         .executableTarget(
             name: "DeskBuddy",
-            dependencies: ["DeskBuddyCore", "TodoAPI", "TodoPlugin", "PomodoroPlugin"],
+            dependencies: ["DeskBuddyCore", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin"],
             path: "Sources/DeskBuddy"
         ),
         .testTarget(
@@ -50,6 +57,11 @@ let package = Package(
             name: "TodoPluginTests",
             dependencies: ["TodoPlugin", "DeskBuddyCore", "TodoAPI"],
             path: "Tests/TodoPluginTests"
+        ),
+        .testTarget(
+            name: "CalendarPluginTests",
+            dependencies: ["CalendarPlugin", "DeskBuddyCore", "TodoAPI"],
+            path: "Tests/CalendarPluginTests"
         ),
         .testTarget(
             name: "PomodoroPluginTests",

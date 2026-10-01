@@ -11,9 +11,6 @@ extension Notification.Name {
 
 enum SettingsKeys {
     static let language = AppLanguage.defaultsKey
-    static let showCalendar = "DeskBuddy.showCalendar"
-    static let eventAlerts = "DeskBuddy.eventAlerts"
-    static let eventAlertLead = "DeskBuddy.eventAlertLead"
     /// Seconds before notification bubbles close themselves; 0 keeps them until clicked
     static let bubbleAutoHide = "DeskBuddy.bubbleAutoHide"
     static let character = "DeskBuddy.character"

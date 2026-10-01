@@ -3,12 +3,10 @@ import Foundation
 import Observation
 import TodoAPI
 
-// `package` marks what the Calendar tab reads until Calendar moves out of the app (PR 10)
-
-package struct Todo: Identifiable, Codable, Equatable {
-    package var id = UUID()
+struct Todo: Identifiable, Codable, Equatable {
+    var id = UUID()
     var title: String
-    package var isDone = false
+    var isDone = false
     var createdAt = Date()
     var memo: String?
     /// When the item was completed — used to group by date in the Done tab
@@ -17,7 +15,7 @@ package struct Todo: Identifiable, Codable, Equatable {
 
 extension Todo {
     /// Completion time — legacy data has no completedAt, so fall back to the creation time
-    package var completionDate: Date { completedAt ?? createdAt }
+    var completionDate: Date { completedAt ?? createdAt }
 }
 
 /// A group of completed items bucketed by day in the Done tab
@@ -29,8 +27,8 @@ struct CompletedGroup: Identifiable {
 
 @MainActor
 @Observable
-package final class TodoStore {
-    package internal(set) var todos: [Todo] = [] {
+final class TodoStore {
+    var todos: [Todo] = [] {
         didSet { scheduleSave() }
     }
 
@@ -198,11 +196,26 @@ package final class TodoStore {
     }
 }
 extension TodoStore: TodoService {
-    package var active: [TodoSummary] {
-        activeTodos.map { TodoSummary(id: $0.id, title: $0.title) }
+    var active: [TodoSummary] {
+        activeTodos.map(\.summary)
     }
 
-    package func todo(_ id: UUID) -> TodoSummary? {
-        todos.first { $0.id == id }.map { TodoSummary(id: $0.id, title: $0.title) }
+    func todo(_ id: UUID) -> TodoSummary? {
+        todos.first { $0.id == id }?.summary
+    }
+
+    func completed(on day: Date) -> [TodoSummary] {
+        let calendar = Calendar.current
+        return completedTodos
+            .filter { calendar.isDate($0.completionDate, inSameDayAs: day) }
+            .sorted { $0.completionDate > $1.completionDate }
+            .map(\.summary)
+    }
+}
+
+private extension Todo {
+    var summary: TodoSummary {
+        TodoSummary(id: id, title: title, isDone: isDone, createdAt: createdAt,
+                    completedAt: isDone ? completionDate : nil, hasMemo: memo?.isEmpty == false)
     }
 }

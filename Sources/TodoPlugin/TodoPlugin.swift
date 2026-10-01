@@ -10,8 +10,8 @@ import TodoAPI
 public final class TodoPlugin: DeskBuddyPlugin {
     public let manifest = PluginManifest(id: "todo", name: "To-dos", version: "1.0.0")
 
-    /// Set by `activate`. The Calendar tab reads it until Calendar moves out of the app (PR 10).
-    package private(set) var store: TodoStore?
+    /// Set by `activate`
+    private(set) var store: TodoStore?
     private let directory: URL
     private let defaults: UserDefaults
 
@@ -47,12 +47,21 @@ public final class TodoPlugin: DeskBuddyPlugin {
             buddy.say(L.f("bubble.added", title), closingAfter: 5)
         }
         commands.register("todo.complete") { arguments in
-            guard let id = arguments["id"] else { throw CommandError.missingArgument("id") }
-            guard let todo = store.todos.first(where: { $0.id.uuidString.caseInsensitiveCompare(id) == .orderedSame }) else {
-                throw CommandError.invalidArgument(name: "id", value: id)
-            }
+            let todo = try store.todo(for: arguments)
             if !todo.isDone { store.toggle(todo) }
             buddy.say(L.f("bubble.done", todo.title), closingAfter: 5)
+        }
+        // What a to-do row does, for rows other features draw (the calendar's day list).
+        // Quiet, like the row's own buttons: no bubble.
+        commands.register("todo.toggle") { arguments in
+            store.toggle(try store.todo(for: arguments))
+        }
+        commands.register("todo.remove") { arguments in
+            store.remove(try store.todo(for: arguments))
+        }
+        commands.register("todo.show") { arguments in
+            let todo = try store.todo(for: arguments)
+            buddy.openList(on: AnyView(TodoDetailPage(id: todo.id, store: store)))
         }
 
         let draft = TodoDraft()
@@ -99,5 +108,16 @@ public final class TodoPlugin: DeskBuddyPlugin {
 
     public func deactivate() {
         // Saves follow every change after a short delay, as they did before this was a plugin
+    }
+}
+
+private extension TodoStore {
+    /// The to-do named by the `id` argument, a full UUID in any case
+    func todo(for arguments: CommandArguments) throws -> Todo {
+        guard let id = arguments["id"] else { throw CommandError.missingArgument("id") }
+        guard let todo = todos.first(where: { $0.id.uuidString.caseInsensitiveCompare(id) == .orderedSame }) else {
+            throw CommandError.invalidArgument(name: "id", value: id)
+        }
+        return todo
     }
 }

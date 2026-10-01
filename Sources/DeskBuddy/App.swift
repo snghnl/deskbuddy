@@ -1,5 +1,7 @@
 import AppKit
+import CalendarPlugin
 import DeskBuddyCore
+import EventKit
 import os
 import PomodoroPlugin
 import SwiftUI
@@ -126,9 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeys: HotKeyCenter!
     private var settingsWindow: NSWindow?
     private var bubble: BubbleController!
-    private var eventNotifier: EventNotifier!
     private let appState = AppState()
-    private let calendarService = CalendarService()
     private let updateService = UpdateService()
     private lazy var plugins = PluginManager(buddy: self)
     private var commandServer: CommandServer?
@@ -141,19 +141,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         migrateLegacyDefaults()
         UserDefaults.standard.register(defaults: [
             SettingsKeys.throwEnabled: true,
-            SettingsKeys.showCalendar: true,
-            SettingsKeys.eventAlerts: true,
-            SettingsKeys.eventAlertLead: 10,
             SettingsKeys.autoUpdateCheck: true,
         ])
         // Before any UI is built, so the services and contributions are there when views first look
-        let todos = TodoPlugin()
-        plugins.register(todos)
+        plugins.register(TodoPlugin())
         plugins.register(PomodoroPlugin())
+        plugins.register(CalendarPlugin())
         plugins.activateAll()
-        if let store = todos.store {
-            FeatureContributions.register(plugins: plugins, todos: store, calendar: calendarService)
-        }
         registerCommands()
         startCommandServer()
         setupCharacterPanel()
@@ -264,7 +258,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - Speech bubble · event alerts
+    // MARK: - Speech bubble
 
     /// User-chosen delay before notification bubbles close themselves — nil keeps them until clicked
     private var notificationAutoHide: TimeInterval? {
@@ -277,16 +271,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bubble.onVisibleChange = { [weak self] visible in
             self?.appState.talking = visible
         }
-
-        eventNotifier = EventNotifier(calendar: calendarService)
-        eventNotifier.onNotify = { [weak self] message in
-            guard let self, characterPanel.isVisible else { return }
-            bubble.show(message, autoHide: notificationAutoHide)
-        }
-        eventNotifier.onUpdate = { [weak self] old, new in
-            self?.bubble.replace(old, with: new)
-        }
-        eventNotifier.start()
     }
 
     // MARK: - Updates
@@ -313,7 +297,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let current = UpdateService.currentVersion.description
         guard previous != current else { return }
-        let message = calendarService.access == .authorized
+        // Asks the system directly: whether the calendar is linked is macOS's to say, not a plugin's
+        let message = EKEventStore.authorizationStatus(for: .event) == .fullAccess
             ? L.f("bubble.updated", current)
             : L.f("bubble.updated_relink_calendar", current)
         bubble.show(message, autoHide: notificationAutoHide) { [weak self] in self?.openSettings() }
@@ -442,7 +427,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.listVisible = false
         } else {
             repositionList()
-            calendarService.refresh()   // refresh events every time the list opens
             // As a child window the list follows automatically when the character is dragged
             characterPanel.addChildWindow(listPanel, ordered: .above)
             listPanel.orderFrontRegardless()
@@ -731,12 +715,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 /// What plugins get to do with the character
 extension AppDelegate: Buddy {
+    var isVisible: Bool { characterPanel.isVisible }
+
     func say(_ message: String) {
         show(message, autoHide: notificationAutoHide)
     }
 
     func say(_ message: String, closingAfter seconds: TimeInterval) {
         show(message, autoHide: seconds)
+    }
+
+    func replace(_ old: String, with new: String) {
+        bubble.replace(old, with: new)
+    }
+
+    func openList(on page: AnyView) {
+        if !listPanel.isVisible {
+            if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
+            toggleList()
+        }
+        appState.listPage = page
     }
 
     private func show(_ message: String, autoHide: TimeInterval?) {

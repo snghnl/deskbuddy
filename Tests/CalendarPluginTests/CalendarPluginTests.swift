@@ -1,0 +1,52 @@
+@testable import CalendarPlugin
+import DeskBuddyCore
+import SwiftUI
+import TodoAPI
+import XCTest
+
+@MainActor
+final class CalendarPluginTests: XCTestCase {
+    func testActivationAddsTheCalendarTabAndItsSettings() {
+        let manager = PluginManager(buddy: QuietBuddy())
+        manager.register(CalendarPlugin())
+
+        manager.activateAll()
+        defer { manager.deactivateAll() }
+
+        XCTAssertEqual(manager.slots.contributions(to: CoreSlots.listTabs).map(\.id), ["calendar.month"])
+        XCTAssertEqual(manager.slots.contributions(to: CoreSlots.settingsSections).map(\.id), ["calendar.integration"])
+    }
+
+    func testActivatesWithoutTheToDoFeature() {
+        let manager = PluginManager(buddy: QuietBuddy())
+        manager.register(CalendarPlugin())
+
+        manager.activateAll()
+        defer { manager.deactivateAll() }
+
+        // Nothing provides TodoService here; the tab still comes up, showing events only
+        XCTAssertNil(manager.services.resolve(TodoService.self))
+        XCTAssertFalse(manager.slots.contributions(to: CoreSlots.listTabs).isEmpty)
+    }
+
+    func testAlertDefaultsAreInPlaceOnceActivated() {
+        let manager = PluginManager(buddy: QuietBuddy())
+        manager.register(CalendarPlugin())
+
+        manager.activateAll()
+        defer { manager.deactivateAll() }
+
+        // register(defaults:) only fills in what the user has not set, and is never saved
+        XCTAssertNotNil(UserDefaults.standard.object(forKey: CalendarSettings.eventAlerts))
+        XCTAssertNotNil(UserDefaults.standard.object(forKey: CalendarSettings.eventAlertLead))
+    }
+}
+
+@MainActor
+private final class QuietBuddy: Buddy {
+    let isVisible = true
+    func say(_ message: String) {}
+    func say(_ message: String, closingAfter seconds: TimeInterval) {}
+    func replace(_ old: String, with new: String) {}
+    func openList(on page: AnyView) {}
+}
