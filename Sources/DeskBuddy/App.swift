@@ -5,6 +5,7 @@ import ClaudePlugin
 import DeskBuddyCore
 import DeskBuddyMacUI
 import EventKit
+import PomodoroMac
 import PomodoroPlugin
 import SwiftUI
 import TodoPlugin
@@ -154,7 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Before any UI is built, so the services and contributions are there when views first look
         StorageMigration.run(appFolder: Self.appFolder, defaults: .standard)
         plugins.register(TodoPlugin())
-        plugins.register(PomodoroPlugin())
+        plugins.register(PomodoroPlugin(platform: PomodoroMac()))
         plugins.register(CalendarPlugin())
         plugins.register(A2UIPlugin())
         plugins.register(ClaudePlugin())

@@ -1,4 +1,5 @@
 import DeskBuddyCore
+import PomodoroMac
 @testable import PomodoroPlugin
 import SwiftUI
 import TodoAPI
@@ -8,7 +9,7 @@ import XCTest
 final class PomodoroPluginTests: XCTestCase {
     func testActivationAddsTheTimerTabAndTheToDoRowIcon() throws {
         let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
-        manager.register(PomodoroPlugin())
+        manager.register(PomodoroPlugin(platform: PomodoroMac()))
 
         manager.activateAll()
 
@@ -18,7 +19,7 @@ final class PomodoroPluginTests: XCTestCase {
 
     func testStartCommandRejectsMinutesThatAreNotAPositiveNumber() throws {
         let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
-        manager.register(PomodoroPlugin())
+        manager.register(PomodoroPlugin(platform: PomodoroMac()))
         manager.activateAll()
 
         for minutes in ["0", "-5", "soon"] {
@@ -30,7 +31,7 @@ final class PomodoroPluginTests: XCTestCase {
 
     func testActivatesWithoutTheToDoFeature() throws {
         let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
-        manager.register(PomodoroPlugin())
+        manager.register(PomodoroPlugin(platform: PomodoroMac()))
 
         manager.activateAll()
 
@@ -41,7 +42,7 @@ final class PomodoroPluginTests: XCTestCase {
 
     func testDeletingAToDoUnlinksItsTimersAndKeepsThemRunning() throws {
         let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
-        let plugin = PomodoroPlugin()
+        let plugin = PomodoroPlugin(platform: PomodoroMac())
         manager.register(plugin)
         manager.activateAll()
         let deleted = UUID(), kept = UUID()

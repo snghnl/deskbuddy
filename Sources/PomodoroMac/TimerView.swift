@@ -1,4 +1,5 @@
 import DeskBuddyCore
+import PomodoroPlugin
 import SwiftUI
 import TodoAPI
 

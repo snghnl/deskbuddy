@@ -1,5 +1,6 @@
 import DeskBuddyCore
 import Foundation
 
-/// This target's strings, from its Resources/Localizations; keys it lacks come from Core's shared ones
-let strings = Strings(bundle: .module)
+/// The timers' strings, from this target's Resources/Localizations, for PomodoroMac's views too;
+/// keys it lacks come from Core's shared ones
+package let strings = Strings(bundle: .module)

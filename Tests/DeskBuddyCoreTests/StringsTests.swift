@@ -32,7 +32,12 @@ final class LocalizationTablesTests: XCTestCase {
         for target in targets {
             let used = try usedKeys(in: target)
             guard !used.isEmpty else { continue }
-            let own = try keys(in: target)
+            var own = try keys(in: target)
+            // A feature's macOS layer (PomodoroMac) shows the strings its plugin target keeps
+            if target.hasSuffix("Mac") {
+                let plugin = try keys(in: target.dropLast(3) + "Plugin")
+                for lang in ["en", "ko"] { own[lang, default: []].formUnion(plugin[lang] ?? []) }
+            }
             for lang in ["en", "ko"] {
                 let available = (own[lang] ?? []).union(shared[lang] ?? [])
                 let missing = used.subtracting(available)

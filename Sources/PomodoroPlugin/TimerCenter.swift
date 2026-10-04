@@ -1,26 +1,28 @@
-import AppKit
 import DeskBuddyCore
+import Foundation
 import Observation
 
+// `package` is for PomodoroMac, the macOS views of these timers
+
 /// A pomodoro-style countdown timer, optionally linked to a to-do.
-struct BuddyTimer: Identifiable, Codable, Equatable {
-    var id = UUID()
-    var label: String
-    var todoID: UUID?
+package struct BuddyTimer: Identifiable, Codable, Equatable {
+    package var id = UUID()
+    package var label: String
+    package var todoID: UUID?
     var duration: TimeInterval
     /// Absolute fire time while running (survives app restarts)
     var endDate: Date?
     /// Remaining seconds while paused
     var pausedRemaining: TimeInterval?
 
-    var isRunning: Bool { endDate != nil }
+    package var isRunning: Bool { endDate != nil }
 
-    func remaining(at now: Date) -> TimeInterval {
+    package func remaining(at now: Date) -> TimeInterval {
         if let endDate { return max(0, endDate.timeIntervalSince(now)) }
         return pausedRemaining ?? duration
     }
 
-    func progress(at now: Date) -> Double {
+    package func progress(at now: Date) -> Double {
         duration > 0 ? remaining(at: now) / duration : 0
     }
 }
@@ -29,8 +31,8 @@ struct BuddyTimer: Identifiable, Codable, Equatable {
 /// Runs its own loop so timers fire even while the list panel is closed.
 @MainActor
 @Observable
-final class TimerCenter {
-    private(set) var timers: [BuddyTimer] = [] {
+package final class TimerCenter {
+    package private(set) var timers: [BuddyTimer] = [] {
         didSet { save() }
     }
 
@@ -54,7 +56,7 @@ final class TimerCenter {
         }
     }
 
-    func start(minutes: Int, label: String, todoID: UUID? = nil) {
+    package func start(minutes: Int, label: String, todoID: UUID? = nil) {
         guard minutes > 0 else { return }
         let duration = TimeInterval(minutes * 60)
         timers.append(BuddyTimer(
@@ -65,27 +67,27 @@ final class TimerCenter {
         ))
     }
 
-    func pause(_ id: UUID) {
+    package func pause(_ id: UUID) {
         guard let i = timers.firstIndex(where: { $0.id == id }),
               let end = timers[i].endDate else { return }
         timers[i].pausedRemaining = max(0, end.timeIntervalSinceNow)
         timers[i].endDate = nil
     }
 
-    func resume(_ id: UUID) {
+    package func resume(_ id: UUID) {
         guard let i = timers.firstIndex(where: { $0.id == id }),
               let remaining = timers[i].pausedRemaining else { return }
         timers[i].endDate = Date().addingTimeInterval(remaining)
         timers[i].pausedRemaining = nil
     }
 
-    func cancel(_ id: UUID) {
+    package func cancel(_ id: UUID) {
         timers.removeAll { $0.id == id }
     }
 
     /// Link or unlink a to-do on an existing timer.
     /// The label stays as the short duration name — the to-do title only shows in tooltips.
-    func link(_ id: UUID, todoID: UUID?) {
+    package func link(_ id: UUID, todoID: UUID?) {
         guard let i = timers.firstIndex(where: { $0.id == id }) else { return }
         timers[i].todoID = todoID
     }
