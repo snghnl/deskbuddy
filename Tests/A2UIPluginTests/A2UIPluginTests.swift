@@ -1,4 +1,5 @@
 import A2UIAPI
+import A2UIMac
 @testable import A2UIPlugin
 import DeskBuddyCore
 import SwiftUI
@@ -20,7 +21,7 @@ final class A2UIPluginTests: XCTestCase {
             guard $0["minutes"] != "0" else { throw CommandError.invalidArgument(name: "minutes", value: "0") }
             started.append(["minutes": $0["minutes"] ?? "", "label": $0["label"] ?? ""])
         }
-        let plugin = A2UIPlugin()
+        let plugin = A2UIPlugin(platform: A2UIMac())
         manager.register(plugin)
         manager.activateAll()
         panels = try XCTUnwrap(plugin.panels)

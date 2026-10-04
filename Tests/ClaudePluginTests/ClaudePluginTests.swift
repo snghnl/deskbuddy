@@ -1,4 +1,5 @@
 import A2UIAPI
+import A2UIMac
 @testable import A2UIPlugin
 @testable import ClaudePlugin
 import DeskBuddyCore
@@ -15,7 +16,7 @@ final class ClaudePluginTests: XCTestCase {
     override func setUp() async throws {
         windows = RecordingWindows()
         manager = makeManager()
-        let a2ui = A2UIPlugin()
+        let a2ui = A2UIPlugin(platform: A2UIMac())
         manager.register(a2ui)
         manager.register(ClaudePlugin())
         manager.activateAll()

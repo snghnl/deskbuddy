@@ -1,3 +1,4 @@
+import A2UIPlugin
 import AppKit
 import DeskBuddyCore
 import DeskBuddyMacUI

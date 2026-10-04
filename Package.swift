@@ -69,11 +69,17 @@ let package = Package(
             name: "A2UIAPI",
             path: "Sources/A2UIAPI"
         ),
-        // Renders UI described in DeskBuddy's A2UI subset as native panels
+        // Shows UI described in DeskBuddy's A2UI subset as panels: parsing, inputs, actions
         .target(
             name: "A2UIPlugin",
-            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "A2UIAPI"],
+            dependencies: ["DeskBuddyCore", "A2UIAPI"],
             path: "Sources/A2UIPlugin"
+        ),
+        // A2UI panels on macOS: the components as SwiftUI controls
+        .target(
+            name: "A2UIMac",
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "A2UIAPI", "A2UIPlugin"],
+            path: "Sources/A2UIMac"
         ),
         // Claude Code's questions to the user, shown through A2UI
         .target(
@@ -86,7 +92,7 @@ let package = Package(
         .executableTarget(
             name: "DeskBuddy",
             dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoPlugin", "TodoMac", "PomodoroPlugin", "PomodoroMac", "CalendarPlugin",
-                           "A2UIPlugin", "ClaudePlugin"],
+                           "A2UIPlugin", "A2UIMac", "ClaudePlugin"],
             path: "Sources/DeskBuddy",
             resources: [.copy("Resources/Localizations")]
         ),
@@ -109,13 +115,13 @@ let package = Package(
         ),
         .testTarget(
             name: "A2UIPluginTests",
-            dependencies: ["A2UIPlugin", "A2UIAPI", "DeskBuddyCore"],
+            dependencies: ["A2UIPlugin", "A2UIMac", "A2UIAPI", "DeskBuddyCore"],
             path: "Tests/A2UIPluginTests"
         ),
         // Runs a question through the real A2UI plugin, the way the app wires them
         .testTarget(
             name: "ClaudePluginTests",
-            dependencies: ["ClaudePlugin", "A2UIPlugin", "A2UIAPI", "DeskBuddyCore"],
+            dependencies: ["ClaudePlugin", "A2UIPlugin", "A2UIMac", "A2UIAPI", "DeskBuddyCore"],
             path: "Tests/ClaudePluginTests"
         ),
         .testTarget(

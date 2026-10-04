@@ -1,8 +1,11 @@
 @testable import A2UIPlugin
+import AppKit
 import XCTest
 
 final class A2UIDocumentTests: XCTestCase {
-    private let parser = A2UIParser(allowedCommands: ["pomodoro.start", "todo.add"])
+    // Icons are checked against SF Symbols, as A2UIMac does
+    private let parser = A2UIParser(allowedCommands: ["pomodoro.start", "todo.add"],
+                                    iconExists: { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil })
 
     /// The panel from the plan: pick a duration, Start runs pomodoro.start with it
     static let startPomodoro = """
@@ -132,7 +135,7 @@ final class A2UIDocumentTests: XCTestCase {
             (#"{"type": "text", "text": "hi", "style": "shouting"}"#,
              A2UIError(path: "root", reason: "\"style\" cannot be \"shouting\"")),
             (#"{"type": "icon", "name": "no.such.symbol"}"#,
-             A2UIError(path: "root", reason: "no SF Symbol is called \"no.such.symbol\"")),
+             A2UIError(path: "root", reason: "no icon is called \"no.such.symbol\"")),
             (#"{"type": "image", "url": "http://example.com/a.png"}"#,
              A2UIError(path: "root", reason: "\"url\" must be https or a file")),
             (#"{"type": "image", "url": "https://example.com/a.png", "height": 900}"#,

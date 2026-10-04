@@ -6,14 +6,14 @@ import Observation
 /// One panel's state: what is in its inputs, and what happens when a button is pressed
 @MainActor
 @Observable
-final class A2UISession {
-    let document: A2UINode
+package final class A2UISession {
+    package let document: A2UINode
     /// The inputs' current values, by id
-    var values: [String: String]
+    package var values: [String: String]
     /// Why the last command failed, shown at the bottom of the panel
-    private(set) var error: String?
+    package private(set) var error: String?
     /// The tab each set of tabs shows, by the tabs' key, once the user has picked one
-    private(set) var selectedTabs: [String: Int] = [:]
+    package private(set) var selectedTabs: [String: Int] = [:]
 
     @ObservationIgnored private let commands: CommandRegistry
     @ObservationIgnored private let finish: (A2UIResponse) -> Void
@@ -29,7 +29,7 @@ final class A2UISession {
 
     /// Runs the button's action and finishes the panel. A command that fails leaves the
     /// panel open with the reason, so the user can fix the input or close it.
-    func perform(_ action: A2UIAction) {
+    package func perform(_ action: A2UIAction) {
         if case .command(let command, let arguments) = action {
             do {
                 try commands.execute(command, CommandArguments(arguments.mapValues(resolve)))
@@ -43,7 +43,7 @@ final class A2UISession {
     }
 
     /// Shows another tab. Tabs differ in height, so the panel is measured again.
-    func select(tab index: Int, of key: String, id: String?, title: String) {
+    package func select(tab index: Int, of key: String, id: String?, title: String) {
         selectedTabs[key] = index
         if let id { values[id] = title }
         resized?()

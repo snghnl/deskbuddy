@@ -1,12 +1,11 @@
 import A2UIAPI
 import DeskBuddyCore
-import DeskBuddyMacUI
 import Foundation
-import SwiftUI
 
 /// Shows UI described in DeskBuddy's A2UI subset (see A2UIDocument) as panels next to the
 /// buddy: for other plugins through `A2UIService`, from outside through the a2ui.show
-/// command. Knows nothing about who asks.
+/// command. Knows nothing about who asks. What a panel's components look like comes from
+/// `platform`.
 @MainActor
 public final class A2UIPlugin: DeskBuddyPlugin {
     public let manifest = PluginManifest(id: "a2ui", name: "A2UI", version: "0.1.0")
@@ -19,12 +18,16 @@ public final class A2UIPlugin: DeskBuddyPlugin {
     ]
 
     private(set) var panels: A2UIPanels?
+    private let platform: any A2UIPlatform
 
-    public init() {}
+    package init(platform: any A2UIPlatform) {
+        self.platform = platform
+    }
 
     public func activate(_ context: PluginContext) throws {
-        let panels = A2UIPanels(commands: context.commands, surfaces: context.surfaces,
-                                parser: A2UIParser(allowedCommands: Self.allowedCommands))
+        let platform = platform
+        let panels = A2UIPanels(commands: context.commands, surfaces: context.surfaces, platform: platform,
+                                parser: A2UIParser(allowedCommands: Self.allowedCommands, iconExists: platform.iconExists))
         self.panels = panels
         context.services.provide(A2UIService.self, panels)
 
@@ -43,14 +46,16 @@ public final class A2UIPlugin: DeskBuddyPlugin {
 final class A2UIPanels: A2UIService {
     private let commands: CommandRegistry
     private let surfaces: SurfaceManager
+    private let platform: any A2UIPlatform
     private let parser: A2UIParser
     private var shown = 0
     /// Each open panel's session and how to finish it, by surface
     private(set) var open: [SurfaceID: (session: A2UISession, finish: (Result<A2UIResponse, Error>) -> Void)] = [:]
 
-    init(commands: CommandRegistry, surfaces: SurfaceManager, parser: A2UIParser) {
+    init(commands: CommandRegistry, surfaces: SurfaceManager, platform: any A2UIPlatform, parser: A2UIParser) {
         self.commands = commands
         self.surfaces = surfaces
+        self.platform = platform
         self.parser = parser
     }
 
@@ -74,10 +79,10 @@ final class A2UIPanels: A2UIService {
         }
         session.resized = { [weak self, weak session] in
             guard let self, let session else { return }
-            surfaces.update(id, to: .panel(MacView(A2UIPanelView(session: session))))
+            surfaces.update(id, to: .panel(platform.panel(for: session)))
         }
         open[id] = (session, finish)
-        surfaces.present(.panel(MacView(A2UIPanelView(session: session))), id: id) { [weak self, weak session] in
+        surfaces.present(.panel(platform.panel(for: session)), id: id) { [weak self, weak session] in
             // Closed by the user: no action, but whatever they had entered
             self?.finish(id, with: .success(A2UIResponse(action: nil, values: session?.values ?? [:])), dismiss: false)
         }
@@ -89,4 +94,15 @@ final class A2UIPanels: A2UIService {
         if dismiss { surfaces.dismiss(id) }
         panel.finish(result)
     }
+}
+
+/// What a platform adds to A2UI panels: drawing their components, and knowing which icons
+/// exist. macOS's is A2UIMac.
+@MainActor
+package protocol A2UIPlatform {
+    /// The panel's content for `session`: its components as native controls
+    func panel(for session: A2UISession) -> any PlatformView
+
+    /// Whether an icon component may name `name`; checked before a panel is shown
+    nonisolated func iconExists(_ name: String) -> Bool
 }

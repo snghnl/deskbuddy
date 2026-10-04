@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 
 /// A UI described in DeskBuddy's A2UI subset: a tree of components, each a JSON object with a
@@ -15,7 +14,7 @@ import Foundation
 ///
 /// Showing things:
 /// - `text`: `text`, `style` ("title", "body" — the default — or "caption")
-/// - `icon`: `name` (an SF Symbol), `size` (8–64, default 16), `color` ("primary", the default,
+/// - `icon`: `name` (on macOS, an SF Symbol), `size` (8–64, default 16), `color` ("primary", the default,
 ///   "secondary", "accent", "red", "orange", "yellow", "green", "blue", "purple", "pink")
 /// - `image`: `url` (https, or a file path), `height` (20–400, default 120)
 /// - `progress`: `value` (0–1; left out, a spinner), `label`
@@ -41,7 +40,9 @@ import Foundation
 /// where an argument may be `{"input": "<id>"}` to pass what the user entered — or names
 /// itself, `{"name": "continue"}`, and leaves it to whoever showed the panel. Either way the
 /// panel then closes. Only some commands may be run from a document.
-indirect enum A2UINode: Equatable {
+// `package` is for A2UIMac, which draws these
+
+package indirect enum A2UINode: Equatable {
     case text(String, style: TextStyle)
     case icon(name: String, size: Double, color: IconColor)
     case image(source: ImageSource, height: Double)
@@ -63,23 +64,23 @@ indirect enum A2UINode: Equatable {
 
     case button(label: String, style: ButtonStyle, action: A2UIAction)
 
-    enum TextStyle: String { case title, body, caption }
-    enum ButtonStyle: String { case primary, secondary }
-    enum RowAlignment: String { case leading, center, trailing }
-    enum SelectStyle: String { case menu, radio }
-    enum CheckboxStyle: String { case checkbox, `switch` }
-    enum IconColor: String { case primary, secondary, accent, red, orange, yellow, green, blue, purple, pink }
+    package enum TextStyle: String { case title, body, caption }
+    package enum ButtonStyle: String { case primary, secondary }
+    package enum RowAlignment: String { case leading, center, trailing }
+    package enum SelectStyle: String { case menu, radio }
+    package enum CheckboxStyle: String { case checkbox, `switch` }
+    package enum IconColor: String { case primary, secondary, accent, red, orange, yellow, green, blue, purple, pink }
 
-    enum ImageSource: Equatable {
+    package enum ImageSource: Equatable {
         case remote(URL)
         case file(URL)
     }
 
-    enum DateTimeMode: String {
+    package enum DateTimeMode: String {
         case date, time, dateTime
 
         /// How values of this mode are written, in local time
-        var format: String {
+        package var format: String {
             switch self {
             case .date: "yyyy-MM-dd"
             case .time: "HH:mm"
@@ -87,7 +88,7 @@ indirect enum A2UINode: Equatable {
             }
         }
 
-        func formatter() -> DateFormatter {
+        package func formatter() -> DateFormatter {
             let f = DateFormatter()
             f.locale = Locale(identifier: "en_US_POSIX")
             f.dateFormat = format
@@ -119,7 +120,7 @@ indirect enum A2UINode: Equatable {
 
     /// A number as reported: no decimals when it is whole, otherwise at most six, so steps of
     /// 0.1 read 0.3 and not 0.30000000000000004
-    static func format(_ number: Double) -> String {
+    package static func format(_ number: Double) -> String {
         if number.rounded() == number && abs(number) < 1e15 { return String(Int64(number)) }
         var text = String(format: "%.6f", number)
         while text.hasSuffix("0") { text.removeLast() }
@@ -128,17 +129,17 @@ indirect enum A2UINode: Equatable {
     }
 }
 
-struct A2UITab: Equatable {
-    let title: String
-    let children: [A2UINode]
+package struct A2UITab: Equatable {
+    package let title: String
+    package let children: [A2UINode]
 }
 
-struct A2UIOption: Equatable {
-    let label: String
-    let value: String
+package struct A2UIOption: Equatable {
+    package let label: String
+    package let value: String
 }
 
-enum A2UIAction: Equatable {
+package enum A2UIAction: Equatable {
     case command(String, arguments: [String: A2UIArgument])
     case named(String)
 
@@ -151,7 +152,7 @@ enum A2UIAction: Equatable {
     }
 }
 
-enum A2UIArgument: Equatable {
+package enum A2UIArgument: Equatable {
     case literal(String)
     /// What the user entered in the input with this id
     case input(String)
@@ -168,6 +169,8 @@ struct A2UIError: Error, Equatable, CustomStringConvertible {
 struct A2UIParser {
     /// Commands a button may run
     let allowedCommands: Set<String>
+    /// Whether an icon of that name exists where the panel is drawn
+    let iconExists: (String) -> Bool
 
     private static let maxDepth = 12
 
@@ -215,8 +218,8 @@ struct A2UIParser {
 
         case "icon":
             let name = try fields.string("name")
-            guard NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil else {
-                throw A2UIError(path: path, reason: "no SF Symbol is called \"\(name)\"")
+            guard iconExists(name) else {
+                throw A2UIError(path: path, reason: "no icon is called \"\(name)\"")
             }
             return .icon(name: name, size: try fields.number("size", default: 16, in: 8...64),
                          color: try fields.choice("color", default: .primary))

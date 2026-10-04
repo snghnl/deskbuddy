@@ -1,3 +1,4 @@
+import A2UIMac
 import A2UIPlugin
 import AppKit
 import CalendarPlugin
@@ -158,7 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         plugins.register(TodoPlugin(platform: TodoMac()))
         plugins.register(PomodoroPlugin(platform: PomodoroMac()))
         plugins.register(CalendarPlugin())
-        plugins.register(A2UIPlugin())
+        plugins.register(A2UIPlugin(platform: A2UIMac()))
         plugins.register(ClaudePlugin())
         plugins.activateAll()
         registerCommands()
