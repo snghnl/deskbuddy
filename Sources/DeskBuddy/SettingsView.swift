@@ -73,15 +73,15 @@ struct SettingsView: View {
         .onChange(of: wanderEnabled) { notifyChange() }
         .onAppear { customs = CustomCharacters.list() }
         .onDisappear(perform: stopRecording)
-        .alert(L.s("settings.character_name"), isPresented: $showRename) {
-            TextField(L.s("settings.name"), text: $renameText)
-            Button(L.s("settings.save")) {
+        .alert(strings.s("settings.character_name"), isPresented: $showRename) {
+            TextField(strings.s("settings.name"), text: $renameText)
+            Button(strings.s("settings.save")) {
                 if let target = renameTarget {
                     CustomCharacters.setDisplayName(renameText, for: target)
                 }
                 renameTarget = nil
             }
-            Button(L.s("settings.cancel"), role: .cancel) { renameTarget = nil }
+            Button(strings.s("settings.cancel"), role: .cancel) { renameTarget = nil }
         }
     }
 
@@ -89,40 +89,40 @@ struct SettingsView: View {
     private var sections: [SettingsSection] {
         let builtIn = [
             SettingsSection(id: "general", order: 100,
-                            title: { L.s("settings.general") },
-                            footer: { L.s("settings.bubble_auto_hide_footer") }) { generalRows },
+                            title: { strings.s("settings.general") },
+                            footer: { strings.s("settings.bubble_auto_hide_footer") }) { generalRows },
             SettingsSection(id: "character", order: 200,
-                            title: { L.s("settings.character") },
-                            footer: { L.s("settings.character_footer") }) { characterRows },
+                            title: { strings.s("settings.character") },
+                            footer: { strings.s("settings.character_footer") }) { characterRows },
             SettingsSection(id: "shortcut", order: 400,
-                            title: { L.s("settings.global_shortcut") },
-                            footer: { L.s("settings.hotkey_footer") }) { shortcutRows },
+                            title: { strings.s("settings.global_shortcut") },
+                            footer: { strings.s("settings.hotkey_footer") }) { shortcutRows },
             SettingsSection(id: "updates", order: 600,
-                            title: { L.s("settings.updates") }) { updatesRows },
+                            title: { strings.s("settings.updates") }) { updatesRows },
         ]
         return (builtIn + slots.contributions(to: CoreSlots.settingsSections)).sorted { $0.order < $1.order }
     }
 
     @ViewBuilder
     private var generalRows: some View {
-        Picker(L.s("settings.language"), selection: $languageRaw) {
-            Text(L.s("settings.follow_system")).tag(AppLanguage.system.rawValue)
+        Picker(strings.s("settings.language"), selection: $languageRaw) {
+            Text(strings.s("settings.follow_system")).tag(AppLanguage.system.rawValue)
             Text("한국어").tag(AppLanguage.korean.rawValue)
             Text("English").tag(AppLanguage.english.rawValue)
         }
         .pickerStyle(.menu)
 
-        Picker(L.s("settings.bubble_auto_hide"), selection: $bubbleAutoHide) {
-            Text(L.s("settings.when_clicked")).tag(0)
+        Picker(strings.s("settings.bubble_auto_hide"), selection: $bubbleAutoHide) {
+            Text(strings.s("settings.when_clicked")).tag(0)
             ForEach([5, 10, 30], id: \.self) { seconds in
-                Text(L.f("settings.after_seconds", seconds)).tag(seconds)
+                Text(strings.f("settings.after_seconds", seconds)).tag(seconds)
             }
-            Text(L.s("settings.after_1min")).tag(60)
+            Text(strings.s("settings.after_1min")).tag(60)
         }
         .pickerStyle(.menu)
 
         if Appearance.supportsGlass {
-            Toggle(L.s("settings.liquid_glass"), isOn: $liquidGlass)
+            Toggle(strings.s("settings.liquid_glass"), isOn: $liquidGlass)
         }
     }
 
@@ -136,8 +136,8 @@ struct SettingsView: View {
                 ForEach(customs, id: \.self) { name in
                     characterOption(.custom(name), label: CustomCharacters.displayName(name), deletable: true)
                         .contextMenu {
-                            Button(L.s("settings.rename")) { beginRename(name) }
-                            Button(L.s("settings.delete"), role: .destructive) { removeCustom(name) }
+                            Button(strings.s("settings.rename")) { beginRename(name) }
+                            Button(strings.s("settings.delete"), role: .destructive) { removeCustom(name) }
                         }
                 }
                 addCharacterButton
@@ -145,20 +145,20 @@ struct SettingsView: View {
             .padding(.vertical, 2)
         }
 
-        Toggle(L.s("settings.throwable"), isOn: $throwEnabled)
-        Toggle(L.s("settings.wander"), isOn: $wanderEnabled)
+        Toggle(strings.s("settings.throwable"), isOn: $throwEnabled)
+        Toggle(strings.s("settings.wander"), isOn: $wanderEnabled)
     }
 
     private var shortcutRows: some View {
         HStack {
-            Text(L.s("settings.hotkey_action"))
+            Text(strings.s("settings.hotkey_action"))
             Spacer()
             Button {
                 recording ? stopRecording() : startRecording()
             } label: {
                 Text(recording
-                     ? L.s("settings.press_keys")
-                     : (hotkeyDisplay.isEmpty ? L.s("settings.record_shortcut") : hotkeyDisplay))
+                     ? strings.s("settings.press_keys")
+                     : (hotkeyDisplay.isEmpty ? strings.s("settings.record_shortcut") : hotkeyDisplay))
                     .frame(minWidth: 130)
             }
             if !hotkeyDisplay.isEmpty && !recording {
@@ -167,19 +167,19 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help(L.s("settings.remove_shortcut"))
+                .help(strings.s("settings.remove_shortcut"))
             }
         }
     }
 
     @ViewBuilder
     private var updatesRows: some View {
-        LabeledContent(L.s("settings.current_version")) {
+        LabeledContent(strings.s("settings.current_version")) {
             Text(UpdateService.currentVersion.description)
                 .foregroundStyle(.secondary)
         }
         updateRow
-        Toggle(L.s("settings.auto_update_check"), isOn: $autoUpdateCheck)
+        Toggle(strings.s("settings.auto_update_check"), isOn: $autoUpdateCheck)
     }
 
     private func beginRename(_ name: String) {
@@ -194,22 +194,22 @@ struct SettingsView: View {
     private var updateRow: some View {
         switch updates.phase {
         case .checking:
-            progressRow(L.s("settings.checking_for_updates"))
+            progressRow(strings.s("settings.checking_for_updates"))
 
         case .downloading:
-            progressRow(L.s("settings.downloading_update"))
+            progressRow(strings.s("settings.downloading_update"))
 
         case .installing:
-            progressRow(L.s("settings.installing_update"))
+            progressRow(strings.s("settings.installing_update"))
 
         case .available(let tag):
-            LabeledContent(L.f("settings.update_available", tag)) {
+            LabeledContent(strings.f("settings.update_available", tag)) {
                 HStack(spacing: 10) {
                     if let notes = updates.pending?.notes {
-                        Link(L.s("settings.release_notes"), destination: notes)
+                        Link(strings.s("settings.release_notes"), destination: notes)
                             .font(.caption)
                     }
-                    Button(L.s("settings.install_update")) {
+                    Button(strings.s("settings.install_update")) {
                         guard let update = updates.pending else { return }
                         Task { await updates.install(update) }
                     }
@@ -217,7 +217,7 @@ struct SettingsView: View {
             }
 
         case .idle, .upToDate, .failed:
-            LabeledContent(L.s("settings.update_status")) {
+            LabeledContent(strings.s("settings.update_status")) {
                 HStack(spacing: 10) {
                     if !checkResultText.isEmpty {
                         Text(checkResultText)
@@ -227,7 +227,7 @@ struct SettingsView: View {
                             .truncationMode(.tail)
                             .help(checkResultText)
                     }
-                    Button(L.s("settings.check_for_updates")) {
+                    Button(strings.s("settings.check_for_updates")) {
                         Task { await updates.check(userInitiated: true) }
                     }
                 }
@@ -236,7 +236,7 @@ struct SettingsView: View {
     }
 
     private func progressRow(_ label: String) -> some View {
-        LabeledContent(L.s("settings.update_status")) {
+        LabeledContent(strings.s("settings.update_status")) {
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
                 Text(label).font(.caption).foregroundStyle(.secondary)
@@ -248,9 +248,9 @@ struct SettingsView: View {
         switch updates.phase {
         case .upToDate:
             if let checked = updates.lastChecked {
-                L.f("settings.up_to_date_at", checked.formatted(date: .omitted, time: .shortened))
+                strings.f("settings.up_to_date_at", checked.formatted(date: .omitted, time: .shortened))
             } else {
-                L.s("settings.up_to_date")
+                strings.s("settings.up_to_date")
             }
         case .failed(let message): message
         default: ""
@@ -297,7 +297,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                     .offset(x: 4, y: -4)
-                    .help(L.s("settings.delete"))
+                    .help(strings.s("settings.delete"))
                 }
             }
         }
@@ -311,7 +311,7 @@ struct SettingsView: View {
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.secondary)
                     .frame(width: 56, height: 60)
-                Text(L.s("settings.add"))
+                Text(strings.s("settings.add"))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
@@ -323,14 +323,14 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
-        .help(L.s("settings.add_character_help"))
+        .help(strings.s("settings.add_character_help"))
     }
 
     private func addCustom() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .gif, .heic, .tiff, .webP]
         panel.allowsMultipleSelection = false
-        panel.message = L.s("settings.choose_image")
+        panel.message = strings.s("settings.choose_image")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if let name = try? CustomCharacters.add(url) {
             customs = CustomCharacters.list()

@@ -302,12 +302,12 @@ enum UpdateError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .server(let status): L.f("update.error_server", status)
-        case .badPackage: L.s("update.error_package")
-        case .checksumUnavailable: L.s("update.error_checksum_unavailable")
-        case .checksumMismatch: L.s("update.error_checksum")
-        case .notWritable(let path): L.f("update.error_not_writable", path)
-        case .tool(let name, _): L.f("update.error_tool", name)
+        case .server(let status): strings.f("update.error_server", status)
+        case .badPackage: strings.s("update.error_package")
+        case .checksumUnavailable: strings.s("update.error_checksum_unavailable")
+        case .checksumMismatch: strings.s("update.error_checksum")
+        case .notWritable(let path): strings.f("update.error_not_writable", path)
+        case .tool(let name, _): strings.f("update.error_tool", name)
         }
     }
 }

@@ -34,12 +34,12 @@ public final class TodoPlugin: DeskBuddyPlugin {
                let added = store.todos.first(where: { $0.title == title.trimmingCharacters(in: .whitespacesAndNewlines) }) {
                 store.updateMemo(added.id, memo)
             }
-            buddy.say(L.f("bubble.added", title), closingAfter: 5)
+            buddy.say(strings.f("bubble.added", title), closingAfter: 5)
         }
         commands.register("todo.complete") { arguments in
             let todo = try store.todo(for: arguments)
             if !todo.isDone { store.toggle(todo) }
-            buddy.say(L.f("bubble.done", todo.title), closingAfter: 5)
+            buddy.say(strings.f("bubble.done", todo.title), closingAfter: 5)
         }
         // TodoService's actions, for callers outside the app. Quiet, like a row's buttons: no bubble.
         commands.register("todo.toggle") { arguments in
@@ -55,7 +55,7 @@ public final class TodoPlugin: DeskBuddyPlugin {
         let draft = TodoDraft()
         slots.contribute(CoreSlots.listTabs, ListTab(
             id: "todo.active", order: 100,
-            title: { L.s("list.to_do") },
+            title: { strings.s("list.to_do") },
             count: { store.activeTodos.count },
             toolbar: { AnyView(TodoInputBar(store: store, draft: draft)) }
         ) {
@@ -63,7 +63,7 @@ public final class TodoPlugin: DeskBuddyPlugin {
         })
         slots.contribute(CoreSlots.listTabs, ListTab(
             id: "todo.done", order: 200,
-            title: { L.s("list.done") },
+            title: { strings.s("list.done") },
             count: { store.visibleCompleted.count }
         ) {
             CompletedTodoList(store: store)
@@ -72,20 +72,20 @@ public final class TodoPlugin: DeskBuddyPlugin {
         // confirmation — the permanent version lives in Settings.
         slots.contribute(CoreSlots.listMenu, ListMenuItem(
             id: "todo.clearCompleted", order: 100,
-            title: { L.f("list.clear_from_list", store.visibleCompleted.count) },
+            title: { strings.f("list.clear_from_list", store.visibleCompleted.count) },
             isEnabled: { !store.visibleCompleted.isEmpty },
             action: { store.clearCompletedFromList() }
         ))
         slots.contribute(CoreSlots.listMenu, ListMenuItem(
             id: "todo.restoreCompleted", order: 200,
-            title: { L.f("list.restore_history", store.hiddenCompletedCount) },
+            title: { strings.f("list.restore_history", store.hiddenCompletedCount) },
             isVisible: { store.hiddenCompletedCount > 0 },
             action: { store.restoreClearedHistory() }
         ))
         slots.contribute(CoreSlots.settingsSections, SettingsSection(
             id: "todo.history", order: 500,
-            title: { L.s("settings.history") },
-            footer: { L.s("settings.history_footer") }
+            title: { strings.s("settings.history") },
+            footer: { strings.s("settings.history_footer") }
         ) {
             HistorySettingsRows(store: store)
         })

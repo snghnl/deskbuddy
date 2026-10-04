@@ -157,7 +157,7 @@ struct CalendarTabView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help([count > 0 ? L.f("calendar.n_completed", count) : nil, hasEvent ? L.s("calendar.has_events") : nil]
+        .help([count > 0 ? strings.f("calendar.n_completed", count) : nil, hasEvent ? strings.s("calendar.has_events") : nil]
             .compactMap { $0 }.joined(separator: " · "))
     }
 
@@ -174,7 +174,7 @@ struct CalendarTabView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                 if !items.isEmpty {
-                    Text(L.f("calendar.n_completed", items.count))
+                    Text(strings.f("calendar.n_completed", items.count))
                         .font(.system(size: 9, design: .rounded))
                         .foregroundStyle(.tertiary)
                 }
@@ -190,8 +190,8 @@ struct CalendarTabView: View {
 
             if items.isEmpty {
                 Text(events.isEmpty
-                     ? L.s("calendar.nothing_recorded")
-                     : L.s("calendar.nothing_completed"))
+                     ? strings.s("calendar.nothing_recorded")
+                     : strings.s("calendar.nothing_completed"))
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity)
@@ -230,7 +230,7 @@ struct CalendarTabView: View {
             Circle()
                 .fill(event.color)
                 .frame(width: 5, height: 5)
-            Text(event.isAllDay ? L.s("calendar.all_day") : event.start.formatted(date: .omitted, time: .shortened))
+            Text(event.isAllDay ? strings.s("calendar.all_day") : event.start.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: 11, weight: isNext ? .semibold : .regular).monospacedDigit())
                 .foregroundStyle(isNext ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
             Text(event.title)
@@ -239,7 +239,7 @@ struct CalendarTabView: View {
                 .lineLimit(1)
             Spacer(minLength: 0)
             if isNext {
-                Text(ongoing ? L.s("calendar.now") : relative(to: event.start, from: now))
+                Text(ongoing ? strings.s("calendar.now") : relative(to: event.start, from: now))
                     .font(.system(size: 9, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5)
@@ -258,11 +258,11 @@ struct CalendarTabView: View {
     /// "in 5 min", "in 2h 30m" — only handles events within today, so simple math is enough
     private func relative(to date: Date, from now: Date) -> String {
         let minutes = Int(date.timeIntervalSince(now) / 60)
-        if minutes < 1 { return L.s("calendar.starting_soon") }
-        if minutes < 60 { return L.f("calendar.in_minutes", minutes) }
+        if minutes < 1 { return strings.s("calendar.starting_soon") }
+        if minutes < 60 { return strings.f("calendar.in_minutes", minutes) }
         return minutes % 60 == 0
-            ? L.f("calendar.in_hours", minutes / 60)
-            : L.f("calendar.in_hours_minutes", minutes / 60, minutes % 60)
+            ? strings.f("calendar.in_hours", minutes / 60)
+            : strings.f("calendar.in_hours_minutes", minutes / 60, minutes % 60)
     }
 }
 
@@ -287,14 +287,14 @@ struct CalendarSettingsRows: View {
     var body: some View {
         integrationRow
         if calendar.access == .authorized {
-            Toggle(L.s("settings.show_events"), isOn: $showCalendar)
-            Toggle(L.s("settings.event_alerts"), isOn: $eventAlerts)
+            Toggle(strings.s("settings.show_events"), isOn: $showCalendar)
+            Toggle(strings.s("settings.event_alerts"), isOn: $eventAlerts)
             if eventAlerts {
-                Picker(L.s("settings.alert_timing"), selection: $eventAlertLead) {
-                    Text(L.s("settings.before_5min")).tag(5)
-                    Text(L.s("settings.before_10min")).tag(10)
-                    Text(L.s("settings.before_15min")).tag(15)
-                    Text(L.s("settings.before_30min")).tag(30)
+                Picker(strings.s("settings.alert_timing"), selection: $eventAlertLead) {
+                    Text(strings.s("settings.before_5min")).tag(5)
+                    Text(strings.s("settings.before_10min")).tag(10)
+                    Text(strings.s("settings.before_15min")).tag(15)
+                    Text(strings.s("settings.before_30min")).tag(30)
                 }
                 .pickerStyle(.menu)
             }
@@ -306,24 +306,24 @@ struct CalendarSettingsRows: View {
         switch calendar.access {
         case .notDetermined:
             HStack {
-                Text(L.s("settings.calendar"))
+                Text(strings.s("settings.calendar"))
                 Spacer()
-                Button(L.s("settings.connect")) { calendar.requestAccess() }
+                Button(strings.s("settings.connect")) { calendar.requestAccess() }
             }
         case .denied:
             HStack {
-                Text(L.s("settings.calendar"))
+                Text(strings.s("settings.calendar"))
                 Spacer()
-                Text(L.s("settings.access_denied"))
+                Text(strings.s("settings.access_denied"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button(L.s("settings.open_system_settings")) { calendar.openPrivacySettings() }
+                Button(strings.s("settings.open_system_settings")) { calendar.openPrivacySettings() }
             }
         case .authorized:
             HStack {
-                Text(L.s("settings.calendar"))
+                Text(strings.s("settings.calendar"))
                 Spacer()
-                Label(L.s("settings.connected"), systemImage: "checkmark.circle.fill")
+                Label(strings.s("settings.connected"), systemImage: "checkmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.green)
             }

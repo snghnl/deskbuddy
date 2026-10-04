@@ -292,7 +292,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateService.onUpdateFound = { [weak self] update in
             guard let self else { return }
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            bubble.show(L.f("bubble.update_available", update.tag), autoHide: notificationAutoHide) {
+            bubble.show(strings.f("bubble.update_available", update.tag), autoHide: notificationAutoHide) {
                 [weak self] in self?.openSettings()
             }
         }
@@ -312,8 +312,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard previous != current else { return }
         // Asks the system directly: whether the calendar is linked is macOS's to say, not a plugin's
         let message = EKEventStore.authorizationStatus(for: .event) == .fullAccess
-            ? L.f("bubble.updated", current)
-            : L.f("bubble.updated_relink_calendar", current)
+            ? strings.f("bubble.updated", current)
+            : strings.f("bubble.updated_relink_calendar", current)
         bubble.show(message, autoHide: notificationAutoHide) { [weak self] in self?.openSettings() }
     }
 
@@ -607,7 +607,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             settingsWindow = window
         }
-        settingsWindow?.title = L.s("app.settings_title")
+        settingsWindow?.title = strings.s("app.settings_title")
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
@@ -621,8 +621,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let listItem = NSMenuItem(
             title: listPanel.isVisible
-                ? L.s("app.close_to_do_list")
-                : L.s("app.open_to_do_list"),
+                ? strings.s("app.close_to_do_list")
+                : strings.s("app.open_to_do_list"),
             action: #selector(toggleListFromMenu), keyEquivalent: ""
         )
         listItem.target = self
@@ -631,27 +631,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
 
         let wanderItem = NSMenuItem(
-            title: L.s("app.wander_around"), action: #selector(toggleWander), keyEquivalent: ""
+            title: strings.s("app.wander_around"), action: #selector(toggleWander), keyEquivalent: ""
         )
         wanderItem.target = self
         wanderItem.state = wanderEnabled ? .on : .off
         menu.addItem(wanderItem)
 
-        let homeItem = NSMenuItem(title: L.s("app.send_home"), action: #selector(sendHome), keyEquivalent: "")
+        let homeItem = NSMenuItem(title: strings.s("app.send_home"), action: #selector(sendHome), keyEquivalent: "")
         homeItem.target = self
         menu.addItem(homeItem)
 
         menu.addItem(.separator())
 
-        let settingsItem = NSMenuItem(title: L.s("app.settings"), action: #selector(openSettings), keyEquivalent: "")
+        let settingsItem = NSMenuItem(title: strings.s("app.settings"), action: #selector(openSettings), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        let hideItem = NSMenuItem(title: L.s("app.hide_character"), action: #selector(toggleCharacter), keyEquivalent: "")
+        let hideItem = NSMenuItem(title: strings.s("app.hide_character"), action: #selector(toggleCharacter), keyEquivalent: "")
         hideItem.target = self
         menu.addItem(hideItem)
 
-        menu.addItem(withTitle: L.s("app.quit_deskbuddy"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: strings.s("app.quit_deskbuddy"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
 
         NSMenu.popUpContextMenu(menu, with: event, for: view)
     }
@@ -673,16 +673,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard statusItem != nil else { return }
         let menu = NSMenu()
         let toggleItem = NSMenuItem(
-            title: L.s("app.show_hide_character"),
+            title: strings.s("app.show_hide_character"),
             action: #selector(toggleCharacter), keyEquivalent: ""
         )
         toggleItem.target = self
         menu.addItem(toggleItem)
-        let settingsItem = NSMenuItem(title: L.s("app.settings"), action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: strings.s("app.settings"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
         menu.addItem(.separator())
-        menu.addItem(withTitle: L.s("app.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: strings.s("app.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
     }
 

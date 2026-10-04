@@ -28,19 +28,22 @@ let package = Package(
         .target(
             name: "TodoPlugin",
             dependencies: ["DeskBuddyCore", "TodoAPI"],
-            path: "Sources/TodoPlugin"
+            path: "Sources/TodoPlugin",
+            resources: [.copy("Resources/Localizations")]
         ),
         // Countdown timers, optionally linked to to-dos
         .target(
             name: "PomodoroPlugin",
             dependencies: ["DeskBuddyCore", "TodoAPI"],
-            path: "Sources/PomodoroPlugin"
+            path: "Sources/PomodoroPlugin",
+            resources: [.copy("Resources/Localizations")]
         ),
         // The Calendar tab, calendar settings and event alerts; reads to-dos through TodoAPI
         .target(
             name: "CalendarPlugin",
             dependencies: ["DeskBuddyCore", "TodoAPI"],
-            path: "Sources/CalendarPlugin"
+            path: "Sources/CalendarPlugin",
+            resources: [.copy("Resources/Localizations")]
         ),
         // What the A2UI feature offers others: show a described UI, hear what the user did
         .target(
@@ -57,13 +60,15 @@ let package = Package(
         .target(
             name: "ClaudePlugin",
             dependencies: ["DeskBuddyCore", "A2UIAPI"],
-            path: "Sources/ClaudePlugin"
+            path: "Sources/ClaudePlugin",
+            resources: [.copy("Resources/Localizations")]
         ),
         // Puts the plugins together: registers them and hosts the UI they contribute to
         .executableTarget(
             name: "DeskBuddy",
             dependencies: ["DeskBuddyCore", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin", "A2UIPlugin", "ClaudePlugin"],
-            path: "Sources/DeskBuddy"
+            path: "Sources/DeskBuddy",
+            resources: [.copy("Resources/Localizations")]
         ),
         // The app's own logic, such as moving old data into plugin storage
         .testTarget(
@@ -74,7 +79,8 @@ let package = Package(
         .testTarget(
             name: "DeskBuddyCoreTests",
             dependencies: ["DeskBuddyCore"],
-            path: "Tests/DeskBuddyCoreTests"
+            path: "Tests/DeskBuddyCoreTests",
+            resources: [.copy("Resources/Localizations")]
         ),
         .testTarget(
             name: "TodoPluginTests",

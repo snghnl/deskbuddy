@@ -26,7 +26,7 @@ final class ClaudePluginTests: XCTestCase {
         let reply = ask(["question": "Which database should I use?", "options": "PostgreSQL\nSQLite\nMySQL", "project": "deskbuddy"])
         let session = try await openSession()
         XCTAssertEqual(session.values, ["choice": "PostgreSQL", "text": ""], "the first option is picked to start with")
-        XCTAssertEqual(session.document.texts, [L.s("claude.needs_input"), "deskbuddy", "Which database should I use?"])
+        XCTAssertEqual(session.document.texts, [strings.s("claude.needs_input"), "deskbuddy", "Which database should I use?"])
 
         session.values["choice"] = "SQLite"
         session.perform(.named("answer"))

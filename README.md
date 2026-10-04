@@ -88,8 +88,9 @@ During development you can also just `swift run`. No Xcode project — plain Swi
   starts, the character raises a speech bubble. It stays until clicked, follows the
   character around, and repositions above/below/left/right based on screen space
 - **Language setting**: follow the system language or force Korean/English from Settings.
-  All strings live in `Sources/DeskBuddyCore/Resources/Localizations/*.yml` — translation
-  fixes and new languages are welcome as PRs
+  Strings live next to the code that shows them, in `Sources/<target>/Resources/Localizations/*.yml`
+  (the app's and each plugin's), with a few shared ones in DeskBuddyCore — translation fixes and
+  new languages are welcome as PRs
 - **Always on top**: `NSPanel` at `.floating` level, visible on all Spaces and over
   full-screen apps
 - **Non-activating**: clicking the buddy never steals focus from the app you are using
@@ -211,8 +212,8 @@ DeskBuddyCore and on other features' API modules, never on another plugin.
 
 - `Sources/DeskBuddyCore/` — what plugins build on: the plugin lifecycle (`Plugins/`), services, slots
   on the shared UI (`Slots/`), commands and the CLI socket (`Commands/`), events (`Events/`), the
-  `Buddy` protocol, and YAML-backed localization (`L.s("key")` / `L.f("key", args...)`) with its
-  tables in `Resources/Localizations/` (`ko.yml`, `en.yml`)
+  `Buddy` protocol, and YAML-backed localization: the language choice, `Strings` for each target's
+  own tables (`strings.s("key")`), and the few strings targets share (`L.s("key")`)
 - `Sources/TodoAPI/` — what the to-do feature offers others: `TodoService`, `TodoDeleted`, the to-do row slot
 - `Sources/TodoPlugin/` — to-dos: model and JSON persistence, To Do/Done tabs, detail page, history settings
 - `Sources/PomodoroPlugin/` — timers: the Timer tab, timer icons on to-do rows, the done bubble

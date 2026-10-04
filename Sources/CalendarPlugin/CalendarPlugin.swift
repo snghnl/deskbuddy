@@ -24,14 +24,14 @@ public final class CalendarPlugin: DeskBuddyPlugin {
         let services = context.services
         context.slots.contribute(CoreSlots.listTabs, ListTab(
             id: "calendar.month", order: 300,
-            title: { L.s("list.calendar") }
+            title: { strings.s("list.calendar") }
         ) {
             CalendarTabView(calendar: calendar, todos: services.resolve(TodoService.self), settings: settings)
         })
         context.slots.contribute(CoreSlots.settingsSections, SettingsSection(
             id: "calendar.integration", order: 300,
-            title: { L.s("settings.integrations") },
-            footer: { L.s("settings.integrations_footer") }
+            title: { strings.s("settings.integrations") },
+            footer: { strings.s("settings.integrations_footer") }
         ) {
             CalendarSettingsRows(calendar: calendar, settings: settings)
         })

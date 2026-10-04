@@ -60,20 +60,20 @@ struct ClaudeQuestion {
     /// The panel in DeskBuddy's A2UI subset
     func document() throws -> Data {
         var children: [[String: Any]] = [
-            ["type": "text", "text": L.s("claude.needs_input"), "style": "title"],
+            ["type": "text", "text": strings.s("claude.needs_input"), "style": "title"],
         ]
         if let project {
             children.append(["type": "text", "text": project, "style": "caption"])
         }
         children.append(["type": "text", "text": question])
         if options.isEmpty {
-            children.append(["type": "textField", "id": Self.textID, "placeholder": L.s("claude.answer_placeholder")])
+            children.append(["type": "textField", "id": Self.textID, "placeholder": strings.s("claude.answer_placeholder")])
         } else {
             children.append(["type": "select", "id": Self.choiceID, "options": options, "style": "radio"])
-            children.append(["type": "textField", "id": Self.textID, "placeholder": L.s("claude.own_answer")])
+            children.append(["type": "textField", "id": Self.textID, "placeholder": strings.s("claude.own_answer")])
         }
         children.append(["type": "row", "align": "trailing", "children": [
-            ["type": "button", "label": L.s("claude.continue"), "style": "primary", "action": ["name": Self.answerAction]],
+            ["type": "button", "label": strings.s("claude.continue"), "style": "primary", "action": ["name": Self.answerAction]],
         ]])
         return try JSONSerialization.data(withJSONObject: ["type": "column", "children": children])
     }

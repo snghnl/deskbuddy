@@ -35,9 +35,20 @@ cp "$PRODUCTS/DeskBuddy" "$APP/Contents/MacOS/"
 # Checked in rather than rendered here, so CI needs no extra tooling.
 # Regenerate with: swift tools/make-assets.swift icns
 [[ -f assets/AppIcon.icns ]] && cp assets/AppIcon.icns "$APP/Contents/Resources/"
-# SPM resource bundle (localization tables, owned by DeskBuddyCore) — Bundle.module looks for
-# it in Contents/Resources and stops the app if it is missing
-cp -R "$PRODUCTS/DeskBuddy_DeskBuddyCore.bundle" "$APP/Contents/Resources/"
+# SPM resource bundles: each target with resources (the app's and every plugin's localization
+# tables) has one. Bundle.module looks for them in Contents/Resources and stops the app if one
+# is missing, so the list comes from the package itself and a missing bundle fails the build.
+RESOURCE_TARGETS=$(swift package describe --type json | python3 -c '
+import json, sys
+print(" ".join(t["name"] for t in json.load(sys.stdin)["targets"] if t.get("resources") and t["type"] != "test"))')
+for target in ${=RESOURCE_TARGETS}; do   # zsh splits on spaces only when asked
+  bundle="$PRODUCTS/DeskBuddy_$target.bundle"
+  if [[ ! -d "$bundle" ]]; then
+    echo "error: $bundle was not built" >&2
+    exit 1
+  fi
+  cp -R "$bundle" "$APP/Contents/Resources/"
+done
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

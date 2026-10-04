@@ -1,0 +1,4 @@
+claude.answer_placeholder: "답변"
+claude.continue: "계속"
+claude.needs_input: "🐻 Claude가 답을 기다려요"
+claude.own_answer: "또는 직접 입력"

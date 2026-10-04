@@ -76,7 +76,7 @@ final class EventNotifier {
     /// "n min" is rounded up — it reads n until less than n-1 minutes remain
     private static func message(for event: CalendarEvent, now: Date) -> String {
         let seconds = event.start.timeIntervalSince(now)
-        guard seconds > 0 else { return L.f("bubble.event_now", event.title) }
-        return L.f("bubble.event_upcoming", Int((seconds / 60).rounded(.up)), event.title)
+        guard seconds > 0 else { return strings.f("bubble.event_now", event.title) }
+        return strings.f("bubble.event_upcoming", Int((seconds / 60).rounded(.up)), event.title)
     }
 }

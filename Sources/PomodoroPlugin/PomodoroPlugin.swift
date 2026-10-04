@@ -22,7 +22,7 @@ public final class PomodoroPlugin: DeskBuddyPlugin {
             NSSound(named: "Glass")?.play()
             // Announce with the linked to-do's title when there is one
             let title = timer.todoID.flatMap { services.resolve(TodoService.self)?.todo($0)?.title }
-            buddy.say(L.f("timer.done_bubble", title ?? timer.label))
+            buddy.say(strings.f("timer.done_bubble", title ?? timer.label))
         }
 
         // The Timer tab's buttons call TimerCenter.start directly; this is the same start for
@@ -33,7 +33,7 @@ public final class PomodoroPlugin: DeskBuddyPlugin {
             }
             timers.start(
                 minutes: minutes,
-                label: arguments["label"] ?? L.f("timer.min_chip", minutes),
+                label: arguments["label"] ?? strings.f("timer.min_chip", minutes),
                 todoID: arguments["todo"].flatMap(UUID.init(uuidString:))
             )
         }
@@ -45,7 +45,7 @@ public final class PomodoroPlugin: DeskBuddyPlugin {
 
         context.slots.contribute(CoreSlots.listTabs, ListTab(
             id: "pomodoro.timers", order: 400,
-            title: { L.s("timer.tab") },
+            title: { strings.s("timer.tab") },
             count: { timers.timers.count }
         ) {
             TimerTabView(timers: timers, todos: services.resolve(TodoService.self))

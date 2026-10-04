@@ -68,11 +68,11 @@ struct CompletedTodoRow: View {
     }
 
     private var tooltip: String {
-        var text = L.f("list.tooltip_added",
+        var text = strings.f("list.tooltip_added",
                        todo.createdAt.formatted(date: .abbreviated, time: .shortened),
                        Self.relative(todo.createdAt))
         if let completedAt = todo.completedAt {
-            text += "\n" + L.f("list.tooltip_completed",
+            text += "\n" + strings.f("list.tooltip_completed",
                                completedAt.formatted(date: .abbreviated, time: .shortened),
                                Self.relative(completedAt))
         }

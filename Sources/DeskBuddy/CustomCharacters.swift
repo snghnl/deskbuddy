@@ -63,7 +63,7 @@ enum CustomCharacters {
 
     static func displayName(_ name: String) -> String {
         let dict = UserDefaults.standard.dictionary(forKey: namesKey) as? [String: String]
-        return dict?[name] ?? L.s("character.custom")
+        return dict?[name] ?? strings.s("character.custom")
     }
 
     static func setDisplayName(_ display: String, for name: String) {

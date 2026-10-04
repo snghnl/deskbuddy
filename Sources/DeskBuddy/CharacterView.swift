@@ -11,7 +11,7 @@ enum CharacterKind: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var label: String { L.s("character.buddy") }
+    var label: String { strings.s("character.buddy") }
 }
 
 // MARK: - Palette

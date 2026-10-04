@@ -20,7 +20,7 @@ struct TimerTabView: View {
                 Divider().opacity(0.4)
 
                 if timers.timers.isEmpty {
-                    Text(L.s("timer.empty"))
+                    Text(strings.s("timer.empty"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
@@ -49,9 +49,9 @@ struct TimerTabView: View {
         HStack(spacing: 6) {
             ForEach(presets, id: \.self) { minutes in
                 Button {
-                    timers.start(minutes: minutes, label: L.f("timer.min_chip", minutes))
+                    timers.start(minutes: minutes, label: strings.f("timer.min_chip", minutes))
                 } label: {
-                    Text(L.f("timer.min_chip", minutes))
+                    Text(strings.f("timer.min_chip", minutes))
                         .font(.system(size: 11, weight: .medium))
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
@@ -62,7 +62,7 @@ struct TimerTabView: View {
 
             Spacer(minLength: 0)
 
-            TextField(L.s("timer.custom_placeholder"), text: $customMinutes)
+            TextField(strings.s("timer.custom_placeholder"), text: $customMinutes)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
                 .frame(width: 32)
@@ -70,7 +70,7 @@ struct TimerTabView: View {
                 .padding(.vertical, 3)
                 .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
                 .onSubmit(startCustom)
-            Button(L.s("timer.start"), action: startCustom)
+            Button(strings.s("timer.start"), action: startCustom)
                 .font(.system(size: 11))
                 .disabled(Int(customMinutes) == nil)
         }
@@ -78,7 +78,7 @@ struct TimerTabView: View {
 
     private func startCustom() {
         guard let minutes = Int(customMinutes), minutes > 0 else { return }
-        timers.start(minutes: minutes, label: L.f("timer.min_chip", minutes))
+        timers.start(minutes: minutes, label: strings.f("timer.min_chip", minutes))
         customMinutes = ""
     }
 }
@@ -112,7 +112,7 @@ private struct TimerCard: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help(L.s("timer.cancel"))
+                .help(strings.s("timer.cancel"))
             }
         }
     }
@@ -157,7 +157,7 @@ private struct TimerCard: View {
         }
         .onHover { hoveringRing = $0 }
         .animation(.easeOut(duration: 0.12), value: hoveringRing)
-        .help(timer.isRunning ? L.s("timer.pause") : L.s("timer.resume"))
+        .help(timer.isRunning ? strings.s("timer.pause") : strings.s("timer.resume"))
     }
 
     /// Always shows the short duration label; the linked to-do's title appears only as a hover tooltip
@@ -166,7 +166,7 @@ private struct TimerCard: View {
         if let todos {
             Menu {
                 if timer.todoID != nil {
-                    Button(L.s("timer.unlink")) {
+                    Button(strings.s("timer.unlink")) {
                         timers.link(timer.id, todoID: nil)
                     }
                     Divider()
@@ -188,7 +188,7 @@ private struct TimerCard: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
-            .help(linkedTodo?.title ?? L.s("timer.link"))
+            .help(linkedTodo?.title ?? strings.s("timer.link"))
         } else {
             durationLabel
         }
@@ -222,7 +222,7 @@ struct TimerStateIcon: View {
             Image(systemName: "timer")
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(running ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
-                .help(running ? L.s("timer.running") : L.s("timer.pause"))
+                .help(running ? strings.s("timer.running") : strings.s("timer.pause"))
         }
     }
 }

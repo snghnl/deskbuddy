@@ -155,7 +155,7 @@ struct SurfacePanelChrome: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(L.s("surface.close"))
+                .help(strings.s("surface.close"))
             }
             // Also reaches the plugin's content, e.g. A2UI buttons
             .environment(\.glassEnabled, liquidGlass && Appearance.supportsGlass)

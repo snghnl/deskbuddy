@@ -166,12 +166,12 @@ final class TodoStore {
     }
 
     private static func dayTitle(_ day: Date, calendar: Calendar) -> String {
-        if calendar.isDateInToday(day) { return L.s("date.today") }
-        if calendar.isDateInYesterday(day) { return L.s("date.yesterday") }
+        if calendar.isDateInToday(day) { return strings.s("date.today") }
+        if calendar.isDateInYesterday(day) { return strings.s("date.yesterday") }
         // Built per call so the format and locale follow the current app language
         let f = DateFormatter()
         f.locale = L.locale
-        f.dateFormat = L.s("date.day_format")
+        f.dateFormat = strings.s("date.day_format")
         return f.string(from: day)
     }
 

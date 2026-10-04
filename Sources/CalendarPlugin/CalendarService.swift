@@ -88,7 +88,7 @@ final class CalendarService {
             .map { event in
                 CalendarEvent(
                     id: "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
-                    title: event.title ?? L.s("calendar.no_title"),
+                    title: event.title ?? strings.s("calendar.no_title"),
                     start: event.startDate,
                     end: event.endDate,
                     isAllDay: event.isAllDay,

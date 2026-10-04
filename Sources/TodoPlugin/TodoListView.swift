@@ -23,7 +23,7 @@ struct TodoInputBar: View {
             Image(systemName: "plus")
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.tertiary)
-            TextField(L.s("list.add_placeholder"), text: $draft.title)
+            TextField(strings.s("list.add_placeholder"), text: $draft.title)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .focused($focused)
@@ -60,7 +60,7 @@ struct ActiveTodoList: View {
         ScrollView {
             LazyVStack(spacing: 2) {
                 if activeTodos.isEmpty {
-                    Text(L.s("list.empty_state"))
+                    Text(strings.s("list.empty_state"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .padding(.vertical, 16)
@@ -105,7 +105,7 @@ struct CompletedTodoList: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 2, pinnedViews: [.sectionHeaders]) {
                 if completedGroups.isEmpty {
-                    Text(L.s("list.nothing_completed_yet"))
+                    Text(strings.s("list.nothing_completed_yet"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
@@ -167,39 +167,39 @@ struct HistorySettingsRows: View {
 
     // Every row is label-plus-trailing-control, matching the rest of the form
     var body: some View {
-        LabeledContent(L.s("settings.history_total")) {
-            Text(L.f("settings.history_count", store.completedTodos.count))
+        LabeledContent(strings.s("settings.history_total")) {
+            Text(strings.f("settings.history_count", store.completedTodos.count))
                 .foregroundStyle(.secondary)
         }
 
         if store.hiddenCompletedCount > 0 {
-            LabeledContent(L.s("settings.history_hidden_label")) {
+            LabeledContent(strings.s("settings.history_hidden_label")) {
                 HStack(spacing: 8) {
-                    Text(L.f("settings.history_count", store.hiddenCompletedCount))
+                    Text(strings.f("settings.history_count", store.hiddenCompletedCount))
                         .foregroundStyle(.secondary)
-                    Button(L.s("settings.history_restore")) { store.restoreClearedHistory() }
+                    Button(strings.s("settings.history_restore")) { store.restoreClearedHistory() }
                 }
             }
         }
 
-        LabeledContent(L.s("settings.history_delete_label")) {
+        LabeledContent(strings.s("settings.history_delete_label")) {
             // Ellipsis: macOS convention for an action that asks first
-            Button(L.s("settings.history_delete_button"), role: .destructive) {
+            Button(strings.s("settings.history_delete_button"), role: .destructive) {
                 confirmingDelete = true
             }
             .disabled(store.completedTodos.isEmpty)
         }
         .confirmationDialog(
-            L.f("settings.history_confirm_title", store.completedTodos.count),
+            strings.f("settings.history_confirm_title", store.completedTodos.count),
             isPresented: $confirmingDelete,
             titleVisibility: .visible
         ) {
-            Button(L.s("settings.history_confirm_delete"), role: .destructive) {
+            Button(strings.s("settings.history_confirm_delete"), role: .destructive) {
                 store.deleteCompleted()
             }
-            Button(L.s("settings.cancel"), role: .cancel) {}
+            Button(strings.s("settings.cancel"), role: .cancel) {}
         } message: {
-            Text(L.s("settings.history_confirm_message"))
+            Text(strings.s("settings.history_confirm_message"))
         }
     }
 }
@@ -274,11 +274,11 @@ struct TodoRow: View {
     }
 
     private var tooltip: String {
-        var text = L.f("list.tooltip_added",
+        var text = strings.f("list.tooltip_added",
                        todo.createdAt.formatted(date: .abbreviated, time: .shortened),
                        todo.createdAt.relativeText)
         if todo.isDone {
-            text += "\n" + L.f("list.tooltip_completed",
+            text += "\n" + strings.f("list.tooltip_completed",
                                todo.completionDate.formatted(date: .abbreviated, time: .shortened),
                                todo.completionDate.relativeText)
         }
@@ -328,7 +328,7 @@ private struct TodoDetailView: View {
                     HStack(spacing: 3) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 10, weight: .semibold))
-                        Text(L.s("list.list"))
+                        Text(strings.s("list.list"))
                             .font(.system(size: 11))
                     }
                     .foregroundStyle(.secondary)
@@ -344,7 +344,7 @@ private struct TodoDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help(L.s("settings.delete"))
+                .help(strings.s("settings.delete"))
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -364,7 +364,7 @@ private struct TodoDetailView: View {
                     }
                     .buttonStyle(.plain)
 
-                    TextField(L.s("list.title"), text: $title, axis: .vertical)
+                    TextField(strings.s("list.title"), text: $title, axis: .vertical)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13, weight: .medium))
                         .focused($titleFocused)
@@ -373,15 +373,15 @@ private struct TodoDetailView: View {
 
                 // Created / completed timestamps
                 VStack(alignment: .leading, spacing: 6) {
-                    timestamp("clock", L.s("list.added"), todo.createdAt)
+                    timestamp("clock", strings.s("list.added"), todo.createdAt)
                     if todo.isDone {
-                        timestamp("checkmark.circle", L.s("list.completed"), todo.completionDate)
+                        timestamp("checkmark.circle", strings.s("list.completed"), todo.completionDate)
                     }
                 }
 
                 // Memo
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(L.s("list.memo"))
+                    Text(strings.s("list.memo"))
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.secondary)
                     TextEditor(text: $memo)

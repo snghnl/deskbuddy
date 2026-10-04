@@ -103,7 +103,7 @@ struct ListPanelView: View {
             if !items.isEmpty {
                 Divider()
             }
-            Button(L.s("app.quit")) { NSApp.terminate(nil) }
+            Button(strings.s("app.quit")) { NSApp.terminate(nil) }
         } label: {
             Image(systemName: "ellipsis.circle")
                 .font(.system(size: 12))
