@@ -63,6 +63,27 @@ final class A2UIPluginTests: XCTestCase {
         answer.cancel()
     }
 
+    func testSwitchingTabsReportsTheTabAndMeasuresThePanelAgain() async throws {
+        let answer = Task {
+            try await panels.ask(Data(#"""
+                {"type": "column", "children": [
+                  {"type": "tabs", "id": "when", "tabs": [
+                    {"title": "Now", "children": [{"type": "text", "text": "short"}]},
+                    {"title": "Later", "children": [{"type": "dateTime", "id": "at", "mode": "time", "value": "09:00"}]}]},
+                  {"type": "button", "label": "OK", "action": {"name": "ok"}}]}
+                """#.utf8))
+        }
+        let session = try await openSession()
+
+        session.select(tab: 1, of: "root.children[0]", id: "when", title: "Later")
+        XCTAssertEqual(session.selectedTabs, ["root.children[0]": 1])
+        XCTAssertEqual(windows.log.last, "update a2ui.panel1 panel")
+        session.perform(.named("ok"))
+
+        let response = try await answer.value
+        XCTAssertEqual(response, A2UIResponse(action: "ok", values: ["when": "Later", "at": "09:00"]))
+    }
+
     func testANamedActionAnswersWithTheInputs() async throws {
         let answer = Task {
             try await panels.ask(Data(#"""

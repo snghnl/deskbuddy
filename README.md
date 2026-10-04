@@ -146,9 +146,14 @@ Commands, for `deskbuddy run <command> name=value ...` or `deskbuddy://<command>
 
 `deskbuddy ui` shows a native panel next to the buddy, built from a JSON description, and
 waits for the user. It prints what they did, as `{"action": "...", "values": {...}}` (the
-action is `null` if they closed the panel). The format is a small A2UI-style subset:
-components `text`, `button`, `row`, `column`, `card`, `divider`, `textField` and `select`,
-nested through `children`.
+action is `null` if they closed the panel). The format is a small A2UI-style subset,
+nested through `children`:
+
+- showing: `text`, `icon` (SF Symbols), `image` (https or a file), `progress`, `divider`
+- arranging: `row`, `column`, `card`, `list` (scrolls), `tabs`
+- inputs, reported by `id` as strings: `textField` (optionally `multiline`), `select` (menu
+  or radio), `checkbox` (or a switch), `slider`, `dateTime` (date, time or both)
+- acting: `button`
 
 ```json
 {"type": "column", "children": [

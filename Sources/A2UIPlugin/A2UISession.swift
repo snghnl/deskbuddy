@@ -12,6 +12,8 @@ final class A2UISession {
     var values: [String: String]
     /// Why the last command failed, shown at the bottom of the panel
     private(set) var error: String?
+    /// The tab each set of tabs shows, by the tabs' key, once the user has picked one
+    private(set) var selectedTabs: [String: Int] = [:]
 
     @ObservationIgnored private let commands: CommandRegistry
     @ObservationIgnored private let finish: (A2UIResponse) -> Void
@@ -38,6 +40,13 @@ final class A2UISession {
             }
         }
         finish(A2UIResponse(action: action.reportedName, values: values))
+    }
+
+    /// Shows another tab. Tabs differ in height, so the panel is measured again.
+    func select(tab index: Int, of key: String, id: String?, title: String) {
+        selectedTabs[key] = index
+        if let id { values[id] = title }
+        resized?()
     }
 
     private func resolve(_ argument: A2UIArgument) -> String {
