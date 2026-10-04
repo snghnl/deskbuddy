@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// The arguments a command runs with. Every way in — a deskbuddy:// URL, the CLI — hands
 /// over text, so values are strings, with typed readers on top.
@@ -48,7 +47,7 @@ public final class CommandRegistry {
     }
 
     private var handlers: [String: Handler] = [:]
-    private let log = Logger.deskBuddy("commands")
+    private let log = Log(category: "commands")
 
     public init() {}
 
@@ -87,7 +86,7 @@ public final class CommandRegistry {
                 do {
                     _ = try await handle(arguments)
                 } catch {
-                    log.error("\(name, privacy: .public): \(String(describing: error), privacy: .public)")
+                    log.error("\(name): \(String(describing: error))")
                 }
             }
             return nil

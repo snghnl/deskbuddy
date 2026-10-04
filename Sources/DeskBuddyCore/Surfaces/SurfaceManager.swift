@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 /// Names something a plugin put on screen, so it can update or dismiss it later. Namespaced
 /// by the plugin's id, like commands: "calendar.eventAlert".
@@ -19,7 +19,7 @@ public enum Surface {
     case bubble(String)
     /// A floating window next to the buddy, for something the user works with: a form, a
     /// choice. It takes keyboard focus and stays until dismissed or closed by the user.
-    case panel(AnyView)
+    case panel(any PlatformView)
 
     var isBubble: Bool {
         if case .bubble = self { return true }

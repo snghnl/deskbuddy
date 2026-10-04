@@ -1,5 +1,3 @@
-import os
-
 /// A unit of functionality that DeskBuddy starts at launch and stops at quit.
 ///
 /// Built-in plugins are compiled into the app and registered with `PluginManager`
@@ -45,5 +43,5 @@ public struct PluginContext {
     /// This plugin's preferences, under keys named after its id
     public let settings: PluginSettings
     /// This plugin's log, its category the plugin's id
-    public let log: Logger
+    public let log: Log
 }

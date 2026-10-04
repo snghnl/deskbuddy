@@ -210,10 +210,14 @@ System Settings → General → Login Items → add `build/DeskBuddy.app`.
 The app is a small host plus built-in plugins, each its own SwiftPM target. A plugin depends on
 DeskBuddyCore and on other features' API modules, never on another plugin.
 
-- `Sources/DeskBuddyCore/` — what plugins build on: the plugin lifecycle (`Plugins/`), services, slots
-  on the shared UI (`Slots/`), commands and the CLI socket (`Commands/`), events (`Events/`), the
-  `Buddy` protocol, and YAML-backed localization: the language choice, `Strings` for each target's
-  own tables (`strings.s("key")`), and the few strings targets share (`L.s("key")`)
+- `Sources/DeskBuddyCore/` — what plugins build on, with no UI framework: the plugin lifecycle
+  (`Plugins/`), services, slots on the shared UI (`Slots/`), surfaces, commands and the CLI socket
+  (`Commands/`), events (`Events/`), storage and settings, the `Buddy` protocol, logging, and
+  YAML-backed localization: the language choice, `Strings` for each target's own tables
+  (`strings.s("key")`), and the few strings targets share (`L.s("key")`). UI travels through it as
+  `PlatformView`
+- `Sources/DeskBuddyMacUI/` — what macOS adds on top: `MacView` (a SwiftUI view as a `PlatformView`),
+  SwiftUI ways to fill the slots, the list panel's environment, the Liquid Glass look
 - `Sources/TodoAPI/` — what the to-do feature offers others: `TodoService`, `TodoDeleted`, the to-do row slot
 - `Sources/TodoPlugin/` — to-dos: model and JSON persistence, To Do/Done tabs, detail page, history settings
 - `Sources/PomodoroPlugin/` — timers: the Timer tab, timer icons on to-do rows, the done bubble

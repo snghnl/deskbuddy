@@ -1,5 +1,6 @@
 import AppKit
 import DeskBuddyCore
+import DeskBuddyMacUI
 import SwiftUI
 
 /// A panel's content: the document's components, then the last error if a command failed

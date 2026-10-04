@@ -1,4 +1,5 @@
 import DeskBuddyCore
+import DeskBuddyMacUI
 import Foundation
 import SwiftUI
 import TodoAPI
@@ -141,6 +142,6 @@ final class TodoFeatureService: TodoService {
 
     func show(_ id: UUID) {
         guard store.todos.contains(where: { $0.id == id }) else { return }
-        buddy.openList(on: AnyView(TodoDetailPage(id: id, store: store)))
+        buddy.openList(on: MacView(TodoDetailPage(id: id, store: store)))
     }
 }

@@ -1,4 +1,3 @@
-import SwiftUI
 
 /// Slots on the UI DeskBuddy itself owns
 public enum CoreSlots {
@@ -19,23 +18,23 @@ public struct ListTab: SlotContribution {
     /// Shown next to the title when above zero
     public let count: @MainActor () -> Int
     /// Sits between the tab bar and the divider while the tab is selected, e.g. the to-do input
-    public let toolbar: (@MainActor () -> AnyView)?
-    public let content: @MainActor () -> AnyView
+    public let toolbar: (@MainActor () -> any PlatformView)?
+    public let content: @MainActor () -> any PlatformView
 
-    public init<Content: View>(
+    public init(
         id: String,
         order: Int,
         title: @escaping @MainActor () -> String,
         count: @escaping @MainActor () -> Int = { 0 },
-        toolbar: (@MainActor () -> AnyView)? = nil,
-        @ViewBuilder content: @escaping @MainActor () -> Content
+        toolbar: (@MainActor () -> any PlatformView)? = nil,
+        content: @escaping @MainActor () -> any PlatformView
     ) {
         self.id = id
         self.order = order
         self.title = title
         self.count = count
         self.toolbar = toolbar
-        self.content = { AnyView(content()) }
+        self.content = content
     }
 }
 
@@ -70,20 +69,20 @@ public struct SettingsSection: SlotContribution {
     public let title: @MainActor () -> String
     public let footer: (@MainActor () -> String)?
     /// The section's rows
-    public let content: @MainActor () -> AnyView
+    public let content: @MainActor () -> any PlatformView
 
-    public init<Content: View>(
+    public init(
         id: String,
         order: Int,
         title: @escaping @MainActor () -> String,
         footer: (@MainActor () -> String)? = nil,
-        @ViewBuilder content: @escaping @MainActor () -> Content
+        content: @escaping @MainActor () -> any PlatformView
     ) {
         self.id = id
         self.order = order
         self.title = title
         self.footer = footer
-        self.content = { AnyView(content()) }
+        self.content = content
     }
 }
 
@@ -96,46 +95,5 @@ public struct BuddyBadge: SlotContribution {
         self.id = id
         self.order = order
         self.count = count
-    }
-}
-
-/// Shows a page over the whole list panel, tab bar included — e.g. a to-do's detail.
-/// List tabs read it from the environment: `@Environment(\.listPage) private var listPage`.
-public struct ListPageAction {
-    private let presentPage: @MainActor (AnyView) -> Void
-    public let dismiss: @MainActor () -> Void
-
-    public init(present: @escaping @MainActor (AnyView) -> Void, dismiss: @escaping @MainActor () -> Void) {
-        presentPage = present
-        self.dismiss = dismiss
-    }
-
-    @MainActor
-    public func present<Page: View>(_ page: Page) {
-        presentPage(AnyView(page))
-    }
-}
-
-private struct ListPageKey: EnvironmentKey {
-    static var defaultValue: ListPageAction { ListPageAction(present: { _ in }, dismiss: {}) }
-}
-
-public extension EnvironmentValues {
-    var listPage: ListPageAction {
-        get { self[ListPageKey.self] }
-        set { self[ListPageKey.self] = newValue }
-    }
-}
-
-private struct ListPanelVisibleKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-public extension EnvironmentValues {
-    /// Whether the list panel is on screen. The panel is hidden rather than torn down, so a
-    /// tab that wants focus each time it opens (the to-do input) watches this.
-    var listPanelVisible: Bool {
-        get { self[ListPanelVisibleKey.self] }
-        set { self[ListPanelVisibleKey.self] = newValue }
     }
 }

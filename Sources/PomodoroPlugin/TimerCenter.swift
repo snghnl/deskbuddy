@@ -1,7 +1,6 @@
 import AppKit
 import DeskBuddyCore
 import Observation
-import os
 
 /// A pomodoro-style countdown timer, optionally linked to a to-do.
 struct BuddyTimer: Identifiable, Codable, Equatable {
@@ -40,10 +39,10 @@ final class TimerCenter {
 
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private let storage: PluginStorage
-    @ObservationIgnored private let log: Logger
+    @ObservationIgnored private let log: Log
     private static let storageKey = "timers"
 
-    init(storage: PluginStorage, log: Logger) {
+    init(storage: PluginStorage, log: Log) {
         self.storage = storage
         self.log = log
         restore()
@@ -116,7 +115,7 @@ final class TimerCenter {
         do {
             try storage.set(timers, forKey: Self.storageKey)
         } catch {
-            log.error("Could not save timers: \(String(describing: error), privacy: .public)")
+            log.error("Could not save timers: \(String(describing: error))")
         }
     }
 
@@ -126,7 +125,7 @@ final class TimerCenter {
             timers = try storage.get([BuddyTimer].self, forKey: Self.storageKey) ?? []
         } catch {
             let aside = try? storage.setAside(Self.storageKey)
-            log.error("Could not read timers, so starting without them. They were moved to \(aside?.path ?? "nowhere", privacy: .public): \(String(describing: error), privacy: .public)")
+            log.error("Could not read timers, so starting without them. They were moved to \(aside?.path ?? "nowhere"): \(String(describing: error))")
         }
     }
 }

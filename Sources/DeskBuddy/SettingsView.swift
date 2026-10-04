@@ -1,5 +1,6 @@
 import AppKit
 import DeskBuddyCore
+import DeskBuddyMacUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -54,7 +55,7 @@ struct SettingsView: View {
         Form {
             ForEach(sections, id: \.id) { section in
                 Section {
-                    section.content()
+                    section.content().swiftUI
                 } header: {
                     Text(section.title())
                 } footer: {

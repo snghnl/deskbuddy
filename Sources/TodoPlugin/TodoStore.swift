@@ -1,7 +1,6 @@
 import DeskBuddyCore
 import Foundation
 import Observation
-import os
 import TodoAPI
 
 struct Todo: Identifiable, Codable, Equatable {
@@ -49,7 +48,7 @@ final class TodoStore {
                     try storage.remove(forKey: Self.historyClearedAtKey)
                 }
             } catch {
-                log.error("Could not save historyClearedAt: \(String(describing: error), privacy: .public)")
+                log.error("Could not save historyClearedAt: \(String(describing: error))")
             }
         }
     }
@@ -62,9 +61,9 @@ final class TodoStore {
     @ObservationIgnored private let events: EventBus
     @ObservationIgnored private let storage: PluginStorage
     @ObservationIgnored private var saveTask: Task<Void, Never>?
-    @ObservationIgnored private let log: Logger
+    @ObservationIgnored private let log: Log
 
-    init(storage: PluginStorage, events: EventBus, log: Logger) {
+    init(storage: PluginStorage, events: EventBus, log: Log) {
         self.events = events
         self.storage = storage
         self.log = log
@@ -182,7 +181,7 @@ final class TodoStore {
             return try storage.get(type, forKey: key)
         } catch {
             let aside = try? storage.setAside(key)
-            log.error("Could not read \(key, privacy: .public), so starting without it. It was moved to \(aside?.path ?? "nowhere", privacy: .public): \(String(describing: error), privacy: .public)")
+            log.error("Could not read \(key), so starting without it. It was moved to \(aside?.path ?? "nowhere"): \(String(describing: error))")
             return nil
         }
     }
@@ -202,7 +201,7 @@ final class TodoStore {
         do {
             try storage.set(todos, forKey: Self.todosKey)
         } catch {
-            log.error("Could not save to-dos: \(String(describing: error), privacy: .public)")
+            log.error("Could not save to-dos: \(String(describing: error))")
         }
     }
 }

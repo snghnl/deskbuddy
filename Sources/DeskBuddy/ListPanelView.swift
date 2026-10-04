@@ -1,5 +1,6 @@
 import AppKit
 import DeskBuddyCore
+import DeskBuddyMacUI
 import SwiftUI
 
 /// The panel that opens under the buddy. It owns the tab bar, the ⋯ menu and the page shown
@@ -47,11 +48,11 @@ struct ListPanelView: View {
         VStack(spacing: 0) {
             header
             if let toolbar = selectedTab?.toolbar {
-                toolbar().id(selectedTab?.id)
+                toolbar().swiftUI.id(selectedTab?.id)
             }
             Divider().opacity(0.4)
             // Keyed by tab, so two tabs never share view state
-            selectedTab?.content().id(selectedTab?.id)
+            selectedTab?.content().swiftUI.id(selectedTab?.id)
         }
     }
 

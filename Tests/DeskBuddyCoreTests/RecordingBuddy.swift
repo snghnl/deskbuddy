@@ -1,6 +1,5 @@
 import DeskBuddyCore
 import Foundation
-import SwiftUI
 
 /// Stands in for the on-screen character in tests, keeping what it was asked to say
 @MainActor
@@ -17,5 +16,5 @@ final class RecordingBuddy: Buddy {
         said.append(message)
     }
 
-    func openList(on page: AnyView) {}
+    func openList(on page: any PlatformView) {}
 }

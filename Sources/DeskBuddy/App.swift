@@ -3,8 +3,8 @@ import AppKit
 import CalendarPlugin
 import ClaudePlugin
 import DeskBuddyCore
+import DeskBuddyMacUI
 import EventKit
-import os
 import PomodoroPlugin
 import SwiftUI
 import TodoPlugin
@@ -209,7 +209,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         "toggle": "list.toggle",
     ]
 
-    private let commandLog = Logger.deskBuddy("commands")
+    private let commandLog = Log(category: "commands")
 
     /// deskbuddy://<command>?<arguments> runs a registered command, e.g.
     /// deskbuddy://pomodoro.start?minutes=25. The older short forms still work:
@@ -233,7 +233,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try plugins.commands.execute(command, CommandArguments(values))
         } catch {
             // Nobody waits on a URL for an answer, so the log is all there is
-            commandLog.error("\(url.absoluteString, privacy: .public): \(String(describing: error), privacy: .public)")
+            commandLog.error("\(url.absoluteString): \(String(describing: error))")
         }
     }
 
@@ -738,12 +738,12 @@ extension AppDelegate: Buddy {
         show(message, autoHide: seconds)
     }
 
-    func openList(on page: AnyView) {
+    func openList(on page: any PlatformView) {
         if !listPanel.isVisible {
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
             toggleList()
         }
-        appState.listPage = page
+        appState.listPage = page.swiftUI
     }
 
     private func show(_ message: String, autoHide: TimeInterval?) {

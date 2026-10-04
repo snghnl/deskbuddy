@@ -149,5 +149,5 @@ private final class QuietBuddy: Buddy {
     let isVisible = true
     func say(_ message: String) {}
     func say(_ message: String, closingAfter seconds: TimeInterval) {}
-    func openList(on page: AnyView) {}
+    func openList(on page: any PlatformView) {}
 }

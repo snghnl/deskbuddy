@@ -18,6 +18,13 @@ let package = Package(
                 .copy("Resources/Localizations")
             ]
         ),
+        // What macOS needs on top of Core to draw plugins' UI: SwiftUI views as PlatformView,
+        // the list panel's environment, the Liquid Glass look
+        .target(
+            name: "DeskBuddyMacUI",
+            dependencies: ["DeskBuddyCore"],
+            path: "Sources/DeskBuddyMacUI"
+        ),
         // The to-do feature's public API: types and protocols other features may depend on
         .target(
             name: "TodoAPI",
@@ -27,21 +34,21 @@ let package = Package(
         // To-dos: the To Do and Done tabs, the detail page, the history in Settings
         .target(
             name: "TodoPlugin",
-            dependencies: ["DeskBuddyCore", "TodoAPI"],
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoAPI"],
             path: "Sources/TodoPlugin",
             resources: [.copy("Resources/Localizations")]
         ),
         // Countdown timers, optionally linked to to-dos
         .target(
             name: "PomodoroPlugin",
-            dependencies: ["DeskBuddyCore", "TodoAPI"],
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoAPI"],
             path: "Sources/PomodoroPlugin",
             resources: [.copy("Resources/Localizations")]
         ),
         // The Calendar tab, calendar settings and event alerts; reads to-dos through TodoAPI
         .target(
             name: "CalendarPlugin",
-            dependencies: ["DeskBuddyCore", "TodoAPI"],
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoAPI"],
             path: "Sources/CalendarPlugin",
             resources: [.copy("Resources/Localizations")]
         ),
@@ -53,7 +60,7 @@ let package = Package(
         // Renders UI described in DeskBuddy's A2UI subset as native panels
         .target(
             name: "A2UIPlugin",
-            dependencies: ["DeskBuddyCore", "A2UIAPI"],
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "A2UIAPI"],
             path: "Sources/A2UIPlugin"
         ),
         // Claude Code's questions to the user, shown through A2UI
@@ -66,7 +73,8 @@ let package = Package(
         // Puts the plugins together: registers them and hosts the UI they contribute to
         .executableTarget(
             name: "DeskBuddy",
-            dependencies: ["DeskBuddyCore", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin", "A2UIPlugin", "ClaudePlugin"],
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoPlugin", "PomodoroPlugin", "CalendarPlugin", "A2UIPlugin",
+                           "ClaudePlugin"],
             path: "Sources/DeskBuddy",
             resources: [.copy("Resources/Localizations")]
         ),

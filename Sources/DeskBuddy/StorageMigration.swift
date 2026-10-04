@@ -1,6 +1,5 @@
 import DeskBuddyCore
 import Foundation
-import os
 
 /// Moves what the built-in features kept before plugins had storage of their own (0.18):
 /// to-dos in todos.json at the top of the app's folder, and the timers and the Done-tab
@@ -14,7 +13,7 @@ import os
 /// A step whose destination already exists is skipped, which makes running this at every
 /// launch harmless. A step that fails leaves its original where it was and is logged.
 enum StorageMigration {
-    private static let log = Logger.deskBuddy("storage")
+    private static let log = Log(category: "storage")
 
     /// `appFolder` is Application Support/DeskBuddy; plugin data goes under its plugins/ folder
     static func run(appFolder: URL, defaults: UserDefaults, now: Date = Date()) {
@@ -79,7 +78,7 @@ enum StorageMigration {
         do {
             try step()
         } catch {
-            log.error("Could not move \(what, privacy: .public) to plugin storage: \(String(describing: error), privacy: .public)")
+            log.error("Could not move \(what) to plugin storage: \(String(describing: error))")
         }
     }
 

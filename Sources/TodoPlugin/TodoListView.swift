@@ -1,4 +1,5 @@
 import DeskBuddyCore
+import DeskBuddyMacUI
 import SwiftUI
 import TodoAPI
 import UniformTypeIdentifiers
@@ -235,7 +236,7 @@ struct TodoRow: View {
                         .foregroundStyle(.tertiary)
                 }
                 ForEach(accessories, id: \.id) { accessory in
-                    accessory.content(todo.id)
+                    accessory.content(todo.id).swiftUI
                 }
                 Spacer(minLength: 0)
             }

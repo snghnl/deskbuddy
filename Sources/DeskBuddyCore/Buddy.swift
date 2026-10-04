@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// The character on screen, as plugins get to use it
 @MainActor
@@ -17,7 +16,7 @@ public protocol Buddy: AnyObject {
     func say(_ message: String, closingAfter seconds: TimeInterval)
 
     /// Opens the list panel under the buddy, covered by `page` — e.g. a to-do's detail when
-    /// the todo.show command runs. Views already inside the panel use the `listPage`
-    /// environment action instead.
-    func openList(on page: AnyView)
+    /// the todo.show command runs. On macOS, views already inside the panel use the
+    /// `listPage` environment action instead.
+    func openList(on page: any PlatformView)
 }

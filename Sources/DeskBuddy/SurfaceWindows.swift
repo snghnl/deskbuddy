@@ -1,5 +1,6 @@
 import AppKit
 import DeskBuddyCore
+import DeskBuddyMacUI
 import SwiftUI
 
 /// Puts plugins' surfaces on screen. A bubble goes through the buddy's speech bubble. A panel
@@ -40,7 +41,7 @@ final class SurfaceWindows: SurfacePresenter {
                 ended(.closedByUser)
             }
             panels[id] = panel
-            panel.setContent(content)
+            panel.setContent(content.swiftUI)
             // A child of a hidden window would not show
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
             place(panel)
@@ -57,7 +58,7 @@ final class SurfaceWindows: SurfacePresenter {
             bubble.replace(message, with: text)
         case .panel(let content):
             guard let panel = panels[id] else { return }
-            panel.setContent(content)
+            panel.setContent(content.swiftUI)
             place(panel)
         }
     }

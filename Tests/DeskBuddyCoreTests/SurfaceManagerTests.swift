@@ -1,4 +1,3 @@
-import SwiftUI
 import XCTest
 @testable import DeskBuddyCore
 
@@ -33,7 +32,7 @@ final class SurfaceManagerTests: XCTestCase {
         let presenter = RecordingPresenter()
         let surfaces = SurfaceManager(presenter: presenter)
         var closed: [String] = []
-        surfaces.present(.panel(AnyView(Text("form"))), id: alert) { closed.append("first") }
+        surfaces.present(.panel(FormView()), id: alert) { closed.append("first") }
         let end = try XCTUnwrap(presenter.endings[alert])
 
         end(.closedByUser)
@@ -42,7 +41,7 @@ final class SurfaceManagerTests: XCTestCase {
         XCTAssertEqual(closed, ["first"])
         XCTAssertFalse(surfaces.isPresented(alert))
 
-        surfaces.present(.panel(AnyView(Text("form"))), id: alert) { closed.append("second") }
+        surfaces.present(.panel(FormView()), id: alert) { closed.append("second") }
         surfaces.dismiss(alert)
         XCTAssertEqual(closed, ["first"])
     }
@@ -76,3 +75,6 @@ final class SurfaceManagerTests: XCTestCase {
         XCTAssertTrue(surfaces.isPresented(alert))
     }
 }
+
+/// Stands in for a panel's content; Core never looks inside
+private struct FormView: PlatformView {}

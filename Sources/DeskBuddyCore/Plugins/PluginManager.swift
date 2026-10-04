@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Owns the built-in plugins: registered by the app at startup, activated at launch, deactivated at quit.
 @MainActor
@@ -14,7 +13,7 @@ public final class PluginManager {
     private var registered: [any DeskBuddyPlugin] = []
     /// In activation order — deactivated in reverse
     private var active: [any DeskBuddyPlugin] = []
-    private let log = Logger.deskBuddy("plugins")
+    private let log = Log(category: "plugins")
 
     /// Each plugin's storage is the folder named after its id in here
     private let storageRoot: URL
@@ -46,10 +45,10 @@ public final class PluginManager {
                 try plugin.activate(PluginContext(buddy: buddy, commands: commands, events: events, services: services,
                                                   slots: slots, surfaces: surfaces, storage: storage,
                                                   settings: PluginSettings(pluginID: plugin.manifest.id, defaults: defaults),
-                                                  log: .deskBuddy(plugin.manifest.id)))
+                                                  log: Log(category: plugin.manifest.id)))
                 active.append(plugin)
             } catch {
-                log.error("\(plugin.manifest.id, privacy: .public) failed to activate: \(String(describing: error), privacy: .public)")
+                log.error("\(plugin.manifest.id) failed to activate: \(String(describing: error))")
             }
         }
     }

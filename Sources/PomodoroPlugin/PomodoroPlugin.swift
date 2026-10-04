@@ -1,5 +1,6 @@
 import AppKit
 import DeskBuddyCore
+import DeskBuddyMacUI
 import TodoAPI
 
 /// Pomodoro-style countdown timers: the Timer tab, the timer icon on to-do rows, and the
@@ -51,7 +52,7 @@ public final class PomodoroPlugin: DeskBuddyPlugin {
             TimerTabView(timers: timers, todos: services.resolve(TodoService.self))
         })
         context.slots.contribute(TodoSlots.rowAccessory, TodoRowAccessory(id: "pomodoro.state", order: 100) { todoID in
-            TimerStateIcon(timers: timers, todoID: todoID)
+            MacView(TimerStateIcon(timers: timers, todoID: todoID))
         })
     }
 

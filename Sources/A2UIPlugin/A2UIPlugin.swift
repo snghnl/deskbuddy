@@ -1,5 +1,6 @@
 import A2UIAPI
 import DeskBuddyCore
+import DeskBuddyMacUI
 import Foundation
 import SwiftUI
 
@@ -73,10 +74,10 @@ final class A2UIPanels: A2UIService {
         }
         session.resized = { [weak self, weak session] in
             guard let self, let session else { return }
-            surfaces.update(id, to: .panel(AnyView(A2UIPanelView(session: session))))
+            surfaces.update(id, to: .panel(MacView(A2UIPanelView(session: session))))
         }
         open[id] = (session, finish)
-        surfaces.present(.panel(AnyView(A2UIPanelView(session: session))), id: id) { [weak self, weak session] in
+        surfaces.present(.panel(MacView(A2UIPanelView(session: session))), id: id) { [weak self, weak session] in
             // Closed by the user: no action, but whatever they had entered
             self?.finish(id, with: .success(A2UIResponse(action: nil, values: session?.values ?? [:])), dismiss: false)
         }

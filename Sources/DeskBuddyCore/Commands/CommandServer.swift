@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Serves the command registry on a Unix domain socket, so the CLI can run a command and hear
 /// back — its answer, or why it failed — which a deskbuddy:// URL cannot do. It also reaches
@@ -19,7 +18,7 @@ public final class CommandServer: @unchecked Sendable {   // `source` is only to
     private let commands: CommandRegistry
     private let acceptQueue = DispatchQueue(label: "com.snghnl.deskbuddy.command-socket")
     private var source: DispatchSourceRead?
-    private let log = Logger.deskBuddy("commands")
+    private let log = Log(category: "commands")
 
     /// A request is one short line; anything longer is not one of ours
     private static let maxRequestSize = 64 * 1024
@@ -37,11 +36,11 @@ public final class CommandServer: @unchecked Sendable {   // `source` is only to
     public func start() -> Bool {
         guard source == nil else { return true }
         guard var address = Self.address(for: path) else {
-            log.error("Command socket path is too long: \(self.path, privacy: .public)")
+            log.error("Command socket path is too long: \(self.path)")
             return false
         }
         if Self.someoneIsListening(at: &address) {
-            log.notice("Another DeskBuddy already serves \(self.path, privacy: .public)")
+            log.notice("Another DeskBuddy already serves \(self.path)")
             return false
         }
         unlink(path)
@@ -50,7 +49,7 @@ public final class CommandServer: @unchecked Sendable {   // `source` is only to
         guard listener >= 0 else { return false }
         let bound = Self.withSockaddr(&address) { bind(listener, $0, $1) } == 0
         guard bound, chmod(path, 0o600) == 0, listen(listener, 8) == 0 else {
-            log.error("Could not open the command socket: \(String(cString: strerror(errno)), privacy: .public)")
+            log.error("Could not open the command socket: \(String(cString: strerror(errno)))")
             close(listener)
             if bound { unlink(path) }
             return false

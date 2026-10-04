@@ -1,6 +1,5 @@
 import DeskBuddyCore
 import Foundation
-import SwiftUI
 
 // What the to-do feature offers other features. Holds only types and protocols, so a
 // feature can depend on it without depending on how to-dos are stored or shown.
@@ -75,15 +74,11 @@ public struct TodoRowAccessory: SlotContribution {
     public let id: String
     public let order: Int
     /// Given the row's to-do id. Render nothing when there is nothing to show for it.
-    public let content: @MainActor (UUID) -> AnyView
+    public let content: @MainActor (UUID) -> any PlatformView
 
-    public init<Content: View>(
-        id: String,
-        order: Int,
-        @ViewBuilder content: @escaping @MainActor (UUID) -> Content
-    ) {
+    public init(id: String, order: Int, content: @escaping @MainActor (UUID) -> any PlatformView) {
         self.id = id
         self.order = order
-        self.content = { AnyView(content($0)) }
+        self.content = content
     }
 }

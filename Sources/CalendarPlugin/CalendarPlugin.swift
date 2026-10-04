@@ -1,4 +1,5 @@
 import DeskBuddyCore
+import DeskBuddyMacUI
 import Foundation
 import SwiftUI
 import TodoAPI
