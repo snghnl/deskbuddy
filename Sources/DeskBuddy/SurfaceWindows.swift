@@ -109,6 +109,11 @@ private final class SurfacePanel: NSPanel {
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         hosting.sizingOptions = []
+        // Rounded like the chrome, so the window shadow and Liquid Glass stop at its corners
+        hosting.wantsLayer = true
+        hosting.layer?.cornerRadius = 14
+        hosting.layer?.cornerCurve = .continuous
+        hosting.layer?.masksToBounds = true
         contentView = hosting
     }
 

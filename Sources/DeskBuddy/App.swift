@@ -434,6 +434,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             grip.widthAnchor.constraint(equalToConstant: 22),
             grip.heightAnchor.constraint(equalToConstant: 22),
         ])
+        // Clip to the panel's rounded shape: the window shadow follows what is left, and Liquid
+        // Glass would otherwise leave the square window edge showing around the corners
+        container.wantsLayer = true
+        container.layer?.cornerRadius = 14
+        container.layer?.cornerCurve = .continuous
+        container.layer?.masksToBounds = true
         listPanel.contentView = container
     }
 
@@ -447,6 +453,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // As a child window the list follows automatically when the character is dragged
             characterPanel.addChildWindow(listPanel, ordered: .above)
             listPanel.orderFrontRegardless()
+            listPanel.invalidateShadow()   // the look may have switched (glass or not) while it was closed
             listPanel.makeKey()
             appState.listVisible = true
         }
