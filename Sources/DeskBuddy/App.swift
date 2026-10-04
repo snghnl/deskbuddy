@@ -754,8 +754,8 @@ extension AppDelegate: Buddy {
 
 /// Plugins only put surfaces up after launch, by which time the windows exist
 extension AppDelegate: SurfacePresenter {
-    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {
-        surfaceWindows.show(surface, id: id, closed: closed)
+    func show(_ surface: Surface, id: SurfaceID, ended: @escaping @MainActor (SurfaceEnd) -> Void) {
+        surfaceWindows.show(surface, id: id, ended: ended)
     }
 
     func update(_ surface: Surface, id: SurfaceID) {

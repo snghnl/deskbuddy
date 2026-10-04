@@ -129,7 +129,15 @@ final class BubbleController {
     private weak var characterPanel: NSPanel?
     private var autoHideTask: Task<Void, Never>?
     /// The message currently showing or suspended — kept until dismissed
-    private var current: (message: String, autoHide: TimeInterval?, onTap: (() -> Void)?)?
+    private var current: Message?
+
+    private struct Message {
+        let id: UUID
+        var text: String
+        let autoHide: TimeInterval?
+        let onTap: (() -> Void)?
+        let onGone: (() -> Void)?
+    }
 
     init(characterPanel: NSPanel) {
         self.characterPanel = characterPanel
@@ -165,10 +173,13 @@ final class BubbleController {
             ])
         }
         catcher.onClick = { [weak self] in
-            // Read the action before hiding — hide() clears the message it belongs to
-            let action = self?.current?.onTap
-            self?.hide()
-            action?()
+            guard let self, let clicked = current else { return }
+            current = nil
+            dismissPanel()
+            // The click is reported before the message is gone, so whoever showed it can tell
+            // a click from a timeout
+            clicked.onTap?()
+            clicked.onGone?()
         }
         panel.contentView = container
     }
@@ -184,15 +195,27 @@ final class BubbleController {
         return size
     }
 
-    /// Shows the bubble. With autoHide it closes itself after that interval (otherwise it stays until clicked).
-    /// `onTap` runs when this particular message is clicked — it is dropped along with the message.
-    func show(_ message: String, autoHide: TimeInterval? = nil, onTap: (() -> Void)? = nil) {
-        guard characterPanel != nil else { return }
-        current = (message, autoHide, onTap)
-        layout(message)
+    /// Shows the bubble, taking the place of whatever it said before. With autoHide it closes
+    /// itself after that interval (otherwise it stays until clicked). `onTap` runs when this
+    /// message is clicked; `onGone` once it leaves for any reason — clicked, timed out, hidden,
+    /// or replaced by a newer message. Returns the message's id, to change or hide it later.
+    @discardableResult
+    func show(_ message: String, autoHide: TimeInterval? = nil,
+              onTap: (() -> Void)? = nil, onGone: (() -> Void)? = nil) -> UUID {
+        let shown = Message(id: UUID(), text: message, autoHide: autoHide, onTap: onTap, onGone: onGone)
+        guard characterPanel != nil else { return shown.id }
+        let replaced = current
+        current = shown
+        present(shown)
+        replaced?.onGone?()
+        return shown.id
+    }
 
+    /// Lays the message out and starts its auto-hide countdown afresh
+    private func present(_ message: Message) {
+        layout(message.text)
         autoHideTask?.cancel()
-        if let autoHide {
+        if let autoHide = message.autoHide {
             autoHideTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(autoHide))
                 guard !Task.isCancelled else { return }
@@ -273,24 +296,26 @@ final class BubbleController {
         onVisibleChange?(true)
     }
 
-    /// Swaps the text of the showing (or suspended) bubble in place — no-op once it has been dismissed or replaced by another message.
-    /// The auto-hide countdown keeps running, so a ticking message still closes on schedule.
-    func replace(_ old: String, with new: String) {
-        guard let current, current.message == old else { return }
-        self.current = (new, current.autoHide, current.onTap)
-        if panel.isVisible { layout(new) }
+    /// Changes the text of message `id` in place — no-op once it is gone. The auto-hide
+    /// countdown keeps running, so a ticking message still closes on schedule.
+    func replace(_ id: UUID, with text: String) {
+        guard current?.id == id else { return }
+        current?.text = text
+        if panel.isVisible { layout(text) }
     }
 
-    /// Hides `message` if it is still the one showing (or suspended); a newer message stays
-    func hide(ifShowing message: String) {
-        guard current?.message == message else { return }
+    /// Hides message `id` if it is still the one showing (or suspended); a newer message stays
+    func hide(_ id: UUID) {
+        guard current?.id == id else { return }
         hide()
     }
 
-    /// Fully dismiss (click or auto-hide) — discards any suspended message too
+    /// Fully dismiss (auto-hide, or someone hiding it) — discards any suspended message too
     func hide() {
+        let gone = current
         current = nil
         dismissPanel()
+        gone?.onGone?()
     }
 
     /// Fold away temporarily (e.g. while being thrown) — the message is kept and restored in resume
@@ -302,7 +327,7 @@ final class BubbleController {
     /// If there is a suspended message, shows it again relative to the character's current position
     func resume() {
         if let current {
-            show(current.message, autoHide: current.autoHide, onTap: current.onTap)
+            present(current)
         }
     }
 

@@ -14,12 +14,12 @@ extension PluginManager {
 @MainActor
 final class RecordingPresenter: SurfacePresenter {
     private(set) var log: [String] = []
-    /// The close callback of each surface on screen, to play the user closing it
-    private(set) var closers: [SurfaceID: @MainActor () -> Void] = [:]
+    /// How to end each surface on screen, to play the user closing it or a bubble going away
+    private(set) var endings: [SurfaceID: @MainActor (SurfaceEnd) -> Void] = [:]
 
-    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {
+    func show(_ surface: Surface, id: SurfaceID, ended: @escaping @MainActor (SurfaceEnd) -> Void) {
         log.append("show \(id) \(Self.describe(surface))")
-        closers[id] = closed
+        endings[id] = ended
     }
 
     func update(_ surface: Surface, id: SurfaceID) {
@@ -28,7 +28,7 @@ final class RecordingPresenter: SurfacePresenter {
 
     func hide(_ id: SurfaceID) {
         log.append("hide \(id)")
-        closers[id] = nil
+        endings[id] = nil
     }
 
     private static func describe(_ surface: Surface) -> String {

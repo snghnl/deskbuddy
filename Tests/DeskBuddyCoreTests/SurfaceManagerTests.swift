@@ -34,10 +34,10 @@ final class SurfaceManagerTests: XCTestCase {
         let surfaces = SurfaceManager(presenter: presenter)
         var closed: [String] = []
         surfaces.present(.panel(AnyView(Text("form"))), id: alert) { closed.append("first") }
-        let close = try XCTUnwrap(presenter.closers[alert])
+        let end = try XCTUnwrap(presenter.endings[alert])
 
-        close()
-        close()   // reported twice: still one close
+        end(.closedByUser)
+        end(.closedByUser)   // reported twice: still one close
 
         XCTAssertEqual(closed, ["first"])
         XCTAssertFalse(surfaces.isPresented(alert))
@@ -47,15 +47,30 @@ final class SurfaceManagerTests: XCTestCase {
         XCTAssertEqual(closed, ["first"])
     }
 
+    func testABubbleThatWentAwayIsNoLongerPresentedButIsNotAClose() throws {
+        let presenter = RecordingPresenter()
+        let surfaces = SurfaceManager(presenter: presenter)
+        var closed = false
+        surfaces.present(.bubble("in 5 min"), id: alert) { closed = true }
+
+        // Timed out, or another message took the bubble
+        try XCTUnwrap(presenter.endings[alert])(.wentAway)
+        surfaces.update(alert, to: .bubble("in 4 min"))
+
+        XCTAssertFalse(surfaces.isPresented(alert))
+        XCTAssertFalse(closed)
+        XCTAssertEqual(presenter.log, ["show test.alert bubble in 5 min"], "nothing left to update")
+    }
+
     func testACloseFromAnEarlierPresentationIsIgnored() throws {
         let presenter = RecordingPresenter()
         let surfaces = SurfaceManager(presenter: presenter)
         var closed: [String] = []
         surfaces.present(.bubble("old"), id: alert) { closed.append("old") }
-        let staleClose = try XCTUnwrap(presenter.closers[alert])
+        let staleEnd = try XCTUnwrap(presenter.endings[alert])
         surfaces.present(.bubble("new"), id: alert) { closed.append("new") }
 
-        staleClose()
+        staleEnd(.closedByUser)
 
         XCTAssertEqual(closed, [])
         XCTAssertTrue(surfaces.isPresented(alert))

@@ -227,7 +227,7 @@ private final class RecordingBuddy: Buddy {
 /// Surfaces go nowhere
 @MainActor
 private final class NoWindows: SurfacePresenter {
-    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {}
+    func show(_ surface: Surface, id: SurfaceID, ended: @escaping @MainActor (SurfaceEnd) -> Void) {}
     func update(_ surface: Surface, id: SurfaceID) {}
     func hide(_ id: SurfaceID) {}
 }

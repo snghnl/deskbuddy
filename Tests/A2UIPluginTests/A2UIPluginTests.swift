@@ -172,9 +172,9 @@ private final class RecordingWindows: SurfacePresenter {
     private(set) var log: [String] = []
     private(set) var closers: [SurfaceID: @MainActor () -> Void] = [:]
 
-    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {
+    func show(_ surface: Surface, id: SurfaceID, ended: @escaping @MainActor (SurfaceEnd) -> Void) {
         log.append("show \(id)")
-        closers[id] = closed
+        closers[id] = { ended(.closedByUser) }
     }
 
     func update(_ surface: Surface, id: SurfaceID) {

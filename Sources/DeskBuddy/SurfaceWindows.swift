@@ -12,8 +12,9 @@ final class SurfaceWindows: SurfacePresenter {
     /// The user's bubble delay at the moment of showing — nil keeps a bubble until clicked
     private let bubbleAutoHide: () -> TimeInterval?
 
-    /// What each bubble surface last said, to find it again in the shared bubble
-    private var bubbleTexts: [SurfaceID: String] = [:]
+    /// Each bubble surface's message in the shared bubble. May outlive the message, which is
+    /// harmless: the bubble ignores ids it no longer shows.
+    private var bubbleMessages: [SurfaceID: UUID] = [:]
     private var panels: [SurfaceID: SurfacePanel] = [:]
 
     init(characterPanel: NSPanel, bubble: BubbleController, bubbleAutoHide: @escaping () -> TimeInterval?) {
@@ -22,21 +23,21 @@ final class SurfaceWindows: SurfacePresenter {
         self.bubbleAutoHide = bubbleAutoHide
     }
 
-    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void) {
-        hide(id)
+    func show(_ surface: Surface, id: SurfaceID, ended: @escaping @MainActor (SurfaceEnd) -> Void) {
+        closePanel(id)
         switch surface {
         case .bubble(let message):
-            bubbleTexts[id] = message
+            // The new message takes the bubble from the old one; hiding it first would flicker
             if !characterPanel.isVisible { characterPanel.orderFrontRegardless() }
-            bubble.show(message, autoHide: bubbleAutoHide()) { [weak self] in
-                self?.bubbleTexts[id] = nil
-                closed()
-            }
+            bubbleMessages[id] = bubble.show(message, autoHide: bubbleAutoHide(),
+                                             onTap: { ended(.closedByUser) },
+                                             onGone: { ended(.wentAway) })
         case .panel(let content):
+            if let message = bubbleMessages.removeValue(forKey: id) { bubble.hide(message) }
             let panel = SurfacePanel()
             panel.onClose = { [weak self] in
-                self?.hide(id)
-                closed()
+                self?.closePanel(id)
+                ended(.closedByUser)
             }
             panels[id] = panel
             panel.setContent(content)
@@ -51,10 +52,9 @@ final class SurfaceWindows: SurfacePresenter {
 
     func update(_ surface: Surface, id: SurfaceID) {
         switch surface {
-        case .bubble(let message):
-            guard let old = bubbleTexts[id] else { return }
-            bubbleTexts[id] = message
-            bubble.replace(old, with: message)
+        case .bubble(let text):
+            guard let message = bubbleMessages[id] else { return }
+            bubble.replace(message, with: text)
         case .panel(let content):
             guard let panel = panels[id] else { return }
             panel.setContent(content)
@@ -63,13 +63,16 @@ final class SurfaceWindows: SurfacePresenter {
     }
 
     func hide(_ id: SurfaceID) {
-        if let message = bubbleTexts.removeValue(forKey: id) {
-            bubble.hide(ifShowing: message)
+        if let message = bubbleMessages.removeValue(forKey: id) {
+            bubble.hide(message)
         }
-        if let panel = panels.removeValue(forKey: id) {
-            characterPanel.removeChildWindow(panel)
-            panel.orderOut(nil)
-        }
+        closePanel(id)
+    }
+
+    private func closePanel(_ id: SurfaceID) {
+        guard let panel = panels.removeValue(forKey: id) else { return }
+        characterPanel.removeChildWindow(panel)
+        panel.orderOut(nil)
     }
 
     /// Beside the character, on whichever side has room, vertically centered on it

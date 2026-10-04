@@ -15,7 +15,7 @@ public struct SurfaceID: Hashable, CustomStringConvertible {
 /// UI a plugin puts up on its own, as opposed to a contribution to UI someone else owns (a slot)
 public enum Surface {
     /// The buddy's speech bubble. It closes after the delay the user chose in Settings, or when
-    /// clicked, and a later message takes its place.
+    /// clicked, and a later message — from anyone — takes its place.
     case bubble(String)
     /// A floating window next to the buddy, for something the user works with: a form, a
     /// choice. It takes keyboard focus and stays until dismissed or closed by the user.
@@ -27,11 +27,20 @@ public enum Surface {
     }
 }
 
+/// How a surface left the screen, other than by being dismissed
+public enum SurfaceEnd {
+    /// The user closed it: clicked the bubble, or the panel's close button or Escape
+    case closedByUser
+    /// It left on its own: a bubble timed out or gave way to another message
+    case wentAway
+}
+
 /// Draws surfaces with real windows. The app implements it; plugins go through SurfaceManager.
 @MainActor
 public protocol SurfacePresenter: AnyObject {
-    /// Puts `surface` up, replacing what `id` showed. Calls `closed` when the user closes it.
-    func show(_ surface: Surface, id: SurfaceID, closed: @escaping @MainActor () -> Void)
+    /// Puts `surface` up, replacing what `id` showed. Calls `ended` once if it leaves the
+    /// screen other than through `hide`.
+    func show(_ surface: Surface, id: SurfaceID, ended: @escaping @MainActor (SurfaceEnd) -> Void)
     func update(_ surface: Surface, id: SurfaceID)
     func hide(_ id: SurfaceID)
 }
@@ -51,19 +60,19 @@ public final class SurfaceManager {
 
     /// Shows `surface` under `id`, replacing what that id showed. `onClose` runs if the user
     /// closes it, not when you call `dismiss`. A bubble that times out or gives way to another
-    /// message is not reported.
+    /// message is not reported either, but is no longer presented.
     public func present(_ surface: Surface, id: SurfaceID, onClose: (@MainActor () -> Void)? = nil) {
         let presentation = UUID()
         presented[id] = presentation
-        presenter.show(surface, id: id) { [weak self] in
+        presenter.show(surface, id: id) { [weak self] end in
             guard let self, presented[id] == presentation else { return }
             presented[id] = nil
-            onClose?()
+            if case .closedByUser = end { onClose?() }
         }
     }
 
     /// Changes what `id` shows, e.g. a countdown ticking or a form after a submission. Does
-    /// nothing once it is gone.
+    /// nothing once it is gone — dismissed, closed, or for a bubble, timed out or replaced.
     public func update(_ id: SurfaceID, to surface: Surface) {
         guard presented[id] != nil else { return }
         presenter.update(surface, id: id)
