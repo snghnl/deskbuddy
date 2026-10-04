@@ -15,14 +15,9 @@ public final class CalendarPlugin: DeskBuddyPlugin {
     public init() {}
 
     public func activate(_ context: PluginContext) throws {
-        UserDefaults.standard.register(defaults: [
-            CalendarSettings.showEvents: true,
-            CalendarSettings.eventAlerts: true,
-            CalendarSettings.eventAlertLead: 10,
-        ])
-
+        let settings = context.settings
         let calendar = CalendarService()
-        let notifier = EventNotifier(calendar: calendar, buddy: context.buddy, surfaces: context.surfaces)
+        let notifier = EventNotifier(calendar: calendar, buddy: context.buddy, surfaces: context.surfaces, settings: settings)
         notifier.start()
         self.notifier = notifier
 
@@ -31,14 +26,14 @@ public final class CalendarPlugin: DeskBuddyPlugin {
             id: "calendar.month", order: 300,
             title: { L.s("list.calendar") }
         ) {
-            CalendarTabView(calendar: calendar, todos: services.resolve(TodoService.self))
+            CalendarTabView(calendar: calendar, todos: services.resolve(TodoService.self), settings: settings)
         })
         context.slots.contribute(CoreSlots.settingsSections, SettingsSection(
             id: "calendar.integration", order: 300,
             title: { L.s("settings.integrations") },
             footer: { L.s("settings.integrations_footer") }
         ) {
-            CalendarSettingsRows(calendar: calendar)
+            CalendarSettingsRows(calendar: calendar, settings: settings)
         })
     }
 
@@ -47,9 +42,15 @@ public final class CalendarPlugin: DeskBuddyPlugin {
     }
 }
 
-/// UserDefaults keys for the calendar settings. The names predate the plugin and stay as they are.
+/// The calendar's preferences, by name in its PluginSettings, with their defaults
 enum CalendarSettings {
-    static let showEvents = "DeskBuddy.showCalendar"
-    static let eventAlerts = "DeskBuddy.eventAlerts"
-    static let eventAlertLead = "DeskBuddy.eventAlertLead"
+    /// Show macOS calendar events on the Calendar tab
+    static let showEvents = "showEvents"
+    static let showEventsDefault = true
+    /// Say when an event is about to start
+    static let eventAlerts = "eventAlerts"
+    static let eventAlertsDefault = true
+    /// Minutes before the start to say it
+    static let eventAlertLead = "eventAlertLead"
+    static let eventAlertLeadDefault = 10
 }

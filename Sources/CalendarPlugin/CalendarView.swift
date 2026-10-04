@@ -9,15 +9,17 @@ struct CalendarTabView: View {
     /// nil without the to-do feature: then only events show
     let todos: (any TodoService)?
 
-    @AppStorage(CalendarSettings.showEvents) private var showEvents = true
+    @AppStorage private var showEvents: Bool
     @State private var month: Date
     @State private var selectedDay: Date
 
     private let cal = Calendar.current
 
-    init(calendar: CalendarService, todos: (any TodoService)?) {
+    init(calendar: CalendarService, todos: (any TodoService)?, settings: PluginSettings) {
         self.calendar = calendar
         self.todos = todos
+        _showEvents = AppStorage(wrappedValue: CalendarSettings.showEventsDefault,
+                                 settings.key(CalendarSettings.showEvents), store: settings.defaults)
         let cal = Calendar.current
         _month = State(initialValue: cal.dateInterval(of: .month, for: Date())?.start ?? Date())
         _selectedDay = State(initialValue: cal.startOfDay(for: Date()))
@@ -268,9 +270,19 @@ struct CalendarTabView: View {
 struct CalendarSettingsRows: View {
     let calendar: CalendarService
 
-    @AppStorage(CalendarSettings.showEvents) private var showCalendar = true
-    @AppStorage(CalendarSettings.eventAlerts) private var eventAlerts = true
-    @AppStorage(CalendarSettings.eventAlertLead) private var eventAlertLead = 10
+    @AppStorage private var showCalendar: Bool
+    @AppStorage private var eventAlerts: Bool
+    @AppStorage private var eventAlertLead: Int
+
+    init(calendar: CalendarService, settings: PluginSettings) {
+        self.calendar = calendar
+        _showCalendar = AppStorage(wrappedValue: CalendarSettings.showEventsDefault,
+                                   settings.key(CalendarSettings.showEvents), store: settings.defaults)
+        _eventAlerts = AppStorage(wrappedValue: CalendarSettings.eventAlertsDefault,
+                                  settings.key(CalendarSettings.eventAlerts), store: settings.defaults)
+        _eventAlertLead = AppStorage(wrappedValue: CalendarSettings.eventAlertLeadDefault,
+                                     settings.key(CalendarSettings.eventAlertLead), store: settings.defaults)
+    }
 
     var body: some View {
         integrationRow

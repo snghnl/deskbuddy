@@ -90,6 +90,25 @@ final class StorageMigrationTests: XCTestCase {
         XCTAssertTrue(exists(floating.appendingPathComponent("todos.json")))
     }
 
+    func testCalendarPreferencesMoveUnderThePluginsPrefix() {
+        let defaults = MemoryDefaults()
+        defaults.set(false, forKey: "DeskBuddy.showCalendar")
+        defaults.set(30, forKey: "DeskBuddy.eventAlertLead")
+        defaults.set(false, forKey: "DeskBuddy.eventAlerts")
+        // Chosen again under the new key by a newer copy already: that choice stays
+        defaults.set(true, forKey: "DeskBuddy.plugins.calendar.eventAlerts")
+
+        StorageMigration.run(appFolder: app, defaults: defaults, now: launch)
+
+        XCTAssertEqual(defaults.object(forKey: "DeskBuddy.plugins.calendar.showEvents") as? Bool, false)
+        XCTAssertEqual(defaults.object(forKey: "DeskBuddy.plugins.calendar.eventAlertLead") as? Int, 30)
+        XCTAssertEqual(defaults.object(forKey: "DeskBuddy.plugins.calendar.eventAlerts") as? Bool, true)
+        for old in ["DeskBuddy.showCalendar", "DeskBuddy.eventAlertLead", "DeskBuddy.eventAlerts"] {
+            XCTAssertNil(defaults.object(forKey: old), old)
+        }
+        XCTAssertFalse(exists(app.appendingPathComponent("backups")), "preferences get no backup folder")
+    }
+
     func testAFreshInstallGetsNoBackupFolder() {
         StorageMigration.run(appFolder: app, defaults: MemoryDefaults(), now: launch)
 

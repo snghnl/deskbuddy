@@ -29,16 +29,19 @@ final class CalendarPluginTests: XCTestCase {
         XCTAssertFalse(manager.slots.contributions(to: CoreSlots.listTabs).isEmpty)
     }
 
-    func testAlertDefaultsAreInPlaceOnceActivated() {
-        let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: unusedStorageRoot())
+    func testStartingUpLeavesThePreferencesUnchosen() {
+        let defaults = MemoryDefaults()
+        let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: unusedStorageRoot(), defaults: defaults)
         manager.register(CalendarPlugin())
 
         manager.activateAll()
         defer { manager.deactivateAll() }
 
-        // register(defaults:) only fills in what the user has not set, and is never saved
-        XCTAssertNotNil(UserDefaults.standard.object(forKey: CalendarSettings.eventAlerts))
-        XCTAssertNotNil(UserDefaults.standard.object(forKey: CalendarSettings.eventAlertLead))
+        // Defaults are read, not registered or written, so a later default change reaches everyone
+        XCTAssertTrue(defaults.isEmpty)
+        let settings = PluginSettings(pluginID: "calendar", defaults: defaults)
+        XCTAssertTrue(settings.bool(CalendarSettings.eventAlerts, default: CalendarSettings.eventAlertsDefault))
+        XCTAssertEqual(settings.integer(CalendarSettings.eventAlertLead, default: CalendarSettings.eventAlertLeadDefault), 10)
     }
 }
 
@@ -61,4 +64,18 @@ private final class NoWindows: SurfacePresenter {
     func show(_ surface: Surface, id: SurfaceID, ended: @escaping @MainActor (SurfaceEnd) -> Void) {}
     func update(_ surface: Surface, id: SurfaceID) {}
     func hide(_ id: SurfaceID) {}
+}
+
+/// Preferences kept in memory only, so a test never writes a preferences file
+private final class MemoryDefaults: UserDefaults, @unchecked Sendable {
+    private var values: [String: Any] = [:]
+    var isEmpty: Bool { values.isEmpty }
+
+    init() {
+        super.init(suiteName: nil)!
+    }
+
+    override func object(forKey key: String) -> Any? { values[key] }
+    override func set(_ value: Any?, forKey key: String) { values[key] = value }
+    override func removeObject(forKey key: String) { values[key] = nil }
 }

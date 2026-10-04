@@ -8,6 +8,9 @@ import os
 /// storage writes, and the original goes into a backup folder, so nothing is left behind to
 /// be read as stale — an older CLI finds no to-dos rather than outdated ones.
 ///
+/// Preferences the calendar kept under app-wide keys (`DeskBuddy.showCalendar` and friends)
+/// move under its plugin prefix the same way; being a few booleans, they get no backup.
+///
 /// A step whose destination already exists is skipped, which makes running this at every
 /// launch harmless. A step that fails leaves its original where it was and is logged.
 enum StorageMigration {
@@ -51,6 +54,24 @@ enum StorageMigration {
             try write(data, to: destination)
             try backup.write(data, named: "historyClearedAt.json")
             defaults.removeObject(forKey: key)
+        }
+
+        movePreferences(toPlugin: "calendar", defaults: defaults, [
+            "DeskBuddy.showCalendar": "showEvents",
+            "DeskBuddy.eventAlerts": "eventAlerts",
+            "DeskBuddy.eventAlertLead": "eventAlertLead",
+        ])
+    }
+
+    /// Old key → name in the plugin's settings. A value already under the new key stays.
+    private static func movePreferences(toPlugin id: String, defaults: UserDefaults, _ names: [String: String]) {
+        let settings = PluginSettings(pluginID: id, defaults: defaults)
+        for (old, name) in names {
+            guard let value = defaults.object(forKey: old) else { continue }
+            if defaults.object(forKey: settings.key(name)) == nil {
+                defaults.set(value, forKey: settings.key(name))
+            }
+            defaults.removeObject(forKey: old)
         }
     }
 

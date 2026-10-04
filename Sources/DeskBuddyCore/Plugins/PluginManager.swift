@@ -18,13 +18,17 @@ public final class PluginManager {
 
     /// Each plugin's storage is the folder named after its id in here
     private let storageRoot: URL
+    /// Where plugins' preferences are kept, each under its own prefix
+    private let defaults: UserDefaults
 
     /// `presenter` draws the surfaces plugins put up. `storageRoot` is where plugins keep their
     /// data — the app's `Application Support/DeskBuddy/plugins`, a temporary folder in tests.
-    public init(buddy: any Buddy, presenter: any SurfacePresenter, storageRoot: URL) {
+    /// `defaults` holds their preferences.
+    public init(buddy: any Buddy, presenter: any SurfacePresenter, storageRoot: URL, defaults: UserDefaults = .standard) {
         self.buddy = buddy
         surfaces = SurfaceManager(presenter: presenter)
         self.storageRoot = storageRoot
+        self.defaults = defaults
     }
 
     public func register(_ plugin: any DeskBuddyPlugin) {
@@ -41,6 +45,7 @@ public final class PluginManager {
                 let storage = PluginStorage(directory: storageRoot.appendingPathComponent(plugin.manifest.id, isDirectory: true))
                 try plugin.activate(PluginContext(buddy: buddy, commands: commands, events: events, services: services,
                                                   slots: slots, surfaces: surfaces, storage: storage,
+                                                  settings: PluginSettings(pluginID: plugin.manifest.id, defaults: defaults),
                                                   log: .deskBuddy(plugin.manifest.id)))
                 active.append(plugin)
             } catch {

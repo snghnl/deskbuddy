@@ -10,15 +10,17 @@ final class EventNotifier {
     private let calendar: CalendarService
     private let buddy: any Buddy
     private let surfaces: SurfaceManager
+    private let settings: PluginSettings
     private var task: Task<Void, Never>?
     private var notifiedIDs: Set<String> = []
     /// The alert currently counting down, with the text last sent for it
     private var countdown: (event: CalendarEvent, message: String)?
 
-    init(calendar: CalendarService, buddy: any Buddy, surfaces: SurfaceManager) {
+    init(calendar: CalendarService, buddy: any Buddy, surfaces: SurfaceManager, settings: PluginSettings) {
         self.calendar = calendar
         self.buddy = buddy
         self.surfaces = surfaces
+        self.settings = settings
     }
 
     func start() {
@@ -41,9 +43,9 @@ final class EventNotifier {
         let now = Date()
         refreshCountdown(now)
 
-        let defaults = UserDefaults.standard
-        if calendar.access == .authorized, defaults.bool(forKey: CalendarSettings.eventAlerts) {
-            let leadMinutes = max(1, defaults.integer(forKey: CalendarSettings.eventAlertLead))
+        if calendar.access == .authorized,
+           settings.bool(CalendarSettings.eventAlerts, default: CalendarSettings.eventAlertsDefault) {
+            let leadMinutes = max(1, settings.integer(CalendarSettings.eventAlertLead, default: CalendarSettings.eventAlertLeadDefault))
             for event in calendar.events(on: now) where !event.isAllDay {
                 let seconds = event.start.timeIntervalSince(now)
                 guard seconds > 0, seconds <= Double(leadMinutes) * 60,
