@@ -7,7 +7,7 @@ import Foundation
 final class EventNotifier {
     private static let alert = SurfaceID("calendar.eventAlert")
 
-    private let calendar: CalendarService
+    private let calendar: any CalendarSource
     private let buddy: any Buddy
     private let surfaces: SurfaceManager
     private let settings: PluginSettings
@@ -16,7 +16,7 @@ final class EventNotifier {
     /// The alert currently counting down, with the text last sent for it
     private var countdown: (event: CalendarEvent, message: String)?
 
-    init(calendar: CalendarService, buddy: any Buddy, surfaces: SurfaceManager, settings: PluginSettings) {
+    init(calendar: any CalendarSource, buddy: any Buddy, surfaces: SurfaceManager, settings: PluginSettings) {
         self.calendar = calendar
         self.buddy = buddy
         self.surfaces = surfaces

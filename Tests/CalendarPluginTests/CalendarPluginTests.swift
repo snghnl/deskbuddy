@@ -1,3 +1,4 @@
+import CalendarMac
 @testable import CalendarPlugin
 import DeskBuddyCore
 import SwiftUI
@@ -8,7 +9,7 @@ import XCTest
 final class CalendarPluginTests: XCTestCase {
     func testActivationAddsTheCalendarTabAndItsSettings() {
         let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: unusedStorageRoot())
-        manager.register(CalendarPlugin())
+        manager.register(CalendarPlugin(platform: CalendarMac()))
 
         manager.activateAll()
         defer { manager.deactivateAll() }
@@ -19,7 +20,7 @@ final class CalendarPluginTests: XCTestCase {
 
     func testActivatesWithoutTheToDoFeature() {
         let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: unusedStorageRoot())
-        manager.register(CalendarPlugin())
+        manager.register(CalendarPlugin(platform: CalendarMac()))
 
         manager.activateAll()
         defer { manager.deactivateAll() }
@@ -32,7 +33,7 @@ final class CalendarPluginTests: XCTestCase {
     func testStartingUpLeavesThePreferencesUnchosen() {
         let defaults = MemoryDefaults()
         let manager = PluginManager(buddy: QuietBuddy(), presenter: NoWindows(), storageRoot: unusedStorageRoot(), defaults: defaults)
-        manager.register(CalendarPlugin())
+        manager.register(CalendarPlugin(platform: CalendarMac()))
 
         manager.activateAll()
         defer { manager.deactivateAll() }

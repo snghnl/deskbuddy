@@ -57,12 +57,18 @@ let package = Package(
             dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoAPI", "PomodoroPlugin"],
             path: "Sources/PomodoroMac"
         ),
-        // The Calendar tab, calendar settings and event alerts; reads to-dos through TodoAPI
+        // The calendar's logic on any platform: event alerts, preferences, the event model
         .target(
             name: "CalendarPlugin",
-            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoAPI"],
+            dependencies: ["DeskBuddyCore"],
             path: "Sources/CalendarPlugin",
             resources: [.copy("Resources/Localizations")]
+        ),
+        // The calendar on macOS: EventKit, the Calendar tab, the Settings rows; reads to-dos through TodoAPI
+        .target(
+            name: "CalendarMac",
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoAPI", "CalendarPlugin"],
+            path: "Sources/CalendarMac"
         ),
         // What the A2UI feature offers others: show a described UI, hear what the user did
         .target(
@@ -92,7 +98,7 @@ let package = Package(
         .executableTarget(
             name: "DeskBuddy",
             dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoPlugin", "TodoMac", "PomodoroPlugin", "PomodoroMac", "CalendarPlugin",
-                           "A2UIPlugin", "A2UIMac", "ClaudePlugin"],
+                           "CalendarMac", "A2UIPlugin", "A2UIMac", "ClaudePlugin"],
             path: "Sources/DeskBuddy",
             resources: [.copy("Resources/Localizations")]
         ),
@@ -126,7 +132,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CalendarPluginTests",
-            dependencies: ["CalendarPlugin", "DeskBuddyCore", "TodoAPI"],
+            dependencies: ["CalendarPlugin", "CalendarMac", "DeskBuddyCore", "TodoAPI"],
             path: "Tests/CalendarPluginTests"
         ),
         .testTarget(

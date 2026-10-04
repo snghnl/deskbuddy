@@ -1,6 +1,7 @@
 import A2UIMac
 import A2UIPlugin
 import AppKit
+import CalendarMac
 import CalendarPlugin
 import ClaudePlugin
 import DeskBuddyCore
@@ -158,7 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         StorageMigration.run(appFolder: Self.appFolder, defaults: .standard)
         plugins.register(TodoPlugin(platform: TodoMac()))
         plugins.register(PomodoroPlugin(platform: PomodoroMac()))
-        plugins.register(CalendarPlugin())
+        plugins.register(CalendarPlugin(platform: CalendarMac()))
         plugins.register(A2UIPlugin(platform: A2UIMac()))
         plugins.register(ClaudePlugin())
         plugins.activateAll()

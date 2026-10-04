@@ -1,29 +1,13 @@
 import AppKit
+import CalendarPlugin
 import DeskBuddyCore
 import EventKit
-import SwiftUI
-
-/// Event snapshot for rendering (never exposes EKEvent directly to views)
-struct CalendarEvent: Identifiable {
-    let id: String
-    let title: String
-    let start: Date
-    let end: Date
-    let isAllDay: Bool
-    let color: Color
-}
-
-enum CalendarAccess {
-    case notDetermined   // Never asked yet — show the connect button
-    case denied          // Denied — point to System Settings
-    case authorized
-}
 
 /// Reads today's events from the macOS calendar (including Google accounts) via EventKit.
 /// macOS handles syncing, so we only need to follow local DB changes (EKEventStoreChanged).
 @MainActor
 @Observable
-final class CalendarService {
+final class CalendarService: CalendarSource {
     private(set) var access: CalendarAccess
     /// Incremented whenever the calendar DB changes — views observing this value call events(on:) again
     private(set) var revision = 0
@@ -92,12 +76,19 @@ final class CalendarService {
                     start: event.startDate,
                     end: event.endDate,
                     isAllDay: event.isAllDay,
-                    color: event.calendar.cgColor.map { Color(cgColor: $0) } ?? .accentColor
+                    color: event.calendar.cgColor.flatMap(EventColor.init(cgColor:))
                 )
             }
             .sorted {
                 if $0.isAllDay != $1.isAllDay { return $0.isAllDay }
                 return $0.start < $1.start
             }
+    }
+}
+
+private extension EventColor {
+    init?(cgColor: CGColor) {
+        guard let rgb = NSColor(cgColor: cgColor)?.usingColorSpace(.sRGB) else { return nil }
+        self.init(red: rgb.redComponent, green: rgb.greenComponent, blue: rgb.blueComponent)
     }
 }

@@ -1,3 +1,4 @@
+import CalendarPlugin
 import DeskBuddyCore
 import SwiftUI
 import TodoAPI
@@ -228,7 +229,7 @@ struct CalendarTabView: View {
         let ongoing = isToday && !event.isAllDay && event.start <= now && now < event.end
         return HStack(spacing: 6) {
             Circle()
-                .fill(event.color)
+                .fill(event.color.map { Color(red: $0.red, green: $0.green, blue: $0.blue) } ?? .accentColor)
                 .frame(width: 5, height: 5)
             Text(event.isAllDay ? strings.s("calendar.all_day") : event.start.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: 11, weight: isNext ? .semibold : .regular).monospacedDigit())

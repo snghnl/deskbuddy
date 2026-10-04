@@ -207,8 +207,10 @@ System Settings → General → Login Items → add `build/DeskBuddy.app`.
 
 ## Project Layout
 
-The app is a small host plus built-in plugins, each its own SwiftPM target. A plugin depends on
-DeskBuddyCore and on other features' API modules, never on another plugin.
+The app is a small host plus built-in plugins. A plugin depends on DeskBuddyCore and on other
+features' API modules, never on another plugin. Each feature with a UI is two SwiftPM targets: its
+logic, which imports no UI framework, and its macOS layer (`…Mac`), which draws it with SwiftUI and
+plugs in when the app composes it, e.g. `TodoPlugin(platform: TodoMac())`.
 
 - `Sources/DeskBuddyCore/` — what plugins build on, with no UI framework: the plugin lifecycle
   (`Plugins/`), services, slots on the shared UI (`Slots/`), surfaces, commands and the CLI socket
@@ -219,9 +221,15 @@ DeskBuddyCore and on other features' API modules, never on another plugin.
 - `Sources/DeskBuddyMacUI/` — what macOS adds on top: `MacView` (a SwiftUI view as a `PlatformView`),
   SwiftUI ways to fill the slots, the list panel's environment, the Liquid Glass look
 - `Sources/TodoAPI/` — what the to-do feature offers others: `TodoService`, `TodoDeleted`, the to-do row slot
-- `Sources/TodoPlugin/` — to-dos: model and JSON persistence, To Do/Done tabs, detail page, history settings
-- `Sources/PomodoroPlugin/` — timers: the Timer tab, timer icons on to-do rows, the done bubble
-- `Sources/CalendarPlugin/` — the Calendar tab (completion heatmap + EventKit events), calendar settings, event alerts
+- `Sources/TodoPlugin/` — to-dos: model and JSON persistence, TodoService, commands, the badge and Done-tab menu;
+  `Sources/TodoMac/` — the To Do/Done tabs, detail page, history settings
+- `Sources/PomodoroPlugin/` — timers: keeping them, the start command, the done bubble;
+  `Sources/PomodoroMac/` — the Timer tab, timer icons on to-do rows, the sound
+- `Sources/CalendarPlugin/` — event alerts, calendar preferences, the event model;
+  `Sources/CalendarMac/` — EventKit, the Calendar tab (completion heatmap + events), calendar settings
+- `Sources/A2UIAPI/`, `Sources/A2UIPlugin/` — panels described in JSON: parsing, inputs, actions;
+  `Sources/A2UIMac/` — drawing them with SwiftUI
+- `Sources/ClaudePlugin/` — Claude Code's questions (`deskbuddy ask`), shown through A2UI
 - `Sources/DeskBuddy/` — the host: registers the plugins, draws the character, list panel, speech
   bubble and settings window, and handles click/drag/throw, wandering, the hotkey, menus, the URL
   scheme and updates
