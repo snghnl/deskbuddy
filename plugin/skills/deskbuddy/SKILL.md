@@ -46,7 +46,7 @@ Sending a command launches the app automatically if it is not running
 (except `list`, which reads the data file directly when the app is off).
 While the app runs, a failed command prints `deskbuddy: <reason>` to stderr and
 exits non-zero — read it rather than assuming success. `timer` needs
-DeskBuddy 0.16 or later, `ask` 0.20 or later.
+DeskBuddy 0.16 or later, `ask` 0.17 or later.
 
 ## Usage guidelines
 
