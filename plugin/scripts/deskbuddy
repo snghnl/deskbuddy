@@ -14,8 +14,14 @@
 #   deskbuddy run <command> [name=value ...]  Run any DeskBuddy command, print its answer
 #   deskbuddy ui <file.json | ->              Show a panel described in A2UI, wait for the
 #                                             user, print what they did as JSON
+#       [--id name] [--no-wait]               Named: the next call with that id changes the
+#                                             open panel in place (actions with keepOpen
+#                                             leave it up); --no-wait only shows or updates
+#   deskbuddy ui --id name --close            Close a named panel
 #   deskbuddy ask "question" [option ...]     Ask the user next to the buddy, print the answer
-#       [--timeout seconds]                   (exits 1 if they close it or time runs out)
+#       [--timeout seconds] [--id name]       (exits 1 if they close it or time runs out);
+#                                             with --id, a run of questions shares one panel
+#   deskbuddy ask --id name --close           Close that panel after the last question
 #
 # While the app runs, commands go over its socket, so errors come back here.
 # Otherwise notify/add/done/toggle use the deskbuddy:// URL scheme, which
@@ -229,32 +235,67 @@ PY
     call_launching "$command" "${@:3}"
     ;;
   ui)
-    source="${2:?usage: deskbuddy ui <file.json | ->}"
+    shift
+    id="" waits=true closes=false source=""
+    while (( $# )); do
+      case "$1" in
+        --id) id="${2:?--id needs a name}"; shift 2 ;;
+        --no-wait) waits=false; shift ;;
+        --close) closes=true; shift ;;
+        *) source="$1"; shift ;;
+      esac
+    done
+    if $closes; then
+      [[ -n "$id" ]] || { echo "usage: deskbuddy ui --id <name> --close" >&2; exit 1; }
+      call_launching a2ui.close id="$id"
+      exit 0
+    fi
+    [[ -n "$source" ]] || { echo "usage: deskbuddy ui [--id name] [--no-wait] <file.json | ->" >&2; exit 1; }
     if [[ "$source" == "-" ]]; then
       payload=$(cat)
     else
       payload=$(<"$source")
     fi
-    # The user takes as long as they take; interrupting closes the panel
-    WAIT_SECONDS=forever
-    call_launching a2ui.show payload="$payload"
+    args=(payload="$payload")
+    if [[ -n "$id" ]]; then
+      args+=(id="$id")
+    fi
+    if $waits; then
+      # The user takes as long as they take; interrupting closes the panel
+      WAIT_SECONDS=forever
+    else
+      args+=(wait=false)
+    fi
+    call_launching a2ui.show "${args[@]}"
     ;;
   ask)
-    question="${2:?usage: deskbuddy ask \"question\" [option ...] [--timeout seconds]}"
-    shift 2
+    shift
+    question="" panel="" closes=false
     choices=()   # not "options": zsh keeps its shell options in that name
     WAIT_SECONDS=forever
     while (( $# )); do
-      if [[ "$1" == "--timeout" ]]; then
-        WAIT_SECONDS="${2:?--timeout needs seconds}"
-        shift 2
-      else
-        choices+=("$1")
-        shift
-      fi
+      case "$1" in
+        --timeout) WAIT_SECONDS="${2:?--timeout needs seconds}"; shift 2 ;;
+        --id) panel="${2:?--id needs a name}"; shift 2 ;;
+        --close) closes=true; shift ;;
+        *)
+          if [[ -z "$question" ]]; then question="$1"; else choices+=("$1"); fi
+          shift
+          ;;
+      esac
     done
+    if $closes; then
+      [[ -n "$panel" ]] || { echo "usage: deskbuddy ask --id <name> --close" >&2; exit 1; }
+      call_launching claude.close panel="$panel"
+      exit 0
+    fi
+    [[ -n "$question" ]] || { echo "usage: deskbuddy ask \"question\" [option ...] [--timeout seconds] [--id name]" >&2; exit 1; }
     # One option per line; the folder tells apart questions from different sessions
-    answer=$(call_launching claude.ask question="$question" options="${(pj:\n:)choices}" project="${PWD:t}")
+    args=(question="$question" options="${(pj:\n:)choices}" project="${PWD:t}")
+    if [[ -n "$panel" ]]; then
+      args+=(panel="$panel")
+    fi
+    answer=$(call_launching claude.ask "${args[@]}")
     python3 -c 'import json, sys; print(json.loads(sys.argv[1])["answer"])' "$answer"
     ;;
   *)

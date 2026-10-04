@@ -117,7 +117,10 @@ bin/deskbuddy toggle                              # open/close the list
 bin/deskbuddy timer 25 "Write the report"         # start a 25-minute timer
 bin/deskbuddy run todo.list                       # run any command by name, print its answer
 bin/deskbuddy ui panel.json                       # show a panel, wait, print what the user did
+bin/deskbuddy ui --id game turn.json              # named: the next call changes the open panel in place
+bin/deskbuddy ui --id game --close                # close a named panel
 bin/deskbuddy ask "Which database?" SQLite MySQL  # ask in a panel, print the answer
+bin/deskbuddy ask --id setup "Next question?" A B # a run of questions in one panel (close with --close)
 ```
 
 While DeskBuddy runs, the CLI talks to it over a socket
@@ -140,8 +143,10 @@ Commands, for `deskbuddy run <command> name=value ...` or `deskbuddy://<command>
 | `todo.show` | `id` (full UUID) — opens the list on that to-do's detail |
 | `todo.list` | — (answers with every to-do, as in todos.json) |
 | `pomodoro.start` | `minutes`, `label` (optional), `todo` (UUID to link, optional) |
-| `a2ui.show` | `payload` (an A2UI document) — answers once the user acts or closes the panel |
-| `claude.ask` | `question`, `options` (one per line, optional), `project` (optional) — answers `{"answer": ...}` |
+| `a2ui.show` | `payload` (an A2UI document), `id` (name the panel, optional), `wait` (`false` to only show or update) — answers once the user acts or closes the panel |
+| `a2ui.close` | `id` — closes a named panel |
+| `claude.ask` | `question`, `options` (one per line, optional), `project` (optional), `panel` (share one panel across questions, optional) — answers `{"answer": ...}` |
+| `claude.close` | `panel` — closes the panel a run of questions shared |
 
 ### Panels (A2UI, experimental)
 
@@ -171,6 +176,13 @@ A button either runs a command, with `{"input": "<id>"}` for what the user enter
 `todo.complete`, `todo.show` and `pomodoro.start` may run from a panel; a document naming
 another command is refused before anything shows. Full reference:
 `Sources/A2UIPlugin/A2UIDocument.swift`.
+
+A panel can stay up across steps. Give it a name with `--id` and mark its actions
+`"keepOpen": true`: pressing one reports it, and the panel stays where it is. The next
+`deskbuddy ui --id <same name>` changes what it shows in place and waits for the next action,
+which is how a turn-based game or a multi-step form runs without the panel closing and
+reopening. `--no-wait` only shows or updates, for something to watch such as progress; its
+named buttons stay disabled until someone asks. `--close` puts the panel away.
 
 The short URL forms the CLI has always used keep working:
 

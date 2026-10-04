@@ -19,15 +19,34 @@ public final class ClaudePlugin: DeskBuddyPlugin {
                 throw CommandError.missingArgument("question")
             }
             guard let a2ui = services.resolve(A2UIService.self) else { throw ClaudeAskError.noPanels }
+            // With a panel name, a run of questions shares one panel that changes in place
+            let panel = arguments["panel"].flatMap { $0.isEmpty ? nil : $0 }
             let ask = ClaudeQuestion(
                 question: question,
                 options: (arguments["options"] ?? "").split(separator: "\n").map(String.init).filter { !$0.isEmpty },
-                project: arguments["project"].flatMap { $0.isEmpty ? nil : $0 }
+                project: arguments["project"].flatMap { $0.isEmpty ? nil : $0 },
+                keepsPanel: panel != nil
             )
-            let response = try await a2ui.ask(try ask.document())
+            let document = try ask.document()
+            let response: A2UIResponse
+            if let panel {
+                response = try await a2ui.ask(document, panel: Self.a2uiPanel(panel))
+            } else {
+                response = try await a2ui.ask(document)
+            }
             guard let answer = ask.answer(from: response) else { throw ClaudeAskError.closed }
             return ["answer": answer]
         }
+        // Puts away the panel a run of questions shared, once the last answer is in
+        context.commands.register("claude.close") { arguments in
+            guard let panel = arguments["panel"], !panel.isEmpty else { throw CommandError.missingArgument("panel") }
+            services.resolve(A2UIService.self)?.close(panel: Self.a2uiPanel(panel))
+        }
+    }
+
+    /// Claude's panels among A2UI's named ones, apart from panels `deskbuddy ui` names
+    private static func a2uiPanel(_ name: String) -> String {
+        "claude.\(name)"
     }
 
     public func deactivate() {}
@@ -52,6 +71,8 @@ struct ClaudeQuestion {
     let options: [String]
     /// The folder Claude Code is working in, to tell sessions apart
     let project: String?
+    /// Whether the panel stays up after the answer, for the next question in a run
+    var keepsPanel = false
 
     private static let choiceID = "choice"
     private static let textID = "text"
@@ -73,7 +94,8 @@ struct ClaudeQuestion {
             children.append(["type": "textField", "id": Self.textID, "placeholder": strings.s("claude.own_answer")])
         }
         children.append(["type": "row", "align": "trailing", "children": [
-            ["type": "button", "label": strings.s("claude.continue"), "style": "primary", "action": ["name": Self.answerAction]],
+            ["type": "button", "label": strings.s("claude.continue"), "style": "primary",
+             "action": ["name": Self.answerAction, "keepOpen": keepsPanel] as [String: Any]],
         ]])
         return try JSONSerialization.data(withJSONObject: ["type": "column", "children": children])
     }

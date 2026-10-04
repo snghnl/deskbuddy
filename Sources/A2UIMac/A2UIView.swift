@@ -163,14 +163,16 @@ struct A2UINodeView: View {
                     .fixedSize()
             }
 
-        case .button(let label, let style, let action):
+        case .button(let label, let style, let action, let keepOpen):
             if style == .primary {
-                Button(label) { session.perform(action) }
+                Button(label) { session.perform(action, keepOpen: keepOpen) }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
+                    .disabled(!session.canPerform(action))
             } else {
-                Button(label) { session.perform(action) }
+                Button(label) { session.perform(action, keepOpen: keepOpen) }
                     .buttonStyle(.bordered)
+                    .disabled(!session.canPerform(action))
             }
         }
     }

@@ -25,4 +25,16 @@ public protocol A2UIService: AnyObject {
     /// before showing anything if the document is not valid. Cancelling the calling task
     /// closes the panel and throws `CancellationError`.
     func ask(_ document: Data) async throws -> A2UIResponse
+
+    /// Like `ask(_:)`, in the panel named `panel`: opens it, or changes what an open one shows in
+    /// place, then waits for its next action. An action marked `keepOpen` leaves the panel up
+    /// for the next call; any other action, or the user closing it, ends it.
+    func ask(_ document: Data, panel: String) async throws -> A2UIResponse
+
+    /// Shows `document` in the panel named `panel` without waiting: for something to watch
+    /// rather than answer, such as progress. Its named actions stay disabled until someone asks.
+    func show(_ document: Data, panel: String) throws
+
+    /// Closes the panel named `panel`, if it is open. Whoever waits on it gets no action.
+    func close(panel: String)
 }

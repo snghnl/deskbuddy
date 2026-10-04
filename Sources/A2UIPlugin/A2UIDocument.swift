@@ -39,7 +39,9 @@ import Foundation
 /// action either runs a command — `{"command": "todo.add", "arguments": {"title": "Milk"}}`,
 /// where an argument may be `{"input": "<id>"}` to pass what the user entered — or names
 /// itself, `{"name": "continue"}`, and leaves it to whoever showed the panel. Either way the
-/// panel then closes. Only some commands may be run from a document.
+/// panel then closes, unless the action says `"keepOpen": true`: then it stays up for whoever
+/// showed it to change in place (a panel shown under a name). Only some commands may be run
+/// from a document.
 // `package` is for A2UIMac, which draws these
 
 package indirect enum A2UINode: Equatable {
@@ -62,7 +64,8 @@ package indirect enum A2UINode: Equatable {
     case slider(id: String, label: String?, range: ClosedRange<Double>, step: Double?, value: Double)
     case dateTime(id: String, label: String?, mode: DateTimeMode, value: String)
 
-    case button(label: String, style: ButtonStyle, action: A2UIAction)
+    /// `keepOpen`: the panel stays up after the action, to be changed in place
+    case button(label: String, style: ButtonStyle, action: A2UIAction, keepOpen: Bool)
 
     package enum TextStyle: String { case title, body, caption }
     package enum ButtonStyle: String { case primary, secondary }
@@ -311,7 +314,10 @@ struct A2UIParser {
 
         case "button":
             let action = try self.action(object["action"], at: "\(path).action", context: &context)
-            return .button(label: try fields.string("label"), style: try fields.choice("style", default: .secondary), action: action)
+            let keepOpen = try Fields(object: object["action"] as? [String: Any] ?? [:], path: "\(path).action")
+                .bool("keepOpen", default: false)
+            return .button(label: try fields.string("label"), style: try fields.choice("style", default: .secondary),
+                           action: action, keepOpen: keepOpen)
 
         default:
             throw A2UIError(path: path, reason: "unknown component type \"\(type)\"")

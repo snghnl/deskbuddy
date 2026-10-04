@@ -40,13 +40,15 @@ deskbuddy toggle                          # Open/close the to-do list panel
 deskbuddy timer 25 "label"                # Start a countdown timer (label optional)
 deskbuddy ask "question" [option ...]     # Ask in a panel next to the buddy, print the answer
 deskbuddy ask "question" A B --timeout 540  # Give up after 540s (exit 1, panel closes)
+deskbuddy ask --id NAME "question" A B      # A run of questions in one panel, changed in place
+deskbuddy ask --id NAME --close             # Put that panel away after the last answer
 ```
 
 Sending a command launches the app automatically if it is not running
 (except `list`, which reads the data file directly when the app is off).
 While the app runs, a failed command prints `deskbuddy: <reason>` to stderr and
 exits non-zero — read it rather than assuming success. `timer` needs
-DeskBuddy 0.16 or later, `ask` 0.17 or later.
+DeskBuddy 0.16 or later, `ask` 0.17 or later, `ask --id` 0.18 or later.
 
 ## Usage guidelines
 
@@ -84,6 +86,9 @@ answer.
 - **Waiting**: it blocks until the user answers. Run it with the Bash tool's
   timeout at 600000 ms and pass `--timeout 540`, so `ask` gives up first and
   takes the question back off the screen.
+- **Several in a row**: give every question the same `--id` (any short name),
+  so they appear one after another in a single panel instead of a panel each,
+  and run `deskbuddy ask --id NAME --close` once you have the last answer.
 - **No answer**: exit 1 means they closed the panel or time ran out (the reason
   is on stderr). Do not guess on anything hard to undo; stop and say what you
   need, or take the safe default and say which one you took.

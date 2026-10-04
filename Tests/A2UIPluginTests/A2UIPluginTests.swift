@@ -148,7 +148,91 @@ final class A2UIPluginTests: XCTestCase {
         XCTAssertEqual(response, A2UIResponse(action: "pomodoro.start", values: ["minutes": "25"]))
     }
 
+    // MARK: - Named panels
+
+    func testANamedPanelStaysUpAfterAKeepOpenActionAndChangesInPlace() async throws {
+        let first = Task { try await panels.ask(question("Is it an animal?", keepOpen: true), panel: "twenty") }
+        let session = try await openSession()
+
+        session.perform(.named("yes"), keepOpen: true)
+
+        let firstAnswer = try await first.value
+        XCTAssertEqual(firstAnswer.action, "yes")
+        XCTAssertFalse(session.isListening, "nobody waits until the next question")
+        XCTAssertFalse(session.canPerform(.named("yes")))
+        XCTAssertEqual(windows.log, ["show a2ui.named.twenty"], "still up")
+
+        let second = Task { try await panels.ask(question("Can it fly?", keepOpen: false), panel: "twenty") }
+        try await until { session.isListening }
+        XCTAssertEqual(session.document.texts, ["Can it fly?"])
+        XCTAssertEqual(windows.log, ["show a2ui.named.twenty", "update a2ui.named.twenty panel"], "the same window, redrawn")
+
+        session.perform(.named("no"))
+
+        let secondAnswer = try await second.value
+        XCTAssertEqual(secondAnswer.action, "no")
+        XCTAssertEqual(windows.log.last, "hide a2ui.named.twenty", "an action without keepOpen ends it")
+    }
+
+    func testShowingWithoutWaitingKeepsNamedActionsOffUntilSomeoneAsks() async throws {
+        try panels.show(question("Uploading… 40%", keepOpen: true), panel: "progress")
+        let session = try XCTUnwrap(panels.open.values.first?.session)
+
+        XCTAssertFalse(session.isListening)
+        XCTAssertFalse(session.canPerform(.named("yes")))
+        XCTAssertTrue(session.canPerform(.command("pomodoro.start", arguments: [:])), "commands act by themselves")
+
+        try panels.show(question("Uploading… 80%", keepOpen: true), panel: "progress")
+        XCTAssertEqual(session.document.texts, ["Uploading… 80%"])
+        XCTAssertEqual(windows.log, ["show a2ui.named.progress", "update a2ui.named.progress panel"])
+
+        let answer = Task { try await panels.ask(question("Done. Open it?", keepOpen: false), panel: "progress") }
+        try await until { session.isListening }
+        panels.close(panel: "progress")
+        let closed = try await answer.value
+        XCTAssertNil(closed.action, "closing ends the wait without an action")
+        XCTAssertEqual(windows.log.last, "hide a2ui.named.progress")
+    }
+
+    func testTheShowCommandNamesPanelsAndCanSkipWaiting() async throws {
+        let document = String(decoding: question("Hi", keepOpen: true), as: UTF8.self)
+
+        let shown = try await manager.commands.perform("a2ui.show", CommandArguments(["payload": document, "id": "p", "wait": "false"]))
+        XCTAssertEqual(shown as? [String: String], ["panel": "p"])
+        XCTAssertEqual(windows.log, ["show a2ui.named.p"])
+
+        try manager.commands.execute("a2ui.close", CommandArguments(["id": "p"]))
+        XCTAssertEqual(windows.log.last, "hide a2ui.named.p")
+
+        do {
+            _ = try await manager.commands.perform("a2ui.show", CommandArguments(["payload": document, "wait": "false"]))
+            XCTFail("expected an error")
+        } catch {
+            XCTAssertEqual(error as? CommandError, .missingArgument("id"), "a panel nobody waits on needs a name to be closed by")
+        }
+    }
+
     // MARK: - Helpers
+
+    /// A yes/no panel whose buttons may keep it up
+    private func question(_ text: String, keepOpen: Bool) -> Data {
+        Data(#"""
+            {"type": "column", "children": [
+              {"type": "text", "text": "\#(text)"},
+              {"type": "row", "children": [
+                {"type": "button", "label": "No", "action": {"name": "no", "keepOpen": \#(keepOpen)}},
+                {"type": "button", "label": "Yes", "action": {"name": "yes", "keepOpen": \#(keepOpen)}}]}]}
+            """#.utf8)
+    }
+
+    /// Lets the panel's tasks run until `condition` holds
+    private func until(_ condition: () -> Bool) async throws {
+        for _ in 0..<200 {
+            if condition() { return }
+            await Task.yield()
+        }
+        throw NoPanel()
+    }
 
     /// The session of the panel that just opened, once the ask has put it up
     private func openSession() async throws -> A2UISession {
@@ -163,7 +247,7 @@ final class A2UIPluginTests: XCTestCase {
 
     private func startAction(in node: A2UINode) -> A2UIAction {
         guard case .column(let children) = node, case .row(let buttons, _) = children[2],
-              case .button(_, _, let action) = buttons[0] else { fatalError("not the Start Pomodoro panel") }
+              case .button(_, _, let action, _) = buttons[0] else { fatalError("not the Start Pomodoro panel") }
         return action
     }
 }
@@ -193,4 +277,15 @@ private final class QuietBuddy: Buddy {
     func say(_ message: String) {}
     func say(_ message: String, closingAfter seconds: TimeInterval) {}
     func openList(on page: any PlatformView) {}
+}
+
+private extension A2UINode {
+    /// Every text in the panel, in order
+    var texts: [String] {
+        switch self {
+        case .text(let text, _): [text]
+        case .row(let children, _), .column(let children), .card(let children): children.flatMap(\.texts)
+        default: []
+        }
+    }
 }

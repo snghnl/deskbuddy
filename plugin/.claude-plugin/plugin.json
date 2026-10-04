@@ -1,6 +1,6 @@
 {
   "name": "deskbuddy",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "DeskBuddy (macOS floating desktop buddy) integration — lets agents send speech-bubble notifications, read/add/complete to-dos, start timers, and ask you a question in a panel next to the buddy. Includes a hook that alerts you via the buddy when Claude Code is waiting for input.",
   "author": {
     "name": "snghnl",

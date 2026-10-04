@@ -74,6 +74,42 @@ final class ClaudePluginTests: XCTestCase {
         }
     }
 
+    func testARunOfQuestionsSharesOnePanelUntilClosed() async throws {
+        let first = ask(["question": "Is it an animal?", "options": "Yes\nNo", "panel": "twenty"])
+        let session = try await openSession()
+        let (action, keepOpen) = try continueButton(in: session.document)
+        XCTAssertTrue(keepOpen, "a named run keeps the panel up between questions")
+
+        session.values["choice"] = "Yes"
+        session.perform(action, keepOpen: keepOpen)
+        let firstAnswer = try await first.value
+        XCTAssertEqual(firstAnswer, ["answer": "Yes"])
+
+        let second = ask(["question": "Can it fly?", "options": "Yes\nNo", "panel": "twenty"])
+        for _ in 0..<200 where !session.isListening { await Task.yield() }
+        XCTAssertEqual(session.document.texts.last, "Can it fly?")
+        session.values["choice"] = "No"
+        session.perform(action, keepOpen: keepOpen)
+        let secondAnswer = try await second.value
+        XCTAssertEqual(secondAnswer, ["answer": "No"])
+        XCTAssertEqual(windows.log, ["show a2ui.named.claude.twenty", "update a2ui.named.claude.twenty"])
+
+        try manager.commands.execute("claude.close", CommandArguments(["panel": "twenty"]))
+        XCTAssertEqual(windows.log.last, "hide a2ui.named.claude.twenty")
+    }
+
+    func testAQuestionWithoutAPanelNameClosesWhenAnswered() async throws {
+        let reply = ask(["question": "Proceed?", "options": "Yes\nNo"])
+        let session = try await openSession()
+        let (action, keepOpen) = try continueButton(in: session.document)
+        XCTAssertFalse(keepOpen)
+
+        session.perform(action, keepOpen: keepOpen)
+
+        _ = try await reply.value
+        XCTAssertEqual(windows.log.last, "hide a2ui.panel1")
+    }
+
     func testNeedsAQuestionAndAWayToShowIt() async throws {
         do {
             _ = try await manager.commands.perform("claude.ask", CommandArguments())
@@ -113,6 +149,21 @@ final class ClaudePluginTests: XCTestCase {
     }
 
     private struct NoPanel: Error {}
+
+    /// The Continue button's action, and whether it keeps the panel up
+    private func continueButton(in node: A2UINode) throws -> (A2UIAction, Bool) {
+        switch node {
+        case .button(_, _, let action, let keepOpen):
+            return (action, keepOpen)
+        case .row(let children, _), .column(let children), .card(let children):
+            for child in children {
+                if let found = try? continueButton(in: child) { return found }
+            }
+        default:
+            break
+        }
+        throw NoPanel()
+    }
 }
 
 private extension A2UINode {

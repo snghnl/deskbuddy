@@ -155,6 +155,40 @@ final class CLITests: XCTestCase {
         let values: [String: String]
     }
 
+    func testUIWithAnIdCanSkipWaitingAndClose() throws {
+        var shown: [String: String] = [:]
+        var closed: String?
+        commands.respondLater(to: "a2ui.show") { arguments in
+            shown = ["id": arguments["id"] ?? "", "wait": arguments["wait"] ?? ""]
+            return ["panel": arguments["id"] ?? ""]
+        }
+        commands.register("a2ui.close") { closed = $0["id"] }
+        let file = sandbox.appendingPathComponent("panel.json")
+        try #"{"type": "divider"}"#.write(to: file, atomically: true, encoding: .utf8)
+
+        XCTAssertEqual(run("ui", "--id", "progress", "--no-wait", file.path).status, 0)
+        XCTAssertEqual(shown, ["id": "progress", "wait": "false"])
+
+        XCTAssertEqual(run("ui", "--id", "progress", "--close").status, 0)
+        XCTAssertEqual(closed, "progress")
+    }
+
+    func testAskWithAnIdSharesAPanelAndCanClose() throws {
+        var panel: String?
+        var closed: String?
+        commands.respondLater(to: "claude.ask") { arguments in
+            panel = arguments["panel"]
+            return ["answer": "Yes"]
+        }
+        commands.register("claude.close") { closed = $0["panel"] }
+
+        XCTAssertEqual(run("ask", "--id", "twenty", "Is it an animal?", "Yes", "No").out, "Yes\n")
+        XCTAssertEqual(panel, "twenty")
+
+        XCTAssertEqual(run("ask", "--id", "twenty", "--close").status, 0)
+        XCTAssertEqual(closed, "twenty")
+    }
+
     func testAskPassesTheQuestionAndPrintsOnlyTheAnswer() throws {
         var asked: [String: String] = [:]
         commands.respondLater(to: "claude.ask") { arguments in

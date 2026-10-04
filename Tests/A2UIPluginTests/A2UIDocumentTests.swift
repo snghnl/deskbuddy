@@ -27,7 +27,8 @@ final class A2UIDocumentTests: XCTestCase {
                     options: [A2UIOption(label: "25 minutes", value: "25"), A2UIOption(label: "50 minutes", value: "50")],
                     value: "25", style: .menu),
             .row([.button(label: "Start", style: .primary,
-                          action: .command("pomodoro.start", arguments: ["minutes": .input("minutes"), "label": .literal("Focus")]))],
+                          action: .command("pomodoro.start", arguments: ["minutes": .input("minutes"), "label": .literal("Focus")]),
+                          keepOpen: false)],
                  align: .trailing),
         ]))
         XCTAssertEqual(node.initialValues, ["minutes": "25"])
@@ -50,9 +51,10 @@ final class A2UIDocumentTests: XCTestCase {
                                             options: [A2UIOption(label: "PostgreSQL", value: "PostgreSQL"), A2UIOption(label: "SQLite", value: "SQLite")],
                                             value: "SQLite", style: .radio))
         XCTAssertEqual(children[2], .textField(id: "why", label: nil, placeholder: "Why?", value: "", multiline: false))
-        XCTAssertEqual(children[4], .button(label: "Continue", style: .secondary, action: .named("continue")))
+        XCTAssertEqual(children[4], .button(label: "Continue", style: .secondary, action: .named("continue"), keepOpen: false))
         XCTAssertEqual(children[5], .button(label: "Add", style: .secondary,
-                                            action: .command("todo.add", arguments: ["title": .literal("x"), "count": .literal("2"), "urgent": .literal("true")])))
+                                            action: .command("todo.add", arguments: ["title": .literal("x"), "count": .literal("2"), "urgent": .literal("true")]),
+                                            keepOpen: false))
         XCTAssertEqual(node.initialValues, ["db": "SQLite", "why": ""])
     }
 
@@ -105,6 +107,15 @@ final class A2UIDocumentTests: XCTestCase {
         XCTAssertEqual(values["s"], "0")
         XCTAssertEqual(values["d"], A2UINode.DateTimeMode.date.formatter().string(from: Date()), "today")
         XCTAssertEqual(values.count, 2, "tabs without an id are not an input")
+    }
+
+    func testAnActionCanAskForThePanelToStayUp() throws {
+        let node = try parse(#"{"type": "button", "label": "Yes", "action": {"name": "yes", "keepOpen": true}}"#)
+
+        XCTAssertEqual(node, .button(label: "Yes", style: .secondary, action: .named("yes"), keepOpen: true))
+        XCTAssertThrowsError(try parse(#"{"type": "button", "label": "Yes", "action": {"name": "yes", "keepOpen": "sure"}}"#)) {
+            XCTAssertEqual($0 as? A2UIError, A2UIError(path: "root.action", reason: "\"keepOpen\" must be true or false"))
+        }
     }
 
     func testNumbersAreReportedWithoutFloatingPointNoise() {
