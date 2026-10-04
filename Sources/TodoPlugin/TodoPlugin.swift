@@ -1,20 +1,22 @@
 import DeskBuddyCore
-import DeskBuddyMacUI
 import Foundation
-import SwiftUI
 import TodoAPI
 
-/// To-dos: the To Do and Done tabs, the detail page, the completion history in Settings, and
-/// the count on the buddy. Other features reach to-dos through TodoAPI — `TodoService` to read
-/// them, `TodoDeleted` to hear about deletions — never through this module.
+/// To-dos: keeping them, the commands, the count on the buddy and the Done-tab menu items.
+/// Other features reach to-dos through TodoAPI — `TodoService` to read and act on them,
+/// `TodoDeleted` to hear about deletions — never through this module. How to-dos look, in
+/// tabs, a detail page and Settings, comes from `platform`.
 @MainActor
 public final class TodoPlugin: DeskBuddyPlugin {
     public let manifest = PluginManifest(id: "todo", name: "To-dos", version: "1.0.0")
 
     /// Set by `activate`
     private(set) var store: TodoStore?
+    private let platform: any TodoPlatform
 
-    public init() {}
+    package init(platform: any TodoPlatform) {
+        self.platform = platform
+    }
 
     public func activate(_ context: PluginContext) throws {
         let store = TodoStore(storage: context.storage, events: context.events, log: context.log)
@@ -22,7 +24,7 @@ public final class TodoPlugin: DeskBuddyPlugin {
         let commands = context.commands
         let slots = context.slots
         let buddy = context.buddy
-        let shared = TodoFeatureService(store: store, buddy: buddy)
+        let shared = TodoFeatureService(store: store, buddy: buddy, platform: platform)
 
         context.services.provide(TodoService.self, shared)
 
@@ -53,22 +55,8 @@ public final class TodoPlugin: DeskBuddyPlugin {
             shared.show(try store.todo(for: arguments).id)
         }
 
-        let draft = TodoDraft()
-        slots.contribute(CoreSlots.listTabs, ListTab(
-            id: "todo.active", order: 100,
-            title: { strings.s("list.to_do") },
-            count: { store.activeTodos.count },
-            toolbar: { AnyView(TodoInputBar(store: store, draft: draft)) }
-        ) {
-            ActiveTodoList(store: store, slots: slots)
-        })
-        slots.contribute(CoreSlots.listTabs, ListTab(
-            id: "todo.done", order: 200,
-            title: { strings.s("list.done") },
-            count: { store.visibleCompleted.count }
-        ) {
-            CompletedTodoList(store: store)
-        })
+        platform.show(store, in: context)
+
         // Hides rather than deletes, so no destructive styling and no second
         // confirmation — the permanent version lives in Settings.
         slots.contribute(CoreSlots.listMenu, ListMenuItem(
@@ -83,13 +71,6 @@ public final class TodoPlugin: DeskBuddyPlugin {
             isVisible: { store.hiddenCompletedCount > 0 },
             action: { store.restoreClearedHistory() }
         ))
-        slots.contribute(CoreSlots.settingsSections, SettingsSection(
-            id: "todo.history", order: 500,
-            title: { strings.s("settings.history") },
-            footer: { strings.s("settings.history_footer") }
-        ) {
-            HistorySettingsRows(store: store)
-        })
         slots.contribute(CoreSlots.buddyBadge, BuddyBadge(id: "todo.remaining", order: 100) {
             store.activeTodos.count
         })
@@ -118,10 +99,12 @@ private extension TodoStore {
 final class TodoFeatureService: TodoService {
     private let store: TodoStore
     private let buddy: any Buddy
+    private let platform: any TodoPlatform
 
-    init(store: TodoStore, buddy: any Buddy) {
+    init(store: TodoStore, buddy: any Buddy, platform: any TodoPlatform) {
         self.store = store
         self.buddy = buddy
+        self.platform = platform
     }
 
     var active: [TodoSummary] { store.active }
@@ -142,6 +125,16 @@ final class TodoFeatureService: TodoService {
 
     func show(_ id: UUID) {
         guard store.todos.contains(where: { $0.id == id }) else { return }
-        buddy.openList(on: MacView(TodoDetailPage(id: id, store: store)))
+        platform.showDetail(of: id, in: store, buddy: buddy)
     }
+}
+
+/// What a platform adds to to-dos: how they look on the shared UI. macOS's is TodoMac.
+@MainActor
+package protocol TodoPlatform {
+    /// Puts to-dos on screen, e.g. To Do and Done tabs and the history rows in Settings
+    func show(_ store: TodoStore, in context: PluginContext)
+
+    /// Brings up one to-do's detail, e.g. over the list panel
+    func showDetail(of id: UUID, in store: TodoStore, buddy: any Buddy)
 }

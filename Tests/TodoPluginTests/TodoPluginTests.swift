@@ -1,6 +1,7 @@
 import DeskBuddyCore
 import SwiftUI
 import TodoAPI
+import TodoMac
 @testable import TodoPlugin
 import XCTest
 
@@ -165,7 +166,7 @@ final class TodoPluginTests: XCTestCase {
     func testQuittingWritesTheSaveThatWasStillWaitingWhereTheCLIReadsIt() throws {
         let root = try scratchDirectory()
         let manager = PluginManager(buddy: RecordingBuddy(), presenter: NoWindows(), storageRoot: root)
-        let plugin = TodoPlugin()
+        let plugin = TodoPlugin(platform: TodoMac())
         manager.register(plugin)
         manager.activateAll()
         try XCTUnwrap(plugin.store).add("Ship 0.18")
@@ -197,7 +198,7 @@ final class TodoPluginTests: XCTestCase {
 
     private func activatedManager(buddy: (any Buddy)? = nil) throws -> (manager: PluginManager, store: TodoStore) {
         let manager = PluginManager(buddy: buddy ?? RecordingBuddy(), presenter: NoWindows(), storageRoot: try scratchDirectory())
-        let plugin = TodoPlugin()
+        let plugin = TodoPlugin(platform: TodoMac())
         manager.register(plugin)
         manager.activateAll()
         return (manager, try XCTUnwrap(plugin.store))

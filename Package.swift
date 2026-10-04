@@ -31,12 +31,18 @@ let package = Package(
             dependencies: ["DeskBuddyCore"],
             path: "Sources/TodoAPI"
         ),
-        // To-dos: the To Do and Done tabs, the detail page, the history in Settings
+        // To-dos: keeping them, the commands, the logic, on any platform
         .target(
             name: "TodoPlugin",
-            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoAPI"],
+            dependencies: ["DeskBuddyCore", "TodoAPI"],
             path: "Sources/TodoPlugin",
             resources: [.copy("Resources/Localizations")]
+        ),
+        // To-dos on macOS: the tabs, the detail page, the history in Settings
+        .target(
+            name: "TodoMac",
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoAPI", "TodoPlugin"],
+            path: "Sources/TodoMac"
         ),
         // Countdown timers, optionally linked to to-dos: the logic, on any platform
         .target(
@@ -79,7 +85,7 @@ let package = Package(
         // Puts the plugins together: registers them and hosts the UI they contribute to
         .executableTarget(
             name: "DeskBuddy",
-            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoPlugin", "PomodoroPlugin", "PomodoroMac", "CalendarPlugin",
+            dependencies: ["DeskBuddyCore", "DeskBuddyMacUI", "TodoPlugin", "TodoMac", "PomodoroPlugin", "PomodoroMac", "CalendarPlugin",
                            "A2UIPlugin", "ClaudePlugin"],
             path: "Sources/DeskBuddy",
             resources: [.copy("Resources/Localizations")]
@@ -98,7 +104,7 @@ let package = Package(
         ),
         .testTarget(
             name: "TodoPluginTests",
-            dependencies: ["TodoPlugin", "DeskBuddyCore", "TodoAPI"],
+            dependencies: ["TodoPlugin", "TodoMac", "DeskBuddyCore", "TodoAPI"],
             path: "Tests/TodoPluginTests"
         ),
         .testTarget(

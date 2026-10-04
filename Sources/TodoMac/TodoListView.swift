@@ -2,6 +2,7 @@ import DeskBuddyCore
 import DeskBuddyMacUI
 import SwiftUI
 import TodoAPI
+import TodoPlugin
 import UniformTypeIdentifiers
 
 /// What's typed into the to-do input. Kept outside the view because switching tabs or opening

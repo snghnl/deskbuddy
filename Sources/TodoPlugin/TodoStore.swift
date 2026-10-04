@@ -3,32 +3,32 @@ import Foundation
 import Observation
 import TodoAPI
 
-struct Todo: Identifiable, Codable, Equatable {
-    var id = UUID()
-    var title: String
-    var isDone = false
-    var createdAt = Date()
-    var memo: String?
+package struct Todo: Identifiable, Codable, Equatable {
+    package var id = UUID()
+    package var title: String
+    package var isDone = false
+    package var createdAt = Date()
+    package var memo: String?
     /// When the item was completed — used to group by date in the Done tab
-    var completedAt: Date?
+    package var completedAt: Date?
 }
 
 extension Todo {
     /// Completion time — legacy data has no completedAt, so fall back to the creation time
-    var completionDate: Date { completedAt ?? createdAt }
+    package var completionDate: Date { completedAt ?? createdAt }
 }
 
 /// A group of completed items bucketed by day in the Done tab
-struct CompletedGroup: Identifiable {
-    let id: Date        // Midnight of that day
-    let title: String   // "Today" / "Yesterday" / "Aug 7 (Thu)"
-    let items: [Todo]
+package struct CompletedGroup: Identifiable {
+    package let id: Date        // Midnight of that day
+    package let title: String   // "Today" / "Yesterday" / "Aug 7 (Thu)"
+    package let items: [Todo]
 }
 
 @MainActor
 @Observable
-final class TodoStore {
-    var todos: [Todo] = [] {
+package final class TodoStore {
+    package var todos: [Todo] = [] {
         didSet { scheduleSave() }
     }
 
@@ -39,7 +39,7 @@ final class TodoStore {
     /// Stored as a watermark rather than a per-item flag on purpose: a new non-optional
     /// field on `Todo` would make the synthesized decoder throw on every existing
     /// todos.json, and every item would end up set aside as unreadable.
-    var historyClearedAt: Date? {
+    package var historyClearedAt: Date? {
         didSet {
             do {
                 if let at = historyClearedAt {
@@ -54,7 +54,7 @@ final class TodoStore {
     }
 
     /// Storage keys. The CLI reads plugins/todo/todos.json while the app is not running.
-    static let todosKey = "todos"
+    package static let todosKey = "todos"
     private static let historyClearedAtKey = "historyClearedAt"
 
     /// Where deletions are announced
@@ -63,7 +63,7 @@ final class TodoStore {
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private let log: Log
 
-    init(storage: PluginStorage, events: EventBus, log: Log) {
+    package init(storage: PluginStorage, events: EventBus, log: Log) {
         self.events = events
         self.storage = storage
         self.log = log
@@ -74,34 +74,34 @@ final class TodoStore {
     }
 
     /// Writes a save that is still waiting out its delay, e.g. when the app quits
-    func flush() {
+    package func flush() {
         guard let saveTask else { return }
         saveTask.cancel()
         self.saveTask = nil
         save(todos)
     }
 
-    func add(_ title: String) {
+    package func add(_ title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         todos.insert(Todo(title: trimmed), at: 0)
     }
 
-    func toggle(_ todo: Todo) {
+    package func toggle(_ todo: Todo) {
         guard let i = todos.firstIndex(where: { $0.id == todo.id }) else { return }
         todos[i].isDone.toggle()
         // Done/undone items live in separate tabs, so keep the array order as-is (preserves manual ordering in the To Do tab)
         todos[i].completedAt = todos[i].isDone ? Date() : nil
     }
 
-    func remove(_ todo: Todo) {
+    package func remove(_ todo: Todo) {
         guard todos.contains(where: { $0.id == todo.id }) else { return }
         todos.removeAll { $0.id == todo.id }
         events.emit(TodoDeleted(id: todo.id))
     }
 
     /// Move the dragged item to the target item's position
-    func move(_ draggedID: UUID, to targetID: UUID) {
+    package func move(_ draggedID: UUID, to targetID: UUID) {
         guard draggedID != targetID,
               let from = todos.firstIndex(where: { $0.id == draggedID }),
               let to = todos.firstIndex(where: { $0.id == targetID }) else { return }
@@ -109,30 +109,30 @@ final class TodoStore {
         todos.insert(item, at: to)
     }
 
-    func updateTitle(_ id: UUID, _ title: String) {
+    package func updateTitle(_ id: UUID, _ title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let i = todos.firstIndex(where: { $0.id == id }) else { return }
         todos[i].title = trimmed
     }
 
-    func updateMemo(_ id: UUID, _ memo: String) {
+    package func updateMemo(_ id: UUID, _ memo: String) {
         guard let i = todos.firstIndex(where: { $0.id == id }) else { return }
         todos[i].memo = memo.isEmpty ? nil : memo
     }
 
     /// Hides everything completed so far from the Done tab. Reversible.
-    func clearCompletedFromList() {
+    package func clearCompletedFromList() {
         historyClearedAt = Date()
     }
 
     /// Brings hidden completions back into the Done tab.
-    func restoreClearedHistory() {
+    package func restoreClearedHistory() {
         historyClearedAt = nil
     }
 
     /// Removes completed items for good. There is no undo and no backup — the next
     /// save overwrites todos.json with what is left.
-    func deleteCompleted() {
+    package func deleteCompleted() {
         let deleted = completedTodos.map(\.id)
         todos.removeAll { $0.isDone }
         historyClearedAt = nil   // nothing left to hide
@@ -141,20 +141,20 @@ final class TodoStore {
 
     // MARK: - Per-tab lists
 
-    var activeTodos: [Todo] { todos.filter { !$0.isDone } }
+    package var activeTodos: [Todo] { todos.filter { !$0.isDone } }
 
-    var completedTodos: [Todo] { todos.filter { $0.isDone } }
+    package var completedTodos: [Todo] { todos.filter { $0.isDone } }
 
     /// Completed items still shown in the Done tab
-    var visibleCompleted: [Todo] {
+    package var visibleCompleted: [Todo] {
         guard let cutoff = historyClearedAt else { return completedTodos }
         return completedTodos.filter { $0.completionDate > cutoff }
     }
 
-    var hiddenCompletedCount: Int { completedTodos.count - visibleCompleted.count }
+    package var hiddenCompletedCount: Int { completedTodos.count - visibleCompleted.count }
 
     /// Groups the visible completed items by day, newest first
-    var completedGroups: [CompletedGroup] {
+    package var completedGroups: [CompletedGroup] {
         let calendar = Calendar.current
         let done = visibleCompleted
             .sorted { $0.completionDate > $1.completionDate }
@@ -207,15 +207,15 @@ final class TodoStore {
 }
 /// The reads other features get through TodoService
 extension TodoStore {
-    var active: [TodoSummary] {
+    package var active: [TodoSummary] {
         activeTodos.map(\.summary)
     }
 
-    func todo(_ id: UUID) -> TodoSummary? {
+    package func todo(_ id: UUID) -> TodoSummary? {
         todos.first { $0.id == id }?.summary
     }
 
-    func completed(on day: Date) -> [TodoSummary] {
+    package func completed(on day: Date) -> [TodoSummary] {
         let calendar = Calendar.current
         return completedTodos
             .filter { calendar.isDate($0.completionDate, inSameDayAs: day) }
@@ -225,7 +225,7 @@ extension TodoStore {
 }
 
 private extension Todo {
-    var summary: TodoSummary {
+    package var summary: TodoSummary {
         TodoSummary(id: id, title: title, isDone: isDone, createdAt: createdAt,
                     completedAt: isDone ? completionDate : nil, hasMemo: memo?.isEmpty == false)
     }

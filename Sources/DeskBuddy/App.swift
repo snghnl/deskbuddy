@@ -8,6 +8,7 @@ import EventKit
 import PomodoroMac
 import PomodoroPlugin
 import SwiftUI
+import TodoMac
 import TodoPlugin
 
 // Borderless panels cannot become key windows by default, which blocks text input — allow it via subclass
@@ -154,7 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ])
         // Before any UI is built, so the services and contributions are there when views first look
         StorageMigration.run(appFolder: Self.appFolder, defaults: .standard)
-        plugins.register(TodoPlugin())
+        plugins.register(TodoPlugin(platform: TodoMac()))
         plugins.register(PomodoroPlugin(platform: PomodoroMac()))
         plugins.register(CalendarPlugin())
         plugins.register(A2UIPlugin())
