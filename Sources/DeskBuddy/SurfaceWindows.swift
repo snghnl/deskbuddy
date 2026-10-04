@@ -109,11 +109,6 @@ private final class SurfacePanel: NSPanel {
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         hosting.sizingOptions = []
-        // Rounded like the chrome, so the window shadow and Liquid Glass stop at its corners
-        hosting.wantsLayer = true
-        hosting.layer?.cornerRadius = 14
-        hosting.layer?.cornerCurve = .continuous
-        hosting.layer?.masksToBounds = true
         contentView = hosting
     }
 
@@ -142,7 +137,6 @@ struct SurfacePanelChrome: View {
 
     let content: AnyView
     let close: () -> Void
-    @AppStorage(SettingsKeys.liquidGlass) private var liquidGlass = false
 
     var body: some View {
         content
@@ -151,7 +145,11 @@ struct SurfacePanelChrome: View {
             .padding(.bottom, 12)
             .frame(minWidth: 240, maxWidth: Self.maxWidth, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
-            .buddyBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(.white.opacity(0.15), lineWidth: 1)
+            )
             .overlay(alignment: .topTrailing) {
                 Button(action: close) {
                     Image(systemName: "xmark")
@@ -163,7 +161,5 @@ struct SurfacePanelChrome: View {
                 .buttonStyle(.plain)
                 .help(strings.s("surface.close"))
             }
-            // Also reaches the plugin's content, e.g. A2UI buttons
-            .environment(\.glassEnabled, liquidGlass && Appearance.supportsGlass)
     }
 }

@@ -219,7 +219,7 @@ plugs in when the app composes it, e.g. `TodoPlugin(platform: TodoMac())`.
   (`strings.s("key")`), and the few strings targets share (`L.s("key")`). UI travels through it as
   `PlatformView`
 - `Sources/DeskBuddyMacUI/` — what macOS adds on top: `MacView` (a SwiftUI view as a `PlatformView`),
-  SwiftUI ways to fill the slots, the list panel's environment, the Liquid Glass look
+  SwiftUI ways to fill the slots, the list panel's environment
 - `Sources/TodoAPI/` — what the to-do feature offers others: `TodoService`, `TodoDeleted`, the to-do row slot
 - `Sources/TodoPlugin/` — to-dos: model and JSON persistence, TodoService, commands, the badge and Done-tab menu;
   `Sources/TodoMac/` — the To Do/Done tabs, detail page, history settings

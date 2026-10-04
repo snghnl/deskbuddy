@@ -16,8 +16,6 @@ enum SettingsKeys {
     static let bubbleAutoHide = "DeskBuddy.bubbleAutoHide"
     static let character = "DeskBuddy.character"
     static let throwEnabled = "DeskBuddy.throwEnabled"
-    /// Liquid Glass on DeskBuddy's panels and bubbles (macOS 26 and later), off unless turned on
-    static let liquidGlass = "DeskBuddy.liquidGlass"
     static let wander = "DeskBuddy.wander"
     static let hotkeyKeyCode = "DeskBuddy.hotkeyKeyCode"
     static let hotkeyModifiers = "DeskBuddy.hotkeyModifiers"
@@ -37,7 +35,6 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.character) private var characterRaw = CharacterKind.buddy.rawValue
     @AppStorage(SettingsKeys.bubbleAutoHide) private var bubbleAutoHide = 0
     @AppStorage(SettingsKeys.throwEnabled) private var throwEnabled = true
-    @AppStorage(SettingsKeys.liquidGlass) private var liquidGlass = false
     @AppStorage(SettingsKeys.wander) private var wanderEnabled = false
     @AppStorage(SettingsKeys.hotkeyKeyCode) private var hotkeyKeyCode = -1
     @AppStorage(SettingsKeys.hotkeyModifiers) private var hotkeyModifiers = 0
@@ -121,10 +118,6 @@ struct SettingsView: View {
             Text(strings.s("settings.after_1min")).tag(60)
         }
         .pickerStyle(.menu)
-
-        if Appearance.supportsGlass {
-            Toggle(strings.s("settings.liquid_glass"), isOn: $liquidGlass)
-        }
     }
 
     @ViewBuilder

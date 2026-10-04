@@ -19,7 +19,7 @@ let package = Package(
             ]
         ),
         // What macOS needs on top of Core to draw plugins' UI: SwiftUI views as PlatformView,
-        // the list panel's environment, the Liquid Glass look
+        // the list panel's environment
         .target(
             name: "DeskBuddyMacUI",
             dependencies: ["DeskBuddyCore"],

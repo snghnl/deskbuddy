@@ -36,7 +36,6 @@ settings.hotkey_footer: "Open the list and start typing from any app. Must inclu
 settings.install_update: "Install Now"
 settings.installing_update: "Installing…"
 settings.language: "Language"
-settings.liquid_glass: "Liquid Glass on panels and bubbles"
 settings.name: "Name"
 settings.press_keys: "Press keys (esc to cancel)"
 settings.record_shortcut: "Record Shortcut"
