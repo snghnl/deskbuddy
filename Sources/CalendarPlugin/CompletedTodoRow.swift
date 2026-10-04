@@ -2,18 +2,18 @@ import DeskBuddyCore
 import SwiftUI
 import TodoAPI
 
-/// A to-do in the selected day's list. Looks like a row of the Done tab, but acts through the
-/// to-do commands, since only the to-do feature may change to-dos.
+/// A to-do in the selected day's list. Looks like a row of the Done tab, but acts through
+/// TodoService, since only the to-do feature may change to-dos.
 struct CompletedTodoRow: View {
     let todo: TodoSummary
-    let commands: CommandRegistry
+    let todos: any TodoService
 
     @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 8) {
             Button {
-                run("todo.toggle")
+                todos.toggle(todo.id)
             } label: {
                 Image(systemName: todo.isDone ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 14))
@@ -35,7 +35,7 @@ struct CompletedTodoRow: View {
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())
-            .onTapGesture { run("todo.show") }
+            .onTapGesture { todos.show(todo.id) }
 
             if let completedAt = todo.completedAt, !hovering {
                 Text(completedAt.formatted(date: .omitted, time: .shortened))
@@ -48,7 +48,7 @@ struct CompletedTodoRow: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.tertiary)
                 Button {
-                    run("todo.remove")
+                    todos.remove(todo.id)
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .bold))
@@ -65,11 +65,6 @@ struct CompletedTodoRow: View {
         )
         .onHover { hovering = $0 }
         .help(tooltip)
-    }
-
-    /// The commands are there whenever a to-do is: both come from the to-do feature
-    private func run(_ command: String) {
-        try? commands.execute(command, CommandArguments(["id": todo.id.uuidString]))
     }
 
     private var tooltip: String {

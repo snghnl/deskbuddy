@@ -27,12 +27,11 @@ public final class CalendarPlugin: DeskBuddyPlugin {
         self.notifier = notifier
 
         let services = context.services
-        let commands = context.commands
         context.slots.contribute(CoreSlots.listTabs, ListTab(
             id: "calendar.month", order: 300,
             title: { L.s("list.calendar") }
         ) {
-            CalendarTabView(calendar: calendar, todos: services.resolve(TodoService.self), commands: commands)
+            CalendarTabView(calendar: calendar, todos: services.resolve(TodoService.self))
         })
         context.slots.contribute(CoreSlots.settingsSections, SettingsSection(
             id: "calendar.integration", order: 300,

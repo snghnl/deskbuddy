@@ -205,7 +205,8 @@ final class TodoStore {
         }
     }
 }
-extension TodoStore: TodoService {
+/// The reads other features get through TodoService
+extension TodoStore {
     var active: [TodoSummary] {
         activeTodos.map(\.summary)
     }

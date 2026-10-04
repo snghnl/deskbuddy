@@ -8,7 +8,6 @@ struct CalendarTabView: View {
     let calendar: CalendarService
     /// nil without the to-do feature: then only events show
     let todos: (any TodoService)?
-    let commands: CommandRegistry
 
     @AppStorage(CalendarSettings.showEvents) private var showEvents = true
     @State private var month: Date
@@ -16,10 +15,9 @@ struct CalendarTabView: View {
 
     private let cal = Calendar.current
 
-    init(calendar: CalendarService, todos: (any TodoService)?, commands: CommandRegistry) {
+    init(calendar: CalendarService, todos: (any TodoService)?) {
         self.calendar = calendar
         self.todos = todos
-        self.commands = commands
         let cal = Calendar.current
         _month = State(initialValue: cal.dateInterval(of: .month, for: Date())?.start ?? Date())
         _selectedDay = State(initialValue: cal.startOfDay(for: Date()))
@@ -196,9 +194,9 @@ struct CalendarTabView: View {
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-            } else {
+            } else if let todos {
                 ForEach(items) { todo in
-                    CompletedTodoRow(todo: todo, commands: commands)
+                    CompletedTodoRow(todo: todo, todos: todos)
                 }
             }
         }

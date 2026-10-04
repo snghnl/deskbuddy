@@ -94,6 +94,37 @@ final class TodoPluginTests: XCTestCase {
         }
     }
 
+    func testOtherFeaturesActOnToDosThroughTheService() throws {
+        let buddy = RecordingBuddy()
+        let (manager, store) = try activatedManager(buddy: buddy)
+        let todos = try XCTUnwrap(manager.services.resolve(TodoService.self))
+        store.add("Water plants")
+        let id = try XCTUnwrap(store.todos.first).id
+        var deleted: [UUID] = []
+        manager.events.subscribe(TodoDeleted.self) { deleted.append($0.id) }
+
+        todos.toggle(id)
+        XCTAssertEqual(todos.todo(id)?.isDone, true)
+        XCTAssertEqual(todos.completed(on: Date()).map(\.id), [id])
+        todos.toggle(id)
+        XCTAssertEqual(todos.active.map(\.id), [id])
+
+        todos.show(id)
+        XCTAssertEqual(buddy.openedPages, 1)
+
+        todos.remove(id)
+        XCTAssertNil(todos.todo(id))
+        XCTAssertEqual(deleted, [id])
+
+        // Gone now: the actions quietly do nothing
+        todos.toggle(id)
+        todos.remove(id)
+        todos.show(id)
+        XCTAssertEqual(deleted, [id])
+        XCTAssertEqual(buddy.openedPages, 1)
+        XCTAssertTrue(buddy.said.isEmpty)
+    }
+
     func testCompletedOnADayListsThatDaysCompletionsLatestFirstHiddenOnesIncluded() throws {
         let (manager, store) = try activatedManager()
         let todos = try XCTUnwrap(manager.services.resolve(TodoService.self))

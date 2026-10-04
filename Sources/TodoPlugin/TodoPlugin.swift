@@ -21,8 +21,9 @@ public final class TodoPlugin: DeskBuddyPlugin {
         let commands = context.commands
         let slots = context.slots
         let buddy = context.buddy
+        let shared = TodoFeatureService(store: store, buddy: buddy)
 
-        context.services.provide(TodoService.self, store)
+        context.services.provide(TodoService.self, shared)
 
         // The same shape as todos.json, so `deskbuddy list --json` reads the same either way
         commands.respond(to: "todo.list") { _ in store.todos }
@@ -40,17 +41,15 @@ public final class TodoPlugin: DeskBuddyPlugin {
             if !todo.isDone { store.toggle(todo) }
             buddy.say(L.f("bubble.done", todo.title), closingAfter: 5)
         }
-        // What a to-do row does, for rows other features draw (the calendar's day list).
-        // Quiet, like the row's own buttons: no bubble.
+        // TodoService's actions, for callers outside the app. Quiet, like a row's buttons: no bubble.
         commands.register("todo.toggle") { arguments in
-            store.toggle(try store.todo(for: arguments))
+            shared.toggle(try store.todo(for: arguments).id)
         }
         commands.register("todo.remove") { arguments in
-            store.remove(try store.todo(for: arguments))
+            shared.remove(try store.todo(for: arguments).id)
         }
         commands.register("todo.show") { arguments in
-            let todo = try store.todo(for: arguments)
-            buddy.openList(on: AnyView(TodoDetailPage(id: todo.id, store: store)))
+            shared.show(try store.todo(for: arguments).id)
         }
 
         let draft = TodoDraft()
@@ -109,5 +108,39 @@ private extension TodoStore {
             throw CommandError.invalidArgument(name: "id", value: id)
         }
         return todo
+    }
+}
+
+/// What other features get as TodoService: reads straight from the store, which is
+/// observable, so their views follow changes; actions as a to-do row performs them
+@MainActor
+final class TodoFeatureService: TodoService {
+    private let store: TodoStore
+    private let buddy: any Buddy
+
+    init(store: TodoStore, buddy: any Buddy) {
+        self.store = store
+        self.buddy = buddy
+    }
+
+    var active: [TodoSummary] { store.active }
+
+    func todo(_ id: UUID) -> TodoSummary? { store.todo(id) }
+
+    func completed(on day: Date) -> [TodoSummary] { store.completed(on: day) }
+
+    func toggle(_ id: UUID) {
+        guard let todo = store.todos.first(where: { $0.id == id }) else { return }
+        store.toggle(todo)
+    }
+
+    func remove(_ id: UUID) {
+        guard let todo = store.todos.first(where: { $0.id == id }) else { return }
+        store.remove(todo)
+    }
+
+    func show(_ id: UUID) {
+        guard store.todos.contains(where: { $0.id == id }) else { return }
+        buddy.openList(on: AnyView(TodoDetailPage(id: id, store: store)))
     }
 }

@@ -27,11 +27,11 @@ public struct TodoSummary: Identifiable, Equatable {
 }
 
 /// For features that work with to-dos, such as a timer linked to one or the calendar's
-/// completion history. Look it up with `services.resolve(TodoService.self)`; nil means the
-/// to-do feature is not there.
+/// completion history: reading them, and doing what a to-do row does. Look it up with
+/// `services.resolve(TodoService.self)`; nil means the to-do feature is not there.
 ///
-/// To act on a to-do, run the to-do commands with its id: todo.toggle, todo.remove,
-/// todo.show (its detail in the list panel).
+/// The actions take the id of a to-do and do nothing once it has been deleted. The
+/// todo.toggle/remove/show commands do the same for callers outside the app.
 @MainActor
 public protocol TodoService: AnyObject {
     /// Open to-dos, in the user's order
@@ -43,6 +43,15 @@ public protocol TodoService: AnyObject {
     /// To-dos completed on the day `day` falls in, latest first. Includes those hidden from
     /// the Done tab: hiding them does not change the history.
     func completed(on day: Date) -> [TodoSummary]
+
+    /// Marks an open to-do done, or a done one open again
+    func toggle(_ id: UUID)
+
+    /// Deletes the to-do for good; `TodoDeleted` follows
+    func remove(_ id: UUID)
+
+    /// Opens the list panel on the to-do's detail
+    func show(_ id: UUID)
 }
 
 /// A to-do is gone for good — removed from the list, or wiped with the rest of the history.
