@@ -148,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         migrateLegacyDefaults()
         UserDefaults.standard.register(defaults: [
             SettingsKeys.throwEnabled: true,
+            SettingsKeys.liquidGlass: false,   // opt-in until it has been looked at on screen
             SettingsKeys.autoUpdateCheck: true,
         ])
         // Before any UI is built, so the services and contributions are there when views first look

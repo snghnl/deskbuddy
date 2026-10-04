@@ -7,6 +7,7 @@ import SwiftUI
 struct ListPanelView: View {
     @ObservedObject var appState: AppState
     let slots: SlotRegistry
+    @AppStorage(SettingsKeys.liquidGlass) private var liquidGlass = false
 
     private var tabs: [ListTab] { slots.contributions(to: CoreSlots.listTabs) }
     private var selectedTab: ListTab? { tabs.first { $0.id == appState.tab } ?? tabs.first }
@@ -23,11 +24,7 @@ struct ListPanelView: View {
         .environment(\.listPage, ListPageAction(present: { appState.listPage = $0 }, dismiss: { appState.listPage = nil }))
         .environment(\.listPanelVisible, appState.listVisible)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(.white.opacity(0.15), lineWidth: 1)
-        )
+        .buddyBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         // Shows the resize grip (the actual drag handling is done by ResizeGripView)
         .overlay(alignment: .bottomTrailing) {
             Image(systemName: "line.3.horizontal.decrease")
@@ -42,6 +39,8 @@ struct ListPanelView: View {
                 appState.tab = tabs.first?.id
             }
         }
+        // Outermost, so the background above and every tab's content see it
+        .environment(\.glassEnabled, liquidGlass && Appearance.supportsGlass)
     }
 
     private var tabPage: some View {

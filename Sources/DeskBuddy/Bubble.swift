@@ -83,6 +83,7 @@ struct BubbleView: View {
     var tail: TailEdge = .bottom
     /// Tail tip position — in view coordinates (including the 10pt shadow padding), not panel coordinates
     var apex: CGFloat?
+    @AppStorage(SettingsKeys.liquidGlass) private var liquidGlass = false
 
     var body: some View {
         Text(message)
@@ -94,9 +95,7 @@ struct BubbleView: View {
             .padding(.top, 9 + (tail == .top ? 8 : 0))
             .padding(.bottom, 9 + (tail == .bottom ? 8 : 0))
             .frame(maxWidth: 230)
-            .background(BubbleShape(tail: tail, apex: apexInShape).fill(.ultraThinMaterial))
-            .overlay(BubbleShape(tail: tail, apex: apexInShape).stroke(.white.opacity(0.2), lineWidth: 1))
-            .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
+            .modifier(BubbleBackground(shape: BubbleShape(tail: tail, apex: apexInShape), glass: liquidGlass))
             .padding(10)   // Inner padding so the shadow is not clipped by the panel
     }
 
@@ -314,5 +313,23 @@ final class BubbleController {
         characterPanel?.removeChildWindow(panel)
         panel.orderOut(nil)
         onVisibleChange?(false)
+    }
+}
+
+/// The bubble's fill: Liquid Glass in the bubble's own shape, tail included, or frosted
+/// material with an edge and a drop shadow
+private struct BubbleBackground: ViewModifier {
+    let shape: BubbleShape
+    let glass: Bool
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *), glass {
+            content.glassEffect(.regular, in: shape)
+        } else {
+            content
+                .background(shape.fill(.ultraThinMaterial))
+                .overlay(shape.stroke(.white.opacity(0.2), lineWidth: 1))
+                .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
+        }
     }
 }

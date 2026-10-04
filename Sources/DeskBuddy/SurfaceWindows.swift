@@ -133,6 +133,7 @@ struct SurfacePanelChrome: View {
 
     let content: AnyView
     let close: () -> Void
+    @AppStorage(SettingsKeys.liquidGlass) private var liquidGlass = false
 
     var body: some View {
         content
@@ -141,11 +142,7 @@ struct SurfacePanelChrome: View {
             .padding(.bottom, 12)
             .frame(minWidth: 240, maxWidth: Self.maxWidth, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(.white.opacity(0.15), lineWidth: 1)
-            )
+            .buddyBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(alignment: .topTrailing) {
                 Button(action: close) {
                     Image(systemName: "xmark")
@@ -157,5 +154,7 @@ struct SurfacePanelChrome: View {
                 .buttonStyle(.plain)
                 .help(L.s("surface.close"))
             }
+            // Also reaches the plugin's content, e.g. A2UI buttons
+            .environment(\.glassEnabled, liquidGlass && Appearance.supportsGlass)
     }
 }

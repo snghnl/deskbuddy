@@ -1,4 +1,5 @@
 import AppKit
+import DeskBuddyCore
 import SwiftUI
 
 /// A panel's content: the document's components, then the last error if a command failed
@@ -165,11 +166,11 @@ struct A2UINodeView: View {
         case .button(let label, let style, let action):
             if style == .primary {
                 Button(label) { session.perform(action) }
-                    .buttonStyle(.borderedProminent)
+                    .buddyButtonStyle(prominent: true)
                     .keyboardShortcut(.defaultAction)
             } else {
                 Button(label) { session.perform(action) }
-                    .buttonStyle(.bordered)
+                    .buddyButtonStyle(prominent: false)
             }
         }
     }
