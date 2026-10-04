@@ -1,4 +1,5 @@
 import DeskBuddyCore
+import os
 import SwiftUI
 import TodoAPI
 @testable import TodoPlugin
@@ -149,13 +150,13 @@ final class TodoPluginTests: XCTestCase {
 
     func testToDosAndHiddenHistorySurviveARestart() throws {
         let storage = PluginStorage(directory: try scratchDirectory())
-        let store = TodoStore(storage: storage, events: EventBus())
+        let store = TodoStore(storage: storage, events: EventBus(), log: Logger(.disabled))
         store.add("finished")
         store.toggle(store.todos[0])
         store.clearCompletedFromList()
 
         store.flush()
-        let reopened = TodoStore(storage: storage, events: EventBus())
+        let reopened = TodoStore(storage: storage, events: EventBus(), log: Logger(.disabled))
 
         XCTAssertEqual(reopened.todos, store.todos)
         XCTAssertEqual(reopened.historyClearedAt, store.historyClearedAt)
@@ -182,7 +183,7 @@ final class TodoPluginTests: XCTestCase {
         let garbage = Data("{ not the to-do list".utf8)
         try garbage.write(to: directory.appendingPathComponent("todos.json"))
 
-        let store = TodoStore(storage: PluginStorage(directory: directory), events: EventBus())
+        let store = TodoStore(storage: PluginStorage(directory: directory), events: EventBus(), log: Logger(.disabled))
         store.add("fresh start")
         store.flush()
 

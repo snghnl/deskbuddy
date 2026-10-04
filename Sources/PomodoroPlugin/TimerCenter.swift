@@ -40,11 +40,12 @@ final class TimerCenter {
 
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private let storage: PluginStorage
-    @ObservationIgnored private let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "pomodoro")
+    @ObservationIgnored private let log: Logger
     private static let storageKey = "timers"
 
-    init(storage: PluginStorage) {
+    init(storage: PluginStorage, log: Logger) {
         self.storage = storage
+        self.log = log
         restore()
         task = Task { [weak self] in
             while !Task.isCancelled {

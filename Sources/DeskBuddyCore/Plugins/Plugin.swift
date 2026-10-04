@@ -1,3 +1,5 @@
+import os
+
 /// A unit of functionality that DeskBuddy starts at launch and stops at quit.
 ///
 /// Built-in plugins are compiled into the app and registered with `PluginManager`
@@ -40,4 +42,6 @@ public struct PluginContext {
     public let surfaces: SurfaceManager
     /// This plugin's own data, in a folder named after its id
     public let storage: PluginStorage
+    /// This plugin's log, its category the plugin's id
+    public let log: Logger
 }

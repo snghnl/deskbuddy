@@ -209,7 +209,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         "toggle": "list.toggle",
     ]
 
-    private let commandLog = Logger(subsystem: "com.snghnl.deskbuddy", category: "commands")
+    private let commandLog = Logger.deskBuddy("commands")
 
     /// deskbuddy://<command>?<arguments> runs a registered command, e.g.
     /// deskbuddy://pomodoro.start?minutes=25. The older short forms still work:

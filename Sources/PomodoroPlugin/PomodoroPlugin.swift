@@ -13,7 +13,7 @@ public final class PomodoroPlugin: DeskBuddyPlugin {
     public init() {}
 
     public func activate(_ context: PluginContext) throws {
-        let timers = TimerCenter(storage: context.storage)
+        let timers = TimerCenter(storage: context.storage, log: context.log)
         self.timers = timers
         let services = context.services
 

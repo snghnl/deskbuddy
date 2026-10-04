@@ -62,11 +62,12 @@ final class TodoStore {
     @ObservationIgnored private let events: EventBus
     @ObservationIgnored private let storage: PluginStorage
     @ObservationIgnored private var saveTask: Task<Void, Never>?
-    @ObservationIgnored private let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "todo")
+    @ObservationIgnored private let log: Logger
 
-    init(storage: PluginStorage, events: EventBus) {
+    init(storage: PluginStorage, events: EventBus, log: Logger) {
         self.events = events
         self.storage = storage
+        self.log = log
         // If this goes through didSet, it only writes the same value back
         historyClearedAt = load(Date.self, forKey: Self.historyClearedAtKey)
         // Assigning schedules a save of what was just read, which is harmless

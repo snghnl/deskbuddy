@@ -19,7 +19,7 @@ public final class CommandServer: @unchecked Sendable {   // `source` is only to
     private let commands: CommandRegistry
     private let acceptQueue = DispatchQueue(label: "com.snghnl.deskbuddy.command-socket")
     private var source: DispatchSourceRead?
-    private let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "commands")
+    private let log = Logger.deskBuddy("commands")
 
     /// A request is one short line; anything longer is not one of ours
     private static let maxRequestSize = 64 * 1024

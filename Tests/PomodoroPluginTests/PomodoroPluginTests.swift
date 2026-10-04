@@ -1,4 +1,5 @@
 import DeskBuddyCore
+import os
 @testable import PomodoroPlugin
 import SwiftUI
 import TodoAPI
@@ -58,11 +59,11 @@ final class PomodoroPluginTests: XCTestCase {
 
     func testTimersSurviveARestart() throws {
         let storage = PluginStorage(directory: try scratchDirectory())
-        let timers = TimerCenter(storage: storage)
+        let timers = TimerCenter(storage: storage, log: Logger(.disabled))
         timers.start(minutes: 25, label: "Focus")
         timers.pause(try XCTUnwrap(timers.timers.first).id)
 
-        let reopened = TimerCenter(storage: storage)
+        let reopened = TimerCenter(storage: storage, log: Logger(.disabled))
 
         XCTAssertEqual(reopened.timers, timers.timers)
     }

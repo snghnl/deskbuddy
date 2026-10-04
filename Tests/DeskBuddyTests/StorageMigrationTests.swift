@@ -1,5 +1,6 @@
 @testable import DeskBuddy
 import DeskBuddyCore
+import os
 @testable import PomodoroPlugin
 @testable import TodoPlugin
 import XCTest
@@ -33,10 +34,10 @@ final class StorageMigrationTests: XCTestCase {
 
         StorageMigration.run(appFolder: app, defaults: defaults, now: launch)
 
-        let store = TodoStore(storage: PluginStorage(directory: plugins.appendingPathComponent("todo")), events: EventBus())
+        let store = TodoStore(storage: PluginStorage(directory: plugins.appendingPathComponent("todo")), events: EventBus(), log: Logger(.disabled))
         XCTAssertEqual(store.todos, todos)
         XCTAssertEqual(store.historyClearedAt, Date(timeIntervalSinceReferenceDate: watermark))
-        XCTAssertEqual(TimerCenter(storage: PluginStorage(directory: plugins.appendingPathComponent("pomodoro"))).timers, timers)
+        XCTAssertEqual(TimerCenter(storage: PluginStorage(directory: plugins.appendingPathComponent("pomodoro")), log: Logger(.disabled)).timers, timers)
 
         // Nothing is left where it would be read as stale
         XCTAssertFalse(exists(app.appendingPathComponent("todos.json")))

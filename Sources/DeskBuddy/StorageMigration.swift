@@ -1,3 +1,4 @@
+import DeskBuddyCore
 import Foundation
 import os
 
@@ -10,7 +11,7 @@ import os
 /// A step whose destination already exists is skipped, which makes running this at every
 /// launch harmless. A step that fails leaves its original where it was and is logged.
 enum StorageMigration {
-    private static let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "storage")
+    private static let log = Logger.deskBuddy("storage")
 
     /// `appFolder` is Application Support/DeskBuddy; plugin data goes under its plugins/ folder
     static func run(appFolder: URL, defaults: UserDefaults, now: Date = Date()) {

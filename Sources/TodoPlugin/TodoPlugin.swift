@@ -16,7 +16,7 @@ public final class TodoPlugin: DeskBuddyPlugin {
     public init() {}
 
     public func activate(_ context: PluginContext) throws {
-        let store = TodoStore(storage: context.storage, events: context.events)
+        let store = TodoStore(storage: context.storage, events: context.events, log: context.log)
         self.store = store
         let commands = context.commands
         let slots = context.slots

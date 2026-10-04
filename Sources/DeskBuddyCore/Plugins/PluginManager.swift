@@ -14,7 +14,7 @@ public final class PluginManager {
     private var registered: [any DeskBuddyPlugin] = []
     /// In activation order — deactivated in reverse
     private var active: [any DeskBuddyPlugin] = []
-    private let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "plugins")
+    private let log = Logger.deskBuddy("plugins")
 
     /// Each plugin's storage is the folder named after its id in here
     private let storageRoot: URL
@@ -40,7 +40,8 @@ public final class PluginManager {
             do {
                 let storage = PluginStorage(directory: storageRoot.appendingPathComponent(plugin.manifest.id, isDirectory: true))
                 try plugin.activate(PluginContext(buddy: buddy, commands: commands, events: events, services: services,
-                                                  slots: slots, surfaces: surfaces, storage: storage))
+                                                  slots: slots, surfaces: surfaces, storage: storage,
+                                                  log: .deskBuddy(plugin.manifest.id)))
                 active.append(plugin)
             } catch {
                 log.error("\(plugin.manifest.id, privacy: .public) failed to activate: \(String(describing: error), privacy: .public)")

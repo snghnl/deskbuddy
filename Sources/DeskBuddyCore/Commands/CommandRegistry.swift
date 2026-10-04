@@ -48,7 +48,7 @@ public final class CommandRegistry {
     }
 
     private var handlers: [String: Handler] = [:]
-    private let log = Logger(subsystem: "com.snghnl.deskbuddy", category: "commands")
+    private let log = Logger.deskBuddy("commands")
 
     public init() {}
 
